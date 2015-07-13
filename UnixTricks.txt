@@ -51,3 +51,9 @@ C-M-f
 C-M-b
 (setq python-shell-interpreter "ipython"
       python-shell-interpreter-args "-i")
+
+
+#OSX troubleshooting
+rm /L*/Pr*ces/S*/{com.apple.{air,net},Net,pref}*.plist   # wifi
+off, power cable, C-M-S-<power_button> 3 seconds, bootup   # power
+boot with either {option} or {Command-R}. DiskUtility->Repair  # corruption
