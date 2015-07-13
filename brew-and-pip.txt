@@ -1,0 +1,53 @@
+$ brew leaves
+bash-completion
+caskroom/cask/brew-cask
+emacs
+ffmpeg (--with-faac)
+gnu-sed # use `gsed`.
+imagemagick
+jq # json parser, filter, etc
+mercurial
+mobile-shell
+python3
+homebrew/fuse/sshfs
+tree
+wget
+youtube-dl
+z
+
+$ brew cask list
+alfred
+anki
+audacity
+brackets
+day-o  # menubar calendar
+flux
+imageoptim
+macdown
+mactex
+osxfuse # ssh mount
+pycharm-ce
+qlcolorcode
+qlmarkdown
+qlstephen
+quicklook-csv
+quicklook-json
+r
+rstudio
+seashore # easy photo editing
+seil # capslock => esc
+sourcetree
+speedcrunch
+sublime-text 
+transmission
+vlc
+
+$ pip3 install pip-autoremove
+# pip-autoremove -L | cut -f1 '-d ' | sort
+beautifulsoup4
+certifi # for requests+https
+csvkit # for csvcut -c <colname> foo.csv
+fuzzywuzzy
+ipython
+marisa-trie
+requests
