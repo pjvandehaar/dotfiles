@@ -7,8 +7,11 @@ function l { CLICOLOR_FORCE=1 ls -lhFGAtr $@ | egrep --color=never -v '~|#|\.DS_
 function ll { CLICOLOR_FORCE=1 ls -lhFG $@ | egrep --color=never -v '~|#|\.DS_Store$'; }
 alias h='head -n45'
 alias ..='cd ..'
-alias gs='git status'
 alias ds='du -sh *'
+
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit'
 
 
 # settings
