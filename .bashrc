@@ -1,4 +1,3 @@
-
 # shortcuts
 # =========
 alias e=emacs
@@ -8,6 +7,8 @@ function ll { CLICOLOR_FORCE=1 ls -lhFG $@ | egrep --color=never -v '~|#|\.DS_St
 alias h='head -n45'
 alias ..='cd ..'
 alias ds='du -sh *'
+function ql { for file in $@; do qlmanage -p $file &> /dev/null; done } # note: be careful!
+alias ejectall="osascript -e 'tell application \"Finder\" to eject (every disk whose ejectable is true and local volume is true and free space is not equal to 0)'"
 
 alias gs='git status'
 alias ga='git add'
