@@ -22,6 +22,7 @@ audacity
 brackets
 day-o  # menubar calendar
 flux
+iterm2
 imageoptim
 macdown
 mactex
