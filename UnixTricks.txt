@@ -7,6 +7,8 @@ netstat -rn | grep default   # get router's internat ip
 type ls
 diff <(sort .bashrc) <(sort .bash_profile) # double pipe in
 history | tail -n1000 | sort -k2 | less    # requires (export HISTTIMEFORMAT="%Y/%m/%d %T")
+C-A-e  # expand variables inline
+echo $OLDPWD
 
 
 ##git
