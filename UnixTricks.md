@@ -56,6 +56,9 @@ M-g g _num_            | goto line
 
 ##python
 - **postmortem debugger:** `python3 -m pdb foo.py`
+  - **stack:** `where`, `up`, `down`
+  - **run code:**: `!`, `p`, `pp`, `interact`
+  - **context:** `list`, `list start, end`, `args`
 
 ##OSX troubleshooting
 - **wifi:** `rm /L*/Pr*ces/S*/{com.apple.{air,net},Net,pref}*.plist`
