@@ -27,7 +27,6 @@
 - `pip3 install csvkit`
 - `csvcut -c bar,baz foo.csv`
 
-
 ##iTerm2
 - **split:** Command-d
 - **switch:** Command-option-arrow
