@@ -7,8 +7,8 @@
 - `type ls`  
 - `diff <(sort .bashrc) <(sort .bash_profile)`
 - `history | tail -n1000 | sort -k2 | less`
-	- requires `export HISTTIMEFORMAT="%Y/%m/%d %T"`
-- **expand inline:** C-A-e
+  - requires `export HISTTIMEFORMAT="%Y/%m/%d %T"`
+- **expand inline:** C-A-e, C-x *
 - `echo $OLDPWD`
 
 ##git
@@ -32,19 +32,21 @@
 - **switch:** Command-option-arrow
 
 ##emacs
-key                    | effect
------------------------|-------
-M-x menu-bar-open, F10 | 
-C-h k                  | get help on key
-_region_ M-\| pbcopy   | copy region to mac clipboard
-C-x {2,3}              | view current buffer in two "windows"
-C-x 1                  | close all other "windows"
-C-x 0                  | close this "window"
-C-x C-f                | view a file
-M->                    | end of buffer
-M-^                    | join previous line
-M-m                    | move to first character on line
-M-g g _num_            | goto line
+key                     | effect
+------------------------|-------
+M-x `menu-bar-open`, F10| 
+C-h k                   | get help on key
+_region_ M-\| `pbcopy`  | copy region to mac clipboard
+C-x {2,3}               | view current buffer in two "windows"
+C-x 1                   | close all other "windows"
+C-x 0                   | close this "window"
+C-x C-f                 | view a file
+M->                     | end of buffer
+M-^                     | join previous line
+M-m                     | move to first character on line
+M-g g _num_             | goto line
+C-M-{n,p}               | matching paren
+
 
 ##emacs + python
 - C-M-a
