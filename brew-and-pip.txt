@@ -19,13 +19,18 @@ $ brew cask list
 alfred
 anki
 audacity
+better-window-manager
 brackets
 day-o  # menubar calendar
 flux
+hugin
 iterm2
 imageoptim
+lastpass
 macdown
 mactex
+nvalt
+omnidisksweeper
 osxfuse # ssh mount
 pycharm-ce
 qlcolorcode
@@ -36,19 +41,21 @@ quicklook-json
 r
 rstudio
 seashore # easy photo editing
-seil # capslock => esc
 sourcetree
 speedcrunch
 sublime-text 
+the-unarchiver
 transmission
 vlc
 
 $ pip3 install pip-autoremove
-# pip-autoremove -L | cut -f1 '-d ' | sort
+$ pip-autoremove -L | cut -f1 '-d ' | sort
 beautifulsoup4
 certifi # for requests+https
 csvkit # for csvcut -c <colname> foo.csv
 fuzzywuzzy
 ipython
 marisa-trie
+pip-autoremove
+python-Levenshtein
 requests

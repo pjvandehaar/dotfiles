@@ -64,5 +64,7 @@ C-M-{n,p}               | matching paren
 
 ##OSX troubleshooting
 - **wifi:** `rm /L*/Pr*ces/S*/{com.apple.{air,net},Net,pref}*.plist`
-- **power:** off, power cable, C-M-S-power_button for 3 seconds, boot
+- **power:** off, power cable, {C-M-S-power_button} for 3 seconds, boot
 - **corruption:** boot with either {option} or {Command-R}. DiskUtility->Repair
+- **PRAM:**: boot, hold {Command-Opt-P-R} until restart and second chime
+- **Recovery Mode:** boot with {Command-R}.
