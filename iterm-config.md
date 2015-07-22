@@ -1,7 +1,9 @@
 Config
 ======
-- Preferences > Profiles > Colors > Minimum Contrast >  Low------|-----High
 - Preferences > Keys > Hotkey > Show/hide with hotkey > Option-Space
+- Preferences > Keys > Hotkey > Hotkey toggles... > Hotkey Window
+- Preferences > Profiles > * > Colors > Minimum Contrast >  Low------|-----High
+- Preferences > Profiles > Hotkey Window > Window > Rows > 42
 - Preferences > Pointer > Misc > Triple-click selects full wrapped lines
 - Preferences > General > Save copy/paste to disk
 
