@@ -28,8 +28,9 @@
 - `csvcut -c bar,baz foo.csv`
 
 ##iTerm2
-- **split:** Command-d
+- **split:** Command-D
 - **switch:** Command-option-arrow
+- **dump scrollback:** Command-K
 
 ##emacs
 key                     | effect
