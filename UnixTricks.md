@@ -10,6 +10,8 @@
   - requires `export HISTTIMEFORMAT="%Y/%m/%d %T"`
 - **expand inline:** C-A-e, C-x *
 - `echo $OLDPWD`
+- **one-at-a-time:** `... | xargs -L1 ...` 
+- **replace text:** `... | xargs -I% ...` 
 
 ##git
 - **use colors to combine add/remove lines:** `git diff --color-words`
