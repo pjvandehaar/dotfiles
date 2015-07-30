@@ -9,3 +9,7 @@
 - SelectorGadget
 - Stylish
 - uBlock
+
+## settings
+- Passwords and Forms > (uncheck) Enable Autofill
+- Passwords and Forms > (uncheck) web passwords
