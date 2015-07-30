@@ -1,0 +1,12 @@
+[ui]
+username = Peter VandeHaar (email removed)
+ssh = ssh -C
+
+# found at https://mercurial.selenic.com/wiki/PagerExtension
+[pager]
+pager = LESS='FRX' less
+
+[extensions]
+pager =
+purge= 
+mq=
