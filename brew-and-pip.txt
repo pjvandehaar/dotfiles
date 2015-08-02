@@ -8,7 +8,9 @@ imagemagick
 jq # json parser, filter, etc
 mercurial
 mobile-shell
+python # for ipython2 and pip2
 python3
+rename
 homebrew/fuse/sshfs
 tree
 wget
