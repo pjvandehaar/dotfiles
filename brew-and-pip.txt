@@ -18,7 +18,6 @@ z
 $ brew cask list
 alfred
 anki
-audacity
 better-window-manager
 brackets
 day-o  # menubar calendar
@@ -40,7 +39,7 @@ quicklook-csv
 quicklook-json
 r
 rstudio
-seashore # easy photo editing
+seashore
 sourcetree
 speedcrunch
 sublime-text 
@@ -59,3 +58,5 @@ marisa-trie
 pip-autoremove
 python-Levenshtein
 requests
+
+$ pip2 install percol
