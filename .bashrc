@@ -5,6 +5,7 @@ alias e=emacs
 # F=markers, t=time-sort, r=reverse, G=color
 function l  { CLICOLOR_FORCE=1 ls -lhFGAtr $@ | egrep --color=never -v '~|#|\.DS_Store$'; }
 function ll { CLICOLOR_FORCE=1 ls -lhFG    $@ | egrep --color=never -v '~|#|\.DS_Store$'; }
+alias la="ls -AFG"
 
 alias h='head -n45'
 alias ..='cd ..'
@@ -21,6 +22,8 @@ alias gc='git commit'
 
 # settings
 # ========
+
+alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
 
 alias grep='grep --color=auto'
 export EDITOR=emacs
