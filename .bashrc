@@ -3,8 +3,8 @@
 alias e=emacs
 
 # F=markers, t=time-sort, r=reverse, G=color
-function l  { CLICOLOR_FORCE=1 ls -lhFGAtr $@ | egrep --color=never -v '~|#|\.DS_Store$'; }
-function ll { CLICOLOR_FORCE=1 ls -lhFG    $@ | egrep --color=never -v '~|#|\.DS_Store$'; }
+function l  { CLICOLOR_FORCE=1 ls -lhFGAtr "$@" | egrep --color=never -v '~|#|\.DS_Store$'; }
+function ll { CLICOLOR_FORCE=1 ls -lhFG    "$@" | egrep --color=never -v '~|#|\.DS_Store$'; }
 alias la="ls -AFG"
 
 alias h='head -n45'
@@ -12,7 +12,7 @@ alias ..='cd ..'
 alias ds='du -sh *'
 
 # OSX-specific
-function ql { for file in $@; do qlmanage -p $file &> /dev/null; done } # note: be careful! # TODO: confirm every tenth
+function ql { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful! # TODO: confirm every tenth
 alias macdown='open -a macdown'
 
 alias gs='git status'
@@ -22,6 +22,8 @@ alias gc='git commit'
 
 # settings
 # ========
+
+export HOMEBREW_GITHUB_API_TOKEN=--redacted--
 
 alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
 
