@@ -79,3 +79,9 @@ C-M-{n,p}               | matching paren
 - **Diagnotics Mode:**: boot with _D_ or _Option-D_ (via internet).
 - **Verbose Mode:**: boot with _Command-V_.
 - **Single-User Mode:**: boot with _Command-S_.
+
+Monitoring with terminal commands:
+
+- **monitor file openings:** `sudo opensnoop -ve | egrep "(UID|$UID)"`
+- **check who's taking all the disk io:** `sudo iosnoop -stoD`
+- **monitor starting processes:** `sudo execsnoop -v`
