@@ -4,3 +4,6 @@
 	"draw_white_space": "selection",
 	"ensure_newline_at_eof_on_save": false
 }
+
+//notes:
+// use alt-command-left/right to switch tabs by position
