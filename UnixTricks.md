@@ -13,6 +13,13 @@
 - **one-at-a-time:** `... | xargs -L1 ...` 
 - **replace text:** `... | xargs -I% ...` 
 
+##rename
+- **dry-run:** `-n`
+- **sanitize:** `-z`
+- **perl (sed-like):** `rename -e 's/.*(?=[0-9])//' *`
+- **numbering:** `rename -N ...01 -e 's/^/$N/' *`
+
+
 ##git
 - **use colors to combine add/remove lines:** `git diff --color-words`
 - **characterwise diff:** `git diff --color-words=.`
