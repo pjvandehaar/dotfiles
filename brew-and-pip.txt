@@ -2,10 +2,10 @@ $ brew leaves
 bash-completion
 caskroom/cask/brew-cask
 emacs
-ffmpeg (--with-faac)
-gnu-sed # use `gsed`.
+ffmpeg --with-faac
 imagemagick
-jq # json parser, filter, etc
+jq
+lastpass-cli --with-pinentry --with-doc # security, documentation
 mercurial
 mobile-shell
 python # for ipython2 and pip2
@@ -22,7 +22,7 @@ alfred
 anki
 better-window-manager
 brackets
-day-o  # menubar calendar
+day-o
 flux
 hugin
 iterm2
@@ -52,8 +52,8 @@ vlc
 $ pip3 install pip-autoremove
 $ pip-autoremove -L | cut -f1 '-d ' | sort
 beautifulsoup4
-certifi # for requests+https
-csvkit # for csvcut -c <colname> foo.csv
+certifi
+csvkit
 fuzzywuzzy
 ipython
 marisa-trie
