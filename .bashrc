@@ -9,7 +9,7 @@ alias la="ls -AFG"
 
 alias h='head -n45'
 alias ..='cd ..'
-alias ds='du -sh *'
+alias ds='du -sh *' #TODO: sort by size.
 
 # OSX-specific
 function ql { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful! # TODO: confirm every tenth
