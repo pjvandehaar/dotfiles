@@ -1,0 +1,2 @@
+- use symbolic links to synchronize external folders
+    - `ln -s ~/Pictures/drawing.photoslibrary/Masters/ ~/Dropbox/ARCHIVE/backup-link-for-photos-masters`
