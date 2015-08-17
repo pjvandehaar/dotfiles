@@ -56,6 +56,8 @@ M-^                     | join previous line
 M-m                     | move to first character on line
 M-g g _num_             | goto line
 C-M-{n,p}               | matching paren
+M-l                     | move window around cursor
+M-r                     | move cursor to center of window
 
 
 ##emacs + python
