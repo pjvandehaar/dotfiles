@@ -19,6 +19,9 @@
 - **perl (sed-like):** `rename -e 's/.*(?=[0-9])//' *`
 - **numbering:** `rename -N ...01 -e 's/^/$N/' *`
 
+##lastpass
+- `lpass ls | grep umich`
+- `lpass show umich.edu`
 
 ##git
 - **use colors to combine add/remove lines:** `git diff --color-words`

@@ -2,7 +2,8 @@
 # =========
 alias e=emacs
 
-# F=markers, t=time-sort, r=reverse, G=color
+# F=markers, t=time-sort, r=reverse, G=color (OSX-specific)
+# TODO pipe into `more`?
 function l  { CLICOLOR_FORCE=1 ls -lhFGAtr "$@" | egrep --color=never -v '~|#|\.DS_Store$'; }
 function ll { CLICOLOR_FORCE=1 ls -lhFG    "$@" | egrep --color=never -v '~|#|\.DS_Store$'; }
 alias la="ls -AFG"
@@ -29,7 +30,7 @@ alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
 
 alias grep='grep --color=auto'
 export EDITOR=emacs
-PS1='\[\e[1;32m\]\t \[\e[1;34m\]\w\[\e[0m\] ' # show time and wd
+export PS1='\[\e[1;32m\]\t \[\e[1;34m\]\w\[\e[0m\] ' # show time and wd
 
 export HISTFILESIZE=10000000
 export HISTSIZE=100000
