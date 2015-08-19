@@ -12,6 +12,7 @@
 - `echo $OLDPWD`
 - **one-at-a-time:** `... | xargs -L1 ...` 
 - **replace text:** `... | xargs -I% ...` 
+- **don't wrap lines:** `less -S`
 
 ##rename
 - **dry-run:** `-n`
