@@ -20,6 +20,8 @@ alias gs='git status'
 alias ga='git add'
 alias gc='git commit'
 
+# pass in a glob (protected in a string) and get back an arbitrary match
+function arb { bash -c "l=($1); echo \${l[0]};"; }
 
 # settings
 # ========
