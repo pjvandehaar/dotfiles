@@ -10,17 +10,17 @@ mercurial
 mobile-shell
 python # for ipython2 and pip2
 python3
+homebrew/science/r
 rename
 homebrew/fuse/sshfs
 tree
 wget
 youtube-dl
-z
 
 $ brew cask list
 alfred
 anki
-better-window-manager
+box-sync
 brackets
 day-o
 flux
@@ -39,7 +39,6 @@ qlmarkdown
 qlstephen
 quicklook-csv
 quicklook-json
-r
 rstudio
 seashore
 sourcetree
