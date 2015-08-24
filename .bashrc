@@ -46,4 +46,3 @@ export PATH="$HOME/bin:$PATH"
 
 # get git-completion from https://github.com/git/git/tree/master/contrib/completion
 . ~/.git-completion.sh
-. `brew --prefix`/etc/profile.d/z.sh
