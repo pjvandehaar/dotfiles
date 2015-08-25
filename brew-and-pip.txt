@@ -17,7 +17,7 @@ tree
 wget
 youtube-dl
 
-$ brew cask list
+$ brew cask list | cat
 alfred
 anki
 box-sync
