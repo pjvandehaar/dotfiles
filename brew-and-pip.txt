@@ -12,7 +12,7 @@ python # for ipython2 and pip2
 python3
 homebrew/science/r
 rename
-homebrew/fuse/sshfs
+homebrew/fuse/sshfs (depends on Caskroom/osxfuse or XCode)
 tree
 wget
 youtube-dl
@@ -29,10 +29,10 @@ iterm2
 imageoptim
 lastpass
 macdown
-mactex
+mactex (really?)
 nvalt
 omnidisksweeper
-osxfuse # ssh mount
+osxfuse (dependency for sshfs)
 pycharm-ce
 qlcolorcode
 qlmarkdown

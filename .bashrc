@@ -1,6 +1,7 @@
 # shortcuts
 # =========
 alias e=emacs
+alias pip="echo Use pip2 or pip3! #"
 
 # F=markers, t=time-sort, r=reverse, G=color (OSX-specific)
 # TODO pipe into `more`?
@@ -44,5 +45,5 @@ export PATH="$HOME/bin:$PATH"
 # imports
 # =======
 
-# get git-completion from https://github.com/git/git/tree/master/contrib/completion
-. ~/.git-completion.sh
+# get git-completion from https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash
+. ~/.git-completion.bash
