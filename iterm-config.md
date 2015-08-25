@@ -8,6 +8,7 @@ Config
 - Preferences > Profiles > Hotkey Window > Window > Screen > Main Screen
 - Preferences > Profiles > * > General > Working Directory > Reuse Previous Session's Directory
 - Preferences > Profiles > * > Terminal > Scrollback Buffer > Scrollback Lines > 10k
+- Preferences > Profiles > * > Terminal > Notifications > Silence Bell
 - Preferences > Profiles > * > Keys > * option acts as +Esc
 - Preferences > Pointer > Misc > Triple-click selects full wrapped lines
 - Preferences > General > Magic > Save copy/paste to disk
