@@ -1,4 +1,9 @@
 - General Settings > Start at login
+- Keyboard Shortcuts >
+    - Maximize > fn-ctrl-opt-com-up
+    - Left Half > ctrl-opt-com-left
+    - Right Half > ctrl-opt-com-right
+- Keyboard Shortcuts > Maximize > fn-ctrl-opt-command-up
 - Keyboard Shortcuts > Maximize > fn-ctrl-opt-command-up
 - _have window at right 25%_ > Menubar icon > Snap Areas > Create >
     - Gear > Keyboard Shortcut > fn-ctrl-opt-com-right
