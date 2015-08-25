@@ -13,15 +13,11 @@ on CD_to(theDir)
     tell application "iTerm"
         activate
 
-        try
-            set _session to current session of current terminal
-        on error
-            set _term to (make new terminal)
-            tell _term
-                launch session "Default"
-                set _session to current session
-            end tell
-        end try
+        set _term to (make new terminal)
+        tell _term
+            launch session "Default"
+            set _session to current session
+        end tell
 
         tell _session
             write text "cd " & theDir & ";clear;"
