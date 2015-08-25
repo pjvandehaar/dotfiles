@@ -2,7 +2,6 @@
 - General > Alfred Hotkey > {Command-Space}
 - Features > Web Search > Add Custom Search > `nt`, "Naver Translate", <http://m.endic.naver.com/search.nhn?searchOption=all&query={query}>
 - Features > System > Eject, Ejectall
-- Workflows > Searchio!
 - Features > Clipboard > Clipboard History > Persist for > 24 hours
 - Appearance > Theme > Light
 - Appearance > Options > How he looks > Hide hat
@@ -10,3 +9,4 @@
 - Appearance > Options > How he looks > Hide result shortcuts
 - Appearance > Options > How he looks > Hide menubar icon
 - Appearance > Options > How he acts > Fade in Alfred window > uncheck
+- http://www.packal.org/workflow/searchio
