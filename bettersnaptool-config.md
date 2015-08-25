@@ -1,0 +1,10 @@
+- General Settings > Start at login
+- Keyboard Shortcuts > Maximize > fn-ctrl-opt-command-up
+- _have window at right 25%_ > Menubar icon > Snap Areas > Create >
+    - Gear > Keyboard Shortcut > fn-ctrl-opt-com-right
+    - Letter > "\n  Right 25%"
+- _have window at left 75%_ > Menubar icon > Snap Areas > Create >
+    - Gear > Keyboard Shortcut > fn-ctrl-opt-com-left
+    - Letter > 
+    	- Align Right
+    	- "\nLeft 75%\t"
