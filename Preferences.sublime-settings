@@ -2,8 +2,9 @@
 // are overridden in turn by file type specific settings.
 {
 	"draw_white_space": "selection",
-	"ensure_newline_at_eof_on_save": false
+	"ensure_newline_at_eof_on_save": true
 }
 
 //notes:
+// `/Users/peter/Library/Application Support/Sublime Text 2/Packages/User/Preferences.sublime-settings`
 // use alt-command-left/right to switch tabs by position
