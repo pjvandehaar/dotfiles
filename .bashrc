@@ -1,7 +1,9 @@
 # shortcuts
 # =========
 alias e=emacs
+
 alias pip="echo Use pip2 or pip3! #"
+alias ipython="echo Use ipython2 or ipython3! #"
 
 # F=markers, t=time-sort, r=reverse, G=color (OSX-specific)
 # TODO pipe into `more`?

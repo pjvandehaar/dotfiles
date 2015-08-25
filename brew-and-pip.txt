@@ -54,7 +54,7 @@ beautifulsoup4
 certifi
 csvkit
 fuzzywuzzy
-ipython
+ipython[notebook]
 marisa-trie
 pip-autoremove
 python-Levenshtein
