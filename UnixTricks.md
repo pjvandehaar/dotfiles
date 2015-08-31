@@ -31,6 +31,7 @@
 - **use colors to combine add/remove lines:** `git diff --color-words`
 - **characterwise diff:** `git diff --color-words=.`
 - **selectively revert changes:** `git checkout -p`
+- `git grep -E 'pattern'`
 
 ##homebrew
 - `brew leaves`
