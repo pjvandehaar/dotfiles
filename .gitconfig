@@ -4,7 +4,6 @@
 [credential]
 	helper = osxkeychain
 [push]
-	deault = simple
 	default = simple
 [core]
 	excludesfile = /Users/peter/.gitignore_global
