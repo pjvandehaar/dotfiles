@@ -15,7 +15,9 @@
 - **don't wrap lines:** `less -S`
 
 ##find
-- **find young files:** `find -mmin -60 -exec stat -c "%y %n" {} \;`
+- **find young files:**
+	- Linux: `find . -mmin -60 -exec stat -c "%y   %n" {} \;`
+	- OS X: `find . -mmin -60 -exec stat -f "%Sm   %N" {} \;`
 
 ##rename
 - **dry-run:** `-n`
