@@ -15,3 +15,5 @@
 	wdiff = diff --word-diff
 [diff]
 	algorithm = patience
+[color]
+	ui = true
