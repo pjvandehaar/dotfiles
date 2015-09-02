@@ -1,3 +1,0 @@
-- System Preferences > Language & Region > Preferred Languages > + > Korean > 2-set
-- System Preferences > Keyboard > Shortcuts > Input Sources > Select Next Input Source > opt-com-space
-- System Preferences > Keyboard > Keyboard > Show Keyboard & Character Viewers in menubar

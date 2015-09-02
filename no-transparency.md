@@ -1,1 +1,0 @@
-- System Preferences > Accessibilty > Display > Reduce Transparency

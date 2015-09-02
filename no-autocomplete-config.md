@@ -1,1 +1,0 @@
-- System Preferences > Keyboard > Text > (uncheck) Correct Spelling Automatically
