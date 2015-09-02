@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 
-print('\n'.join(__import__('random').sample(
-    list(w for w in 
-    open('/usr/share/dict/words').read().split()
-    if w.islower()
-    ),
-    8)))
+import random
+
+k = 8
+words = ['\n']*k
+
+for i, word in enumerate(open('/usr/share/dict/words')):
+    if random.randint(0,i) < k:
+        words[random.randint(0,k-1)] = word.strip()
+
+print('\n'.join(words))
