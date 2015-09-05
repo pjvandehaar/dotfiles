@@ -1,3 +1,4 @@
 - Preferences > Notes > Synchronization > uncheck Synchronize with Simplenote
 - Preferences > Notes > Storage > Store & read as > plaintext
 - Preferences > Notes > Read notes from folder > `~/Dropbox/Notational Data/`
+- Preferences > General > (uncheck) Quit when closing window
