@@ -55,7 +55,7 @@ alias grep='grep --color=auto'
 export EDITOR=emacs
 
 export GIT_PS1_SHOWDIRTYSTATE=1
-export PS1='\[\e[1;32m\]\t \[\e[1;34m\]\w\[\e[1;32m\]$(__git_ps1 " (%s)")\[\e[0m\] ' # show time and wd and git branch/state
+export PS1='\[\e[1;34m\]\w\[\e[1;32m\]$(__git_ps1 " (%s)")\[\e[0m\] ' # show wd and git branch/state
 
 export HISTFILESIZE=10000000
 export HISTSIZE=100000
