@@ -85,7 +85,9 @@ M-r                     | move cursor to center of window
   - **context:** `list`, `list start, end`, `args`
 
 ##OSX troubleshooting
-- **wifi:** `rm /L*/Pr*ces/S*/{com.apple.{air,net},Net,pref}*.plist`
+- **wifi:**
+  + `rm /L*/Pr*ces/S*/{com.apple.{air,net},Net,pref}*.plist`
+  + shut off bluetooth
 - **reset SMC:** hold _C-M-S-powerbutton_ for 3 seconds while the computer is off but plugged in.
   + do this for issues related to: MagSafe, battery, fans, power button, lid, unexpected shutdown/sleep.
   + expect MagSafe light to change.
