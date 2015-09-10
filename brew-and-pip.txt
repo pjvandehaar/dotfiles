@@ -1,8 +1,10 @@
 $ brew leaves
+autossh
 bash-completion
 caskroom/cask/brew-cask
 emacs
 ffmpeg --with-faac
+gist
 imagemagick
 jq
 lastpass-cli --with-pinentry --with-doc # security, documentation
@@ -23,33 +25,30 @@ anki
 box-sync
 brackets
 day-o
+dropbox
 flux
+google-chrome
+google-hangouts
 hugin
 iterm2
-imageoptim
 lastpass
 macdown
-mactex (really?)
 nvalt
 omnidisksweeper
 osxfuse (dependency for sshfs)
 pycharm-ce
 qlcolorcode
-qlmarkdown
-qlstephen
 quicklook-csv
 quicklook-json
 rstudio
-seashore
+skype
 sourcetree
-speedcrunch
 sublime-text 
-the-unarchiver
 transmission
 vlc
 
 $ pip3 install pip-autoremove
-$ pip-autoremove -L | cut -f1 '-d ' | sort
+$ pip-autoremove -L | perl -pale '$_ = $F[0]' | sort
 beautifulsoup4
 certifi
 csvkit

@@ -12,3 +12,11 @@
 - Appearance > Options > How he looks > Hide result shortcuts
 - Appearance > Options > How he looks > Hide menubar icon
 - Appearance > Options > How he acts > Fade in Alfred window > uncheck
+
+#Workflows
+- GitHub commands
+  - use `gh login <github_token>`
+- Searchio!
+- Hotkey to nvALT scratchpad
+- Export top Pages document to PDF
+- Naver Korean-English dictionary
