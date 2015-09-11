@@ -1,0 +1,5 @@
+# Don't show the default user
+LP_USER_ALWAYS=0
+
+# Don't show VCS info  in `/Volumes`, where it's likely to be slow, esp if it's sshfs.
+LP_DISABLED_VCS_PATH="/Volumes/"

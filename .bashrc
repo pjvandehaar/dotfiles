@@ -7,7 +7,13 @@
 
 # get `.git-prompt.sh` from https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
 # (you've gotta change the name)
-. ~/.git-prompt.sh
+#. ~/.git-prompt.sh
+
+# configure this in `~/.liquidpromptrc`.
+# a template is in `/usr/local/share/liquidpromptrc-dist`.
+if [ -f /usr/local/share/liquidprompt ]; then
+    . /usr/local/share/liquidprompt
+fi
 
 
 # shortcuts
@@ -17,6 +23,7 @@ alias e=emacs
 
 alias pip="echo Use pip2 or pip3! #"
 alias ipython="echo Use ipython2 or ipython3! #"
+alias python="echo Use python2 or python3! #"
 
 # F=markers, t=time-sort, r=reverse, G=color (OSX-specific)
 function l  { CLICOLOR_FORCE=1 ls -lhFGAtr "$@" | egrep --color=never -v '~|#|\.DS_Store$'; }
@@ -54,8 +61,8 @@ alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
 alias grep='grep --color=auto'
 export EDITOR=emacs
 
-export GIT_PS1_SHOWDIRTYSTATE=1
-export PS1='\[\e[1;34m\]\w\[\e[1;32m\]$(__git_ps1 " (%s)")\[\e[0m\] ' # show wd and git branch/state
+#export GIT_PS1_SHOWDIRTYSTATE=1
+#export PS1='\[\e[1;34m\]\w\[\e[1;32m\]$(__git_ps1 " (%s)")\[\e[0m\] ' # show wd and git branch/state
 
 export HISTFILESIZE=10000000
 export HISTSIZE=100000
