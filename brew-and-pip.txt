@@ -2,6 +2,7 @@ $ brew leaves
 autossh
 bash-completion
 caskroom/cask/brew-cask
+coreutils
 emacs
 ffmpeg --with-faac
 gist
