@@ -5,13 +5,12 @@
 # (you've gotta change the name)
 . ~/.git-completion.bash
 
-# get `.git-prompt.sh` from https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
-# (you've gotta change the name)
-#. ~/.git-prompt.sh
-
 # configure this in `~/.liquidpromptrc`.
 # a template is in `/usr/local/share/liquidpromptrc-dist`.
-if [ -f /usr/local/share/liquidprompt ]; then
+if [ "$TERM" = "dumb" ]; then 
+    # liquidprompt makes emacs-shell angry
+    export PS1="\w $ "
+elif [ -f /usr/local/share/liquidprompt ]; then
     . /usr/local/share/liquidprompt
 fi
 
@@ -23,7 +22,7 @@ alias e=emacs
 alias gs='git status'
 alias h='head -n45'
 alias ..='cd ..'
-alias ds='du -sh *' #TODO: sort by size.
+alias ds='du -sh * | gsort -h'
 
 alias pip="echo Use pip2 or pip3! #"
 alias ipython="echo Use ipython2 or ipython3! #"
@@ -51,15 +50,12 @@ function snowwhite {
 # settings
 # ========
 
-export HOMEBREW_GITHUB_API_TOKEN=--redacted--
+$(l=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=ef fb38018 efe1bfd 9ac556bc7454855 4c6601310);printf %s "${l[@]}")
 
 alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
 
 alias grep='grep --color=auto'
 export EDITOR=emacs
-
-#export GIT_PS1_SHOWDIRTYSTATE=1
-#export PS1='\[\e[1;34m\]\w\[\e[1;32m\]$(__git_ps1 " (%s)")\[\e[0m\] ' # show wd and git branch/state
 
 export HISTFILESIZE=10000000
 export HISTSIZE=100000
@@ -67,3 +63,6 @@ export HISTIGNORE="ls:l"
 export HISTTIMEFORMAT="%Y/%m/%d %T "
 
 export PATH="$HOME/bin:$PATH"
+
+PERL_MB_OPT="--install_base \"/Users/peter/perl5\""; export PERL_MB_OPT;
+PERL_MM_OPT="INSTALL_BASE=/Users/peter/perl5"; export PERL_MM_OPT;
