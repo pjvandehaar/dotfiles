@@ -6,3 +6,4 @@
 	- System Preferences > Keyboard > Shortcuts > Input Sources > Select Next Input Source > opt-com-space
 	- System Preferences > Keyboard > Keyboard > Show Keyboard & Character Viewers in menubar
 - **Shut off Bluetooth:** System Preferences > Bluetooth > Turn Bluetooth off
+- **Change Name on Network:** System Preferences > Sharing > Computer Name > (type)
