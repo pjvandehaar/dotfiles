@@ -18,9 +18,10 @@ Config
 Cool Tricks
 ===========
 - Quad-click on URLs
-- fn-command-up # go up a page
-- command-option-e # expose
-- command-shift-h # paste history
-- command-; # autocomplete from text in window
+- **view paste history:** command-shift-h
+- **autocomplete:** command-;
 - command-f <click magnifying glass> regex
-- command-i <tabname> ESC
+- **rename tab:** command-i <tabname> ESC
+- **split:** command-d
+- **switch panes:** command-option-arrow
+- **reset scrollback:** command-k

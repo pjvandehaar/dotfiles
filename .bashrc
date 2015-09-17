@@ -1,13 +1,18 @@
 # imports
 # =======
 
+# following directions at <https://github.com/Homebrew/homebrew/blob/master/Library/Formula/bash-completion.rb>
+if [ -f `brew --prefix`/etc/bash_completion ]; then
+    . `brew --prefix`/etc/bash_completion
+fi
+
 # get `.git-completion.bash` from https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash
 # (you've gotta change the name)
 . ~/.git-completion.bash
 
 # configure this in `~/.liquidpromptrc`.
-# a template is in `/usr/local/share/liquidpromptrc-dist`.
-if [ "$TERM" = "dumb" ]; then 
+# a template is at <https://github.com/nojhan/liquidprompt/blob/master/liquidpromptrc-dist>.
+if [[ "$TERM" = "dumb" ]]; then 
     # liquidprompt makes emacs-shell angry
     export PS1="\w $ "
 elif [ -f /usr/local/share/liquidprompt ]; then
@@ -34,6 +39,7 @@ function ll { CLICOLOR_FORCE=1 ls -lhFG    "$@" | egrep --color=never -v '~|#|\.
 alias la="ls -AFG"
 function cdl { cd "$1" && l; }
 function mcd { mkdir -p "$1" && cd "$1"; }
+function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
 
 # OSX-specific
 function ql { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful not to open too many! # TODO: confirm every tenth

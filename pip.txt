@@ -1,0 +1,10 @@
+$ pip3 install pip-autoremove
+$ pip-autoremove -L |perl -pale '$_=$F[0]'|sort
+beautifulsoup4
+csvkit
+ipython[notebook]
+pip-autoremove
+requests
+#some removed
+
+$ pip2 install percol

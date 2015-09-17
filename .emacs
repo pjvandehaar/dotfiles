@@ -14,3 +14,5 @@
  )
 
 (standard-display-ascii ?\t "–––→")
+
+(setq-default indent-tabs-mode nil)

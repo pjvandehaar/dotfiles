@@ -1,3 +1,5 @@
+$ brew {cask,} cleanup
+
 $ brew leaves
 autossh
 bash-completion
@@ -48,17 +50,3 @@ sourcetree
 sublime-text 
 transmission
 vlc
-
-$ pip3 install pip-autoremove
-$ pip-autoremove -L | perl -pale '$_ = $F[0]' | sort
-beautifulsoup4
-certifi
-csvkit
-fuzzywuzzy
-ipython[notebook]
-marisa-trie
-pip-autoremove
-python-Levenshtein
-requests
-
-$ pip2 install percol
