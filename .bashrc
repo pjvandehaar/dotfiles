@@ -33,6 +33,7 @@ function l  { CLICOLOR_FORCE=1 ls -lhFGAtr "$@" | egrep --color=never -v '~|#|\.
 function ll { CLICOLOR_FORCE=1 ls -lhFG    "$@" | egrep --color=never -v '~|#|\.DS_Store$'; }
 alias la="ls -AFG"
 function cdl { cd "$1" && l; }
+function mcd { mkdir -p "$1" && cd "$1"; }
 
 # OSX-specific
 function ql { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful not to open too many! # TODO: confirm every tenth
@@ -55,6 +56,8 @@ $(l=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=ef fb38018 efe1bfd 9ac556bc7454
 alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
 
 alias grep='grep --color=auto'
+alias egrep='egrep --color=auto'
+alias man='man -a'
 export EDITOR=emacs
 
 export HISTFILESIZE=10000000
@@ -62,7 +65,7 @@ export HISTSIZE=100000
 export HISTIGNORE="ls:l"
 export HISTTIMEFORMAT="%Y/%m/%d %T "
 
-export PATH="$HOME/bin:$PATH"
+export PATH="$HOME/bin:$HOME/perl5/bin:$PATH"
 
-PERL_MB_OPT="--install_base \"/Users/peter/perl5\""; export PERL_MB_OPT;
-PERL_MM_OPT="INSTALL_BASE=/Users/peter/perl5"; export PERL_MM_OPT;
+export PERL_MB_OPT="--install_base \"/Users/peter/perl5\""
+export PERL_MM_OPT="INSTALL_BASE=/Users/peter/perl5"
