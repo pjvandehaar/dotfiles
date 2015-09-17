@@ -1,12 +1,11 @@
 [user]
 	name = Peter VandeHaar
 	email = <<removed>>
-[credential]
-	helper = osxkeychain
 [push]
 	default = current # this means `simple` in modern versions
 [core]
-	excludesfile = /Users/peter/.gitignore_global
+	excludesfile = ~/.gitignore_global
+#	pager = less -r
 [alias]
 	cdiff = diff --color-words=.
 	wdiff = diff --word-diff
@@ -15,3 +14,5 @@
 	tool = emerge
 [color]
 	ui = true
+# [pager]
+#	status = true
