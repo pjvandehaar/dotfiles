@@ -19,13 +19,16 @@ lp=/usr/local/share/liquidprompt
 if [[ "$TERM" = "dumb" ]]; then 
     # liquidprompt makes emacs-shell angry
     export PS1="\w $ "
-elif [ -f "$lp" ]; then
+elif [ -f "$lp" ] && [[ $- = *i* ]]; then
     . "$lp"
 fi
 
 
 # shortcuts
 # =========
+
+# aliases mask functions
+unalias l ll la cdl mcd check_repos arb h 2>/dev/null
 
 alias e=emacs
 alias gs='git status'
