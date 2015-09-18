@@ -13,6 +13,9 @@
  ;; If there is more than one, they won't work right.
  )
 
-(standard-display-ascii ?\t "–––→")
-
 (setq-default indent-tabs-mode nil)
+
+;; for docs, `C-h v whitespace-style` or (describe-variable 'whitespace-style)
+(require 'whitespace)
+(setq-default whitespace-style '(face trailing indentation::space space-before-tab space-after-tab empty))
+(global-whitespace-mode 1)
