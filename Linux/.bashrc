@@ -44,8 +44,8 @@ alias gotcloud='echo dont use the system gotcloud! #'
 # options: `less -R`: pass thru color codes.
 #          `less -X`: `cat` when finished.
 #          `less -F`: quit immediately if output fits on one screen.
-function l { ls -lhFAtr --color "$@" | less -RXF ; }
-function ll { ls -lhF --color "$@" | less -RXF ; }
+function l { ls -lhFABtr --color "$@" | less -RXF ; }
+function ll { ls -lhBF --color "$@" | less -RXF ; }
 function la { ls -FACw $COLUMNS --color "$@" | less -RXF ; } # `ls -Cw $COLUMNS` outputs for the terminal's correct number of columns.
 
 function cdl { cd "$1" && l; }
