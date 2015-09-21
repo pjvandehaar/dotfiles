@@ -12,6 +12,7 @@
 	wdiff = diff --word-diff
 [diff]
 	algorithm = patience
+[merge]
 	tool = emerge
 [color]
 	ui = true

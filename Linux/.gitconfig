@@ -5,14 +5,12 @@
 	default = current # this means `simple` in modern versions
 [core]
 	excludesfile = ~/.gitignore_global
-#	pager = less -r
 [alias]
 	cdiff = diff --color-words=.
 	wdiff = diff --word-diff
 [diff]
 	algorithm = patience
+[merge]
 	tool = emerge
 [color]
 	ui = true
-# [pager]
-#	status = true
