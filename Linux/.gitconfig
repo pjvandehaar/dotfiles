@@ -1,6 +1,6 @@
 [user]
 	name = Peter VandeHaar
-	email = <<removed>>
+	email = pjvandehaar@gmail.com
 [push]
 	default = current # this means `simple` in modern versions
 [core]
