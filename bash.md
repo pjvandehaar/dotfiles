@@ -4,14 +4,14 @@
 - `netstat -rn | grep default`
 
 ##bash
-- `type ls`  
+- `type ls`
 - `diff <(sort .bashrc) <(sort .bash_profile)`
 - `history | tail -n1000 | sort -k2 | less`
   - requires `export HISTTIMEFORMAT="%Y/%m/%d %T"`
 - **expand inline:** C-A-e, C-x *
 - `echo $OLDPWD`
-- **one-at-a-time:** `... | xargs -L1 ...` 
-- **replace text:** `... | xargs -I% ...` 
+- **one-at-a-time:** `... | xargs -L1 ...`
+- **replace text:** `... | xargs -I% ...`
 - **don't wrap lines:** `less -S`
 
 ##find
@@ -42,7 +42,7 @@
 ##emacs
 key                     | effect
 ------------------------|-------
-M-x `menu-bar-open`, F10| 
+M-x `menu-bar-open`, F10|
 C-h k                   | get help on key
 _region_ `M-|` `pbcopy` | copy region to mac clipboard
 C-x {2,3}               | view current buffer in two "windows"
@@ -57,6 +57,7 @@ C-M-{n,p}               | matching paren
 M-l                     | move window around cursor
 M-r                     | move cursor to center of window
 C-q <tab>               |
+C-u 0 C-k               | kill-line-backwards
 
 
 ##emacs + python
