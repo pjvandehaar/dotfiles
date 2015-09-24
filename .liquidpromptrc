@@ -2,7 +2,7 @@
 LP_USER_ALWAYS=0
 
 # Don't show VCS info  in `/Volumes`, where it's likely to be slow, esp if it's sshfs.
-LP_DISABLED_VCS_PATH="/Volumes/"
+LP_DISABLED_VCS_PATH="/Volumes/:/net/"
 
 # Show battery % when under 30%
 LP_BATTERY_THRESHOLD=30
