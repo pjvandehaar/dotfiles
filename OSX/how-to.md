@@ -1,0 +1,2 @@
+- **Volume:** _shift-option-volumekey_
+- **Files belonging to packages**: `pkgutil --pkgs; pkgutil --files <pkgname>`
