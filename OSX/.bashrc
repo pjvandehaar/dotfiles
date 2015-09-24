@@ -35,6 +35,7 @@ alias gs='git status'
 function h { head -n $((LINES-2)); }
 alias ..='cd ..'
 alias ds='du -sh * | gsort -h'
+alias diff2='diff -dy -W$COLUMNS'
 
 alias pip="echo Use pip2 or pip3! #"
 alias ipython="echo Use ipython2 or ipython3! #"
@@ -51,6 +52,7 @@ function cdl { cd "$1" && l; }
 function mcd { mkdir -p "$1" && cd "$1"; }
 function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
 function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
+function cutdammit { awk "{print \$$1}"; }
 
 # pass in a glob (optionally protected in a string) and get back an arbitrary match
 function arb { bash -c "l=($1); echo \${l[0]};"; }
