@@ -2,7 +2,8 @@
 LP_USER_ALWAYS=0
 
 # Don't show VCS info  in `/Volumes`, where it's likely to be slow, esp if it's sshfs.
-LP_DISABLED_VCS_PATH="/Volumes/:/net/"
+# Don't show VCS info in `/net/*`, but `/net/$HOSTNAME` is okay.
+LP_DISABLED_VCS_PATH="/Volumes/"$(perl -e 'print map {":/net/$_"} @ARGV' $(ls /net/ | grep -v "$HOSTNAME"))
 
 # Show battery % when under 30%
 LP_BATTERY_THRESHOLD=30

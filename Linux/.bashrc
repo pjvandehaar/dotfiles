@@ -1,7 +1,8 @@
 # imports
 # =======
 
-export PATH="$HOME/bin:$HOME/perl5/bin:$PATH"
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/perl5/bin:$PATH"
+export PYTHONPATH="$HOME/.local/lib:$PYTHONPATH"
 
 # I don't know whether this is right, but it seems to work.
 bc=/etc/bash_completion
