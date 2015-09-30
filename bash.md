@@ -52,12 +52,13 @@ C-x C-f                 | view a file
 M->                     | end of buffer
 M-^                     | join previous line
 M-m                     | move to first character on line
-M-g g _linenum_         |
+M-g g _linenum_         | Go to _linenum_
 C-M-{n,p}               | matching paren
 M-l                     | move window around cursor
 M-r                     | move cursor to center of window
-C-q <tab>               |
+C-q <tab>               | Indent a literal tab
 C-u 0 C-k               | kill-line-backwards
+C-x <tab>               | Enter indentation mode
 
 
 ##emacs + python
@@ -67,6 +68,7 @@ C-u 0 C-k               | kill-line-backwards
 - M-e
 - C-M-f
 - C-M-b
+- **toggle comment:** M-;
 
 ##python
 - **postmortem debugger:** `python3 -m pdb foo.py`
