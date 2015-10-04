@@ -55,6 +55,7 @@ function mcd { mkdir -p "$1" && cd "$1"; }
 function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
 function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
 function cutdammit { awk "{print \$$1}"; }
+function sumdammit { perl -nale '$s += $_ ; END{print $s}'; }
 
 # pass in a glob (optionally protected in a string) and get back an arbitrary match
 function arb { bash -c "l=($1); echo \${l[0]};"; }
