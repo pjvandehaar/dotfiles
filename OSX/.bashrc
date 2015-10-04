@@ -65,8 +65,9 @@ function clip { [ -t 0 ] && pbpaste || pbcopy; }
 function notify { /usr/bin/osascript -e "display notification \"$*\" with title \"FINISHED\""; }
 
 function snowwhite {
-    mkdir /Volumes/SW
-    sshfs pjvh@snowwhite.sph.umich.edu:/home/pjvh  /Volumes/SW/
+    mount | grep -c /Volumes/SW > /dev/null && echo unmounting... && umount /Volumes/SW
+    mkdir -p /Volumes/SW
+    sshfs pjvh@snowwhite.sph.umich.edu:/home/pjvh /Volumes/SW/
 }
 
 # settings
