@@ -43,6 +43,8 @@ alias ipython="echo Use ipython2 or ipython3! #"
 alias python="echo Use python2 or python3! #"
 alias gotcloud='echo dont use the system gotcloud! #'
 
+type -t r >/dev/null || alias r=R
+
 # options: `less -R`: pass thru color codes.
 #          `less -X`: `cat` when finished.
 #          `less -F`: quit immediately if output fits on one screen.
