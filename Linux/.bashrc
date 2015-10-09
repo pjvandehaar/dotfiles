@@ -58,6 +58,7 @@ function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'e
 function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
 function cutdammit { awk "{print \$$1}"; }
 function sumdammit { perl -nale '$s += $_ ; END{print $s}'; }
+function columndammit { perl -ple '$_ = substr $_, 0, 2000' | column -t; }
 
 # pass in a glob (optionally protected in a string) and get back an arbitrary match
 function arb { bash -c "l=($1); echo \${l[0]};"; }
