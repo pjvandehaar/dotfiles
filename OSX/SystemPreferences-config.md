@@ -7,3 +7,4 @@
 	- System Preferences > Keyboard > Keyboard > Show Keyboard & Character Viewers in menubar
 - **Shut off Bluetooth:** System Preferences > Bluetooth > Turn Bluetooth off
 - **Change Name on Network:** System Preferences > Sharing > Computer Name > (type)
+- **Enable three-finger dictionary:** System Preferences > Trackpad > Point & Click > Look up & data detectors > Tap with three fingers
