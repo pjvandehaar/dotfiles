@@ -11,3 +11,6 @@ bind-key -n M-Up kill-pane
 
 bind-key -n C-S-Left swap-window -t -1
 bind-key -n C-S-Right swap-window -t +1
+
+bind-key -n F8 command-prompt -p "(rename-window)" "rename-window '%%'" # Allow spaces
+# escape ^Qq # For now, C-q a is a decent way to send-prefix.
