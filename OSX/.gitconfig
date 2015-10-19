@@ -10,9 +10,15 @@
 [alias]
 	cdiff = diff --color-words=.
 	wdiff = diff --word-diff
+	glog = log --graph --decorate --branches --abbrev-commit
+	lol = log --graph --decorate --branches --abbrev-commit --pretty=oneline
 [diff]
 	algorithm = patience
 [merge]
 	tool = emerge
 [color]
 	ui = true
+[pager]
+	status = true
+[diff "gz"]
+	textconv = zcat
