@@ -8,3 +8,9 @@
 - **Shut off Bluetooth:** System Preferences > Bluetooth > Turn Bluetooth off
 - **Change Name on Network:** System Preferences > Sharing > Computer Name > (type)
 - **Enable three-finger dictionary:** System Preferences > Trackpad > Point & Click > Look up & data detectors > Tap with three fingers
+- **Expand save panel by default:**
+
+        defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+        defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
+
+- **Allow tab in modals:** `defaults write NSGlobalDomain AppleKeyboardUIMode -int 3`

@@ -6,23 +6,14 @@ export PYTHONPATH="$HOME/.local/lib:$PYTHONPATH"
 
 # I don't know whether this is right, but it seems to work.
 bc=/etc/bash_completion
-if [ -f "$bc" ]; then
-    . "$bc"
-fi
+[ -f "$bc" ] && . "$bc"
 
 # get `.git-completion.bash` from https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash
 # (you've gotta change the name)
 . ~/.git-completion.bash
 
-# configure this in `~/.liquidpromptrc`.
-# a template is at <https://github.com/nojhan/liquidprompt/blob/master/liquidpromptrc-dist>.
-lp=~/liquidprompt/liquidprompt
-if [[ "$TERM" = "dumb" ]]; then 
-    # liquidprompt makes emacs-shell angry
-    export PS1="\w $ "
-elif [ -f "$lp" ] && [[ $- = *i* ]]; then
-    . "$lp"
-fi
+pp="$(dirname $(dirname ${BASH_SOURCE[0]}))/prompt_prompt.sh"
+[ -f "$pp" ] && . "$pp"
 
 
 # shortcuts

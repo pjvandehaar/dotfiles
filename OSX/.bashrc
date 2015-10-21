@@ -7,19 +7,8 @@ export PATH="$HOME/bin:$HOME/perl5/bin:$PATH"
 bc=`brew --prefix`/etc/bash_completion
 [ -f "$bc" ] && . "$bc"
 
-# get `.git-completion.bash` from https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash
-# (you've gotta change the name)
-. ~/.git-completion.bash
-
-# configure this in `~/.liquidpromptrc`.
-# a template is at <https://github.com/nojhan/liquidprompt/blob/master/liquidpromptrc-dist>.
-lp=/usr/local/share/liquidprompt
-if [[ "$TERM" = "dumb" ]]; then 
-    # liquidprompt makes emacs-shell angry
-    export PS1="\w $ "
-elif [ -f "$lp" ] && [[ $- = *i* ]]; then
-    . "$lp"
-fi
+pp="$(dirname $(dirname ${BASH_SOURCE[0]}))/prompt_prompt.sh"
+[ -f "$pp" ] && . "$pp"
 
 
 # shortcuts
