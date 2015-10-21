@@ -8,10 +8,10 @@ coreutils
 emacs
 ffmpeg --with-faac
 gist
+git
 imagemagick
 jq
 lastpass-cli --with-pinentry --with-doc # security, documentation
-liquidprompt
 mercurial
 mobile-shell
 python # for ipython2 and pip2
