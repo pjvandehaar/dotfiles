@@ -59,10 +59,10 @@ M-g g _linenum_         | Go to _linenum_
 C-M-{n,p}               | matching paren
 M-l                     | move window around cursor
 M-r                     | move cursor to center of window
-C-q <tab>               | Indent a literal tab
+C-q _tab_               | Indent a literal tab
 C-u 0 C-k               | kill-line-backwards
-C-x <tab>               | Enter indentation mode
-
+C-x _tab_               | Enter indentation mode
+C-t                     | Search for a character
 
 ##emacs + python
 - C-M-a

@@ -2,7 +2,7 @@
 - Preferences > Advanced > Set Sync Folder > `~/Dropbox/Alfred`
 
 #Preferences
-- General > Alfred Hotkey > {Command-Space}
+- General > Alfred Hotkey > _Command-Space_
 - Features > Web Search > Add Custom Search > `nt`, "Naver Translate", <http://m.endic.naver.com/search.nhn?searchOption=all&query={query}>
 - Features > System > Eject, Ejectall
 - Features > Clipboard > Clipboard History > Persist for > 24 hours
@@ -20,3 +20,5 @@
 - Hotkey to nvALT scratchpad
 - Export top Pages document to PDF
 - Naver Korean-English dictionary
+- Advanced Google Maps Search
+- EggTimer

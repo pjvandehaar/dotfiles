@@ -1,14 +1,11 @@
 ## extensions
 - LastPass
-- CalvinStudent
 - Full Page Screen Capture
 - Google Docs
 - Hangouts
-- Open Frame
 - Project Naptha
-- SelectorGadget
-- Stylish
-- uBlock
+- TamperMonkey
+- uBlock (dynamic filtering)
 
 ## settings
 - Passwords and Forms > (uncheck) Enable Autofill
