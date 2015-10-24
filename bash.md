@@ -35,8 +35,9 @@
 ##git
 - **use colors to combine add/remove lines:** `git diff --color-words`
 - **characterwise diff:** `git diff --color-words=.`
-- **selectively revert changes:** `git checkout -p`
+- **select changes:** `git {checkout,reset,stage} -p`
 - `git grep -E 'pattern'`
+- `git fetch -a && git reset --hard origin/master`
 
 ##csv
 - `pip3 install csvkit`
