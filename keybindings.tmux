@@ -1,5 +1,4 @@
-# this file belongs in `~/.byobu/`.
-# for tmux config, use `~/.tmux.conf`.
+# `~/.byobu/keybindings.tmux`
 
 set -g prefix C-q
 unbind-key -n C-a
@@ -13,4 +12,3 @@ bind-key -n C-S-Left swap-window -t -1
 bind-key -n C-S-Right swap-window -t +1
 
 bind-key -n F8 command-prompt -p "(rename-window)" "rename-window '%%'" # Allow spaces
-# escape ^Qq # For now, C-q a is a decent way to send-prefix.

@@ -17,6 +17,7 @@
 (setq-default column-number-mode t)
 (setq-default show-paren-mode t)
 (setq-default indent-tabs-mode nil)
+(setq require-final-newline 'query)
 
 ;; see `C-h v whitespace-style`
 (require 'whitespace)
