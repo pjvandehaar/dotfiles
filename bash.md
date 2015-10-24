@@ -3,12 +3,15 @@
 - `sshfs user@host:dir mountpoint`
 - `netstat -rn | grep default`
 
+##readline
+- **expand inline:** `C-M-e`, `C-x *`
+- **jump to char:**: `C-]`
+
 ##bash
 - `type ls`
 - `diff <(sort .bashrc) <(sort .bash_profile)`
 - `history | tail -n1000 | sort -k2 | less`
   - requires `export HISTTIMEFORMAT="%Y/%m/%d %T"`
-- **expand inline:** C-A-e, C-x *
 - `echo $OLDPWD`
 - **one-at-a-time:** `... | xargs -L1 ...`
 - **replace text:** `... | xargs -I% ...`
