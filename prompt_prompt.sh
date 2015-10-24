@@ -32,14 +32,11 @@ _PP_prompt() {
         _git="${_PP_YEL} ${_git}${changes:+($changes)} "
     fi
 
-    local _hostname=''
-    [[ -z "$SSH_TTY" ]] || [[ -z "$SSH_CLIENT" ]] || _hostname='\h '
-
     local _pwd="${PWD/#$HOME/~}"
     local -i _max_len=$(( ${COLUMNS:-80} / 3 ))
     (( ${#_pwd} > _max_len )) && _pwd=" … ${_pwd:${#_pwd}-${_max_len}}"
 
-    PS1="${_NONE}${_PP_GRE} \t ${_hostname}${_PP_BLU} ${_pwd} $_git${_runtime}${_err}${_NONE} "
+    PS1="${_NONE}${_PP_GRE} \t ${_PP_BLU} ${_pwd} $_git${_runtime}${_err}${_NONE} "
 }
 
 _PP_runtime_last_seconds=$SECONDS
