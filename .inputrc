@@ -4,4 +4,5 @@
 set visible-stats on
 "\e\t": menu-complete
 "\e[Z": menu-complete
-"\ec": "\C-a\C-k${PWD} \C-\M-e\C-a\C-y\C-e"
+# Almost equivalent to "\ec": "${PWD}\C-\M-e"
+"\ec": "\C-a#\C-a\C-k${PWD} \C-\M-e\C-a\C-y\C-a\C-d\C-e"
