@@ -32,7 +32,8 @@ _PP_prompt() {
         _git="${_PP_YEL} ${_git}${changes:+($changes)} "
     fi
 
-    local _pwd="${PWD/#$HOME/~}"
+    local _tilde=\~ # bash3 vs bash4
+    local _pwd="${PWD/#$HOME/$_tilde}"
     local -i _max_len=$(( ${COLUMNS:-80} / 3 ))
     (( ${#_pwd} > _max_len )) && _pwd=" … ${_pwd:${#_pwd}-${_max_len}}"
 
@@ -51,4 +52,3 @@ _PP_reset_runtime() {
     [ "$BASH_COMMAND" = _PP_prompt ] && _PP_prompt_just_ran=1 || _PP_prompt_just_ran=''
 }
 trap '_PP_reset_runtime' DEBUG # This gets run just before any bash command.
-
