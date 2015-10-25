@@ -1,8 +1,24 @@
 # To find a keybinding: `cat` C-v [press desired chord]
 # Note: "\e" == "\M-"
 
+# Show /*@ in completion options
 set visible-stats on
+
+# Don't make me press tab more than once.
+# set show-all-if-unmodified on
+
+# (Bash4 only) Show only the remaining part of a completion (sometimes).
+set completion-prefix-display-length 1
+
+# Tab can be "\t" or "[Z" depending on the terminal.
 "\e\t": menu-complete
 "\e[Z": menu-complete
-# Almost equivalent to "\ec": "${PWD}\C-\M-e"
-"\ec": "\C-a#\C-a\C-k${PWD} \C-\M-e\C-a\C-y\C-a\C-d\C-e"
+
+# Insert CWD at point. Insert "cd" if the point is at the beginning.
+# Note: it's not hard to make this quote CWD, but I hate spaces in paths.
+# Note: on bash4 we could use `bind -x '"\ec":"foo"'`, where `foo` is a function that modifies `$READLINE_{LINE,POINT}`
+# 1. Get "cd" into the kill-ring.
+# 2. Kill the before the point.  If it's empty, nothing is placed in the kill-ring.
+# 3. Kill the after the point. Prefix a space to guarentee it lands in the kill-ring.
+# 4. Insert expanded $PWD, yank the after-point part, yank the before-point part (or "cd" if it was empty).
+"\ec": " cd\C-w\b\C-u \C-b\C-k $PWD\C-\M-e\C-y\C-a\C-y\ey\C-] "

@@ -38,6 +38,7 @@
 - **select changes:** `git {checkout,reset,stage} -p`
 - `git grep -E 'pattern'`
 - `git fetch -a && git reset --hard origin/master`
+- `git log --stat=,,5`
 
 ##csv
 - `pip3 install csvkit`
