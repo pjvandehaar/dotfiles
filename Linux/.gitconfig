@@ -8,8 +8,8 @@
 [alias]
 	cdiff = diff --color-words=.
 	wdiff = diff --word-diff
-	glog = log --graph --decorate --branches --abbrev-commit
-	lol = log --graph --decorate --branches --abbrev-commit --pretty=oneline
+	glog = log --graph --decorate --abbrev-commit
+	lol = log --graph --decorate --abbrev-commit --pretty=oneline
 [diff]
 	algorithm = patience
 [merge]
