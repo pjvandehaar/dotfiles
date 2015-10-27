@@ -14,10 +14,11 @@
 ;; I think that `setq-default` will let modes that override this setting do so.
 (setq-default vc-follow-symlinks t)
 (setq-default enable-local-variables nil)
-(setq-default column-number-mode t)
-(setq-default show-paren-mode t)
 (setq-default indent-tabs-mode nil)
-(setq require-final-newline 'query)
+(setq-default require-final-newline 'query)
+
+(column-number-mode)
+(show-paren-mode)
 
 ;; see `C-h v whitespace-style`
 (require 'whitespace)
