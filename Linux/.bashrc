@@ -68,3 +68,13 @@ export HISTIGNORE="ls:l"
 export HISTTIMEFORMAT="%Y/%m/%d %T "
 
 export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"
+
+
+# Flux
+# ====
+mangrep_flux() {
+    # paths are from `man -w | tr : "\n"`
+    find /usr/local/torque/man/ /opt/moab/man/ -type f |
+    while read fn; do zgrep -iH "$1" $fn; done |
+    grep -E --color=always "$1|$"
+}
