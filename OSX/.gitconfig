@@ -10,8 +10,9 @@
 [alias]
 	cdiff = diff --color-words=.
 	wdiff = diff --word-diff
-	glog = log --decorate --branches --abbrev-commit
-	lol = log --decorate --branches --abbrev-commit --pretty=oneline
+	glog = log --graph --decorate --abbrev-commit
+	lol  = log --graph --decorate --abbrev-commit --pretty=oneline
+	lola = log --graph --decorate --abbrev-commit --pretty=oneline --all
 [diff]
 	algorithm = patience
 [merge]

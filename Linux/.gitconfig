@@ -9,7 +9,7 @@
 	cdiff = diff --color-words=.
 	wdiff = diff --word-diff
 	glog = log --graph --decorate --abbrev-commit
-	lol = log --graph --decorate --abbrev-commit --pretty=oneline
+	lol =  log --graph --decorate --abbrev-commit --pretty=oneline
 	lola = log --graph --decorate --abbrev-commit --pretty=oneline --all
 [diff]
 	algorithm = patience
