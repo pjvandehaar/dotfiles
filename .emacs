@@ -22,7 +22,7 @@
 
 ;; see `C-h v whitespace-style`
 (require 'whitespace)
-(setq-default whitespace-style '(face trailing indentation::space space-before-tab space-after-tab empty))
+(setq-default whitespace-style '(face trailing indentation::space space-before-tab space-after-tab))
 (global-whitespace-mode)
 
 ;; go-to-char
