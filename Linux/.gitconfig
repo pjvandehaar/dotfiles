@@ -10,6 +10,7 @@
 	wdiff = diff --word-diff
 	glog = log --graph --decorate --abbrev-commit
 	lol = log --graph --decorate --abbrev-commit --pretty=oneline
+	lola = log --graph --decorate --abbrev-commit --pretty=oneline --all
 [diff]
 	algorithm = patience
 [merge]
@@ -20,3 +21,5 @@
 	status = true
 [diff "gz"]
 	textconv = zcat
+[diff "bam"]
+	textconv = samtools view -h
