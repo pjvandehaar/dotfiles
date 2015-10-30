@@ -1,17 +1,42 @@
-only_print_if_gte_n_lines() {
-    perl -e '$header = ""; $header .= <STDIN> foreach (1..@ARGV[0]); $printed_header=0; while ($line = <STDIN>) {print $header if ! ($printed_header++); print $line}' $1
+_reverse_all_but_first_n_lines() {
+    perl -ne '$lines .= $_; if ($. >= '$1') { print $lines; print reverse <> }'
 }
 
-showq_with_arg() {
+_only_print_if_gt_n_lines() {
+    perl -ne '$lines .= $_; if ($. > '$1') { print $lines; print <> }'
+}
+
+_showq_with_arg() {
     showq -n -v -u $USER $1 |
     tail -n +3 | head -n -5 |
     perl -ple 's/[A-Z][a-z]{2} ([A-Z][a-z]{2}) ([0-9]+) ([:0-9]{8})/$1$2_$3/' |
+    perl -ple 's{^([0-9]+)/\g1\.nyx\.arc-ts\.umich\.edu/}{$1 <clip>/}' |
+    perl -ple 's{^JOBID }{JOBID SCRIPT }' |
     column -t
 }
 
 show_my_jobs() {
-    (echo  ---- BLOCKED; showq_with_arg -b; echo) | only_print_if_gte_n_lines 3
-    (echo ---- IDLE; showq_with_arg -i; echo) | only_print_if_gte_n_lines 3
-    (echo ---- RUNNING; showq_with_arg -r; echo) | only_print_if_gte_n_lines 3
-    (echo ---- COMPLETE; showq_with_arg -c; echo) | only_print_if_gte_n_lines 3
+    clear
+    (
+        showq -u $USER -s
+        echo
+        (echo  ---- RUNNING;  _showq_with_arg -r | _reverse_all_but_first_n_lines 1; echo) | _only_print_if_gt_n_lines 3
+        (echo  ---- BLOCKED;  _showq_with_arg -b | _reverse_all_but_first_n_lines 1; echo) | _only_print_if_gt_n_lines 3
+        (echo  ---- IDLE;     _showq_with_arg -i | _reverse_all_but_first_n_lines 1; echo) | _only_print_if_gt_n_lines 3
+        (echo  ---- COMPLETE; _showq_with_arg -c | _reverse_all_but_first_n_lines 1; echo) | _only_print_if_gt_n_lines 3
+    ) |
+    less -XF
+}
+
+spaced_less() {
+    ([ -t 0 ] && cat "$1" || cat) |
+    sed 's_$_\n_' |
+    less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
+}
+
+mangrep_flux() {
+    # paths are from `man -w | tr : "\n"`
+    find /usr/local/torque/man/ /opt/moab/man/ -type f |
+    while read fn; do zgrep -iH "$1" $fn; done |
+    grep -E --color=always "$1|$"
 }
