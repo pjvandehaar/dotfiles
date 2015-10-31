@@ -19,6 +19,7 @@
 
 (column-number-mode)
 (show-paren-mode)
+(which-func-mode)
 
 ;; see `C-h v whitespace-style`
 (require 'whitespace)
