@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# -*- mode: python -*-
+
 import bs4
 import sys
 

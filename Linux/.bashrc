@@ -1,7 +1,9 @@
 # imports
 # =======
 
-export PATH="$HOME/bin:$HOME/.local/bin:$HOME/perl5/bin:$PATH"
+dotfiles_path=$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" && echo $PWD)
+
+export PATH="$dotfiles_path/bin:$HOME/bin:$HOME/.local/bin:$HOME/perl5/bin:$PATH"
 export PYTHONPATH="$HOME/.local/lib:$PYTHONPATH"
 
 # I don't know whether this is right, but it seems to work.
@@ -12,7 +14,7 @@ bc=/etc/bash_completion
 # (you've gotta change the name)
 . ~/.git-completion.bash
 
-pp="$(dirname $(dirname ${BASH_SOURCE[0]}))/prompt_prompt.sh"
+pp="$dotfiles_path/prompt_prompt.sh"
 [ -f "$pp" ] && . "$pp"
 
 
@@ -20,7 +22,7 @@ pp="$(dirname $(dirname ${BASH_SOURCE[0]}))/prompt_prompt.sh"
 # =========
 
 # aliases mask functions
-unalias l ll la cdl mcd check_repos h 2>/dev/null
+unalias l ll la cdl mcd h 2>/dev/null
 
 alias e=emacs
 alias gs='git status'
@@ -49,7 +51,6 @@ function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'e
 function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
 function cutdammit { awk "{print \$$1}"; }
 function sumdammit { perl -nale '$s += $_ ; END{print $s}'; }
-function columndammit { perl -ple '$_ = substr $_, 0, 2000' | column -t; }
 
 # settings
 # ========
