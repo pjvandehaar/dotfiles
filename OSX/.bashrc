@@ -15,7 +15,7 @@ pp="$(dirname $(dirname ${BASH_SOURCE[0]}))/prompt_prompt.sh"
 # =========
 
 # aliases mask functions
-unalias l ll la cdl mcd check_repos arb h notify 2>/dev/null
+unalias l ll la cdl mcd check_repos h notify 2>/dev/null
 
 alias e=emacs
 alias gs='git status'
@@ -42,9 +42,6 @@ function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $
 function cutdammit { awk "{print \$$1}"; }
 function sumdammit { perl -nale '$s += $_ ; END{print $s}'; }
 function columndammit { perl -ple '$_ = substr $_, 0, 2000' | column -t; }
-
-# pass in a glob (optionally protected in a string) and get back an arbitrary match
-function arb { bash -c "l=($1); echo \${l[0]};"; }
 
 # OSX-specific
 function ql { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful not to open too many! # TODO: confirm every tenth
