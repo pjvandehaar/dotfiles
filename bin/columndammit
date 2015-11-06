@@ -1,0 +1,31 @@
+#!/usr/bin/env perl
+
+# -*- mode: perl -*-
+
+use strict; use warnings; use v5.10;
+
+my @lines = <STDIN>;
+print "stdin is empty" and exit 1 if not @lines;
+
+my $delim = ($lines[0] =~ m{\t}) ? "\t" : qr{\s+};
+
+my @widths = ();
+foreach my $line (@lines) {
+    my $i = 0;
+    foreach my $elem (split $delim, $line) {
+        $elem =~ s/^\s+|\s+$//g;
+        my $l = length $elem;
+        $widths[$i] = $l if ! defined($widths[$i]) or $l > $widths[$i];
+        $i++;
+    }
+}
+
+foreach my $line (@lines) {
+    my $i = 0;
+    foreach my $elem (split $delim, $line) {
+        $elem =~ s/^\s+|\s+$//g;
+        printf " %${widths[$i]}s ", $elem;
+        $i++;
+    }
+    print "\n";
+}
