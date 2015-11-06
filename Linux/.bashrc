@@ -10,12 +10,8 @@ export PYTHONPATH="$HOME/.local/lib:$PYTHONPATH"
 bc=/etc/bash_completion
 [ -f "$bc" ] && . "$bc"
 
-# get `.git-completion.bash` from https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash
-# (you've gotta change the name)
-. ~/.git-completion.bash
-
-pp="$dotfiles_path/prompt_prompt.sh"
-[ -f "$pp" ] && . "$pp"
+. "$dotfiles_path/third-party/git-completion.bash"
+. "$dotfiles_path/prompt_prompt.sh"
 
 
 # shortcuts

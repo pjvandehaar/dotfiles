@@ -11,6 +11,10 @@
  ;; If there is more than one, they won't work right.
  )
 
+(add-to-list 'load-path "~/dotfiles/third-party/emacs")
+(require 'git)
+(require 'git-blame)
+
 ;; I think that `setq-default` will let modes that override this setting do so.
 (setq-default vc-follow-symlinks t)
 (setq-default enable-local-variables nil)
@@ -19,7 +23,10 @@
 
 (column-number-mode)
 (show-paren-mode)
+
 (which-func-mode)
+(eval-after-load "which-func"
+  '(setq which-func-modes '(java-mode c++-mode perl-mode)))
 
 ;; see `C-h v whitespace-style`
 (require 'whitespace)
