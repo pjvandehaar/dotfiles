@@ -1,3 +1,11 @@
+# OTHER USEFUL FLUX COMMANDS:
+# - `mdiag -a <acct>`
+# - `mdiag -u $USER`
+# - `qdel $(qselect -u $USER)`
+# - `checkjob <jobid>`
+# - `mjobctl -q diag <jobid>`
+
+
 _reverse_all_but_first_n_lines() {
     perl -ne '$lines .= $_; if ($. >= '$1') { print $lines; print reverse <> }'
 }
