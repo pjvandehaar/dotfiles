@@ -19,9 +19,11 @@ unalias l ll la cdl mcd check_repos h notify 2>/dev/null
 
 alias e=emacs
 alias gs='git status'
-function h { head -n $((LINES-2)); }
-alias ..='cd ..'
-alias ds='du -sh * | gsort -h'
+alias gl='git lol'
+alias gla='git lola'
+__git_complete gl  _git_log
+__git_complete gla _git_log
+function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
 alias diff2='diff -dy -W$COLUMNS'
 
 alias pip="echo Use pip2 or pip3! #"
@@ -35,6 +37,7 @@ function l  { CLICOLOR_FORCE=1 ls -lhFGAtr "$@" | (egrep --color=never -v '~|#|\
 function ll { CLICOLOR_FORCE=1 ls -lhFG    "$@" | (egrep --color=never -v '~|#|\.DS_Store$' ||true); }
 alias la="ls -AFG"
 
+ds() { find "${1:-.}" \( -d 0 -o -d 1 \) -print0 | xargs -0 du -sh | gsort -h | perl -pale 's{^(\s*[0-9.]+[BKMGT]\s+)\./}{\1}'; }
 function cdl { cd "$1" && l; }
 function mcd { mkdir -p "$1" && cd "$1"; }
 function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
@@ -52,7 +55,7 @@ function notify { /usr/bin/osascript -e "display notification \"$*\" with title 
 function snowwhite {
     mount | grep -c /Volumes/SW > /dev/null && echo unmounting... && umount /Volumes/SW
     mkdir -p /Volumes/SW
-    sshfs pjvh@snowwhite.sph.umich.edu:/home/pjvh /Volumes/SW/
+    sshfs  -odebug,sshfs_debug,loglevel=debug pjvh@snowwhite.sph.umich.edu:/home/pjvh /Volumes/SW/
 }
 
 # settings
