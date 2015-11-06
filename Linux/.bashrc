@@ -26,10 +26,12 @@ unalias l ll la cdl mcd h 2>/dev/null
 
 alias e=emacs
 alias gs='git status'
-function h { head -n $((LINES-2)); }
-alias ..='cd ..'
-alias ds='du -sh * | sort -h'
-alias diff2='diff -dy -W$COLUMNS'
+alias gl='git lol'
+alias gla='git lola'
+__git_complete gl  _git_log
+__git_complete gla _git_log
+function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
+alias diffdammit='diff -dy -W$COLUMNS'
 
 alias pip="echo Use pip2 or pip3! #"
 alias ipython="echo Use ipython2 or ipython3! #"
@@ -45,6 +47,7 @@ function l { ls -lhFABtr --color "$@" | less -RXF ; }
 function ll { ls -lhBF --color "$@" | less -RXF ; }
 function la { ls -FACw $COLUMNS --color "$@" | less -RXF ; } # `ls -Cw $COLUMNS` outputs for the terminal's correct number of columns.
 
+ds() { find "${1:-.}" \( -d 0 -o -d 1 \) -print0 | xargs -0 du -sh | gsort -h | perl -pale 's{^(\s*[0-9.]+[BKMGT]\s+)\./}{\1}'; }
 function cdl { cd "$1" && l; }
 function mcd { mkdir -p "$1" && cd "$1"; }
 function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }

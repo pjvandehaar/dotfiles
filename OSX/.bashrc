@@ -1,13 +1,15 @@
 # imports
 # =======
 
-export PATH="$HOME/bin:$HOME/perl5/bin:$PATH"
+dotfiles_path=$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" && echo $PWD)
+
+export PATH="$dotfiles_path/bin:$HOME/bin:$HOME/.local/bin:$HOME/perl5/bin:$PATH"
 
 # following directions at <https://github.com/Homebrew/homebrew/blob/master/Library/Formula/bash-completion.rb>
 bc=`brew --prefix`/etc/bash_completion
 [ -f "$bc" ] && . "$bc"
 
-pp="$(dirname $(dirname ${BASH_SOURCE[0]}))/prompt_prompt.sh"
+pp="$dotfiles_path/prompt_prompt.sh"
 [ -f "$pp" ] && . "$pp"
 
 
@@ -15,7 +17,7 @@ pp="$(dirname $(dirname ${BASH_SOURCE[0]}))/prompt_prompt.sh"
 # =========
 
 # aliases mask functions
-unalias l ll la cdl mcd check_repos h notify 2>/dev/null
+unalias l ll la cdl mcd h notify 2>/dev/null
 
 alias e=emacs
 alias gs='git status'
@@ -24,7 +26,7 @@ alias gla='git lola'
 __git_complete gl  _git_log
 __git_complete gla _git_log
 function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
-alias diff2='diff -dy -W$COLUMNS'
+alias diffdammit='diff -dy -W$COLUMNS'
 
 alias pip="echo Use pip2 or pip3! #"
 alias ipython="echo Use ipython2 or ipython3! #"
@@ -44,7 +46,6 @@ function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'e
 function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
 function cutdammit { awk "{print \$$1}"; }
 function sumdammit { perl -nale '$s += $_ ; END{print $s}'; }
-function columndammit { perl -ple '$_ = substr $_, 0, 2000' | column -t; }
 
 # OSX-specific
 function ql { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful not to open too many! # TODO: confirm every tenth
@@ -75,5 +76,5 @@ export HISTSIZE=100000
 export HISTIGNORE="ls:l"
 export HISTTIMEFORMAT="%Y/%m/%d %T "
 
-export PERL_MB_OPT="--install_base \"/Users/peter/perl5\""
-export PERL_MM_OPT="INSTALL_BASE=/Users/peter/perl5"
+export PERL_MB_OPT="--install_base \"$HOME/perl5\""
+export PERL_MM_OPT="INSTALL_BASE=$HOME/perl5"
