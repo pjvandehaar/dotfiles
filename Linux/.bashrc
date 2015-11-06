@@ -6,9 +6,8 @@ dotfiles_path=$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" && echo $PWD)
 export PATH="$dotfiles_path/bin:$HOME/bin:$HOME/.local/bin:$HOME/perl5/bin:$PATH"
 export PYTHONPATH="$HOME/.local/lib:$PYTHONPATH"
 
-# I don't know whether this is right, but it seems to work.
-bc=/etc/bash_completion
-[ -f "$bc" ] && . "$bc"
+# bc=/etc/bash_completion
+# [ -f "$bc" ] && . "$bc"
 
 . "$dotfiles_path/third-party/git-completion.bash"
 . "$dotfiles_path/prompt_prompt.sh"
