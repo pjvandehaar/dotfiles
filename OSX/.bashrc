@@ -39,7 +39,7 @@ function l  { CLICOLOR_FORCE=1 ls -lhFGAtr "$@" | (egrep --color=never -v '~|#|\
 function ll { CLICOLOR_FORCE=1 ls -lhFG    "$@" | (egrep --color=never -v '~|#|\.DS_Store$' ||true); }
 alias la="ls -AFG"
 
-ds() { find "${1:-.}" -maxdepth 1 -print0 | xargs -0 du -sh | gsort -h | perl -pale 's{^(\s*[0-9.]+[BKMGT]\s+)\./}{\1}'; }
+ds() { find "${1:-.}" -maxdepth 1 -print0 | xargs -0 -L1 du -sh | gsort -h | perl -pale 's{^(\s*[0-9.]+[BKMGT]\s+)\./}{\1}'; }
 function cdl { cd "$1" && l; }
 function mcd { mkdir -p "$1" && cd "$1"; }
 function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
