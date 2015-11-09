@@ -36,12 +36,6 @@ show_my_jobs() {
     less -XF
 }
 
-spaced_less() {
-    ([ -t 0 ] && cat "$1" || cat) |
-    sed 's_$_\n_' |
-    less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
-}
-
 mangrep_flux() {
     # paths are from `man -w | tr : "\n"`
     find /usr/local/torque/man/ /opt/moab/man/ -type f |

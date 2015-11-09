@@ -50,6 +50,12 @@ function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $
 function cutdammit { awk "{print \$$1}"; }
 function sumdammit { perl -nale '$s += $_ ; END{print $s}'; }
 
+spaced_less() {
+    ([ -t 0 ] && cat "$1" || cat) |
+    sed 's_$_\n_' |
+    less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
+}
+
 # settings
 # ========
 
