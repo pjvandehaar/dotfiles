@@ -1,7 +1,7 @@
 # imports
 # =======
 
-dotfiles_path=$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" && echo $PWD)
+dotfiles_path=$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
 
 export PATH="$dotfiles_path/bin:$HOME/bin:$HOME/.local/bin:$HOME/perl5/bin:$PATH"
 export PYTHONPATH="$HOME/.local/lib:$PYTHONPATH"
