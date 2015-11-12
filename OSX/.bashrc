@@ -56,7 +56,7 @@ function notify { /usr/bin/osascript -e "display notification \"$*\" with title 
 function snowwhite {
     mount | grep -c /Volumes/SW > /dev/null && echo unmounting... && umount /Volumes/SW
     mkdir -p /Volumes/SW
-    sshfs  -odebug,sshfs_debug,loglevel=debug pjvh@snowwhite.sph.umich.edu:/home/pjvh /Volumes/SW/
+    sshfs pjvh@snowwhite.sph.umich.edu:/home/pjvh /Volumes/SW/
 }
 
 # settings
