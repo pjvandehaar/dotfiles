@@ -38,9 +38,15 @@ type -t r >/dev/null || alias r=R
 # options: `less -R`: pass thru color codes.
 #          `less -X`: `cat` when finished.
 #          `less -F`: quit immediately if output fits on one screen.
-function l { ls -lhFABtr --color "$@" | less -RXF ; }
-function ll { ls -lhBF --color "$@" | less -RXF ; }
-function la { ls -FACw $COLUMNS --color "$@" | less -RXF ; } # `ls -Cw $COLUMNS` outputs for the terminal's correct number of columns.
+if [[ $TERM != dumb ]]; then
+    function l { ls -lhFABtr --color "$@" | less -RXF ; }
+    function ll { ls -lhBF --color "$@" | less -RXF ; }
+    function la { ls -FACw $COLUMNS --color "$@" | less -RXF ; } # `ls -Cw $COLUMNS` outputs for the terminal's correct number of columns.
+else
+    alias l='ls -lhFABtr --color'
+    alias ll='ls -lhBF --color'
+    alias la='ls -FACw $COLUMNS --color "$@"'
+fi
 
 ds() { find "${1:-.}" -maxdepth 1 -print0 | xargs -0 -L1 du -sh | sort -h | perl -pale 's{^(\s*[0-9.]+[BKMGT]\s+)\./}{\1}'; }
 function cdl { cd "$1" && l; }
