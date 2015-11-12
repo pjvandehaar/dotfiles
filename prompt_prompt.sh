@@ -1,4 +1,8 @@
-[[ "$TERM" = dumb ]] && export PS1="\w $" && return
+if [[ "$TERM" = dumb ]]; then 
+    unset PROMPT_COMMAND
+    export PS1="\w $ "
+    return
+fi
 
 _PP_RED="\[$(tput setab 1; tput setaf 7)\]"
 _PP_GRE="\[$(tput setab 2; tput setaf 7)\]"
