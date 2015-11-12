@@ -1,4 +1,4 @@
-[[ "$TERM" = dumb ]] && export PS1="\w $" && exit 0
+[[ "$TERM" = dumb ]] && export PS1="\w $" && return
 
 _PP_RED="\[$(tput setab 1; tput setaf 7)\]"
 _PP_GRE="\[$(tput setab 2; tput setaf 7)\]"
