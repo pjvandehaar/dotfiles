@@ -1,3 +1,8 @@
+if type -t cutdammit > /dev/null; then
+    echo Apparently .bashrc has already been sourced once. I\'m not sourcing it again.
+    return
+fi
+
 # imports
 # =======
 
