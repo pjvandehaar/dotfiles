@@ -5,6 +5,8 @@ use v5.10;
 use List::Util qw{max};
 use POSIX qw{strftime};
 
+# TODO: Chris says that I must use Kibana like <https://github.com/statgen/csg-mapper/blob/master/lib/perl5/CSG/Mapping/Job/Factory/Implementation/flux.pm>
+
 my %cpu = (); # minutes
 my %walltime = (); # minutes
 my %mem = (); # MB
