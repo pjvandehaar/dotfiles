@@ -8,8 +8,8 @@
 [core]
 	excludesfile = /Users/peter/.gitignore_global
 [alias]
-	cdiff = diff --color-words=.
-	wdiff = diff --word-diff
+	cdiff = -c color.diff.new='yellow reverse' -c color.diff.old='red reverse' diff --color-words=.
+	wdiff = -c color.diff.new='yellow reverse' -c color.diff.old='red reverse' diff --word-diff=color
 	glog = log --graph --decorate --abbrev-commit
 	lol  = log --graph --decorate --abbrev-commit --pretty=oneline
 	lola = log --graph --decorate --abbrev-commit --pretty=oneline --all

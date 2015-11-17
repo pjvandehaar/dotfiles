@@ -53,7 +53,7 @@ else
     alias la='ls -FACw $COLUMNS --color "$@"'
 fi
 
-ds() { find "${1:-.}" -maxdepth 1 -print0 | xargs -0 -L1 du -sh | sort -h | perl -pale 's{^(\s*[0-9.]+[BKMGT]\s+)\./}{\1}'; }
+ds() { find -L "${1:-.}" -maxdepth 1 -print0 | xargs -0 -L1 du -sh | sort -h | perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}'; }
 function cdl { cd "$1" && l; }
 function mcd { mkdir -p "$1" && cd "$1"; }
 function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
