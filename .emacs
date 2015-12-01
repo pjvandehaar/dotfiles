@@ -19,7 +19,7 @@
 (setq-default vc-follow-symlinks t)
 (setq-default enable-local-variables nil)
 (setq-default indent-tabs-mode nil)
-;; (setq-default require-final-newline 'query)
+(setq-default mode-require-final-newline nil)
 
 (column-number-mode)
 (show-paren-mode)
