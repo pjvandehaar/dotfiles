@@ -17,6 +17,6 @@ for filename in .inputrc .emacs .hgrc .gitignore_global OSX/.gitconfig OSX/.bash
             ln -si "$targetfile" "$linkfile"
         fi
     else
-        echo file exists but is not a link: "$linkname"
+        echo file exists but is not a link: "$linkfile"
     fi
 done
