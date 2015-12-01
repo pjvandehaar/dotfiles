@@ -75,7 +75,7 @@ spaced_less() {
 alias grep='grep --color=auto'
 alias egrep='egrep --color=auto'
 alias man='man -a'
-export EDITOR=emacs
+type -t emacs > /dev/null && export EDITOR=emacs || export EDITOR=vim
 
 export HISTFILESIZE=10000000
 export HISTSIZE=100000
