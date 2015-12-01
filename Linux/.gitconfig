@@ -10,7 +10,6 @@
 	wdiff = -c color.diff.new='yellow reverse' -c color.diff.old='red reverse' diff --word-diff=color
 	glog = log --graph --decorate --abbrev-commit
 	lol =  log --graph --decorate --abbrev-commit --pretty=oneline
-	lola = log --graph --decorate --abbrev-commit --pretty=oneline --all
 [diff]
 	algorithm = patience
 [merge]
