@@ -1,4 +1,4 @@
-if [[ "$TERM" = dumb ]]; then 
+if [[ -z $TERM || $TERM = dumb || $- != *i* ]]; then
     unset PROMPT_COMMAND
     export PS1="\w $ "
     return
