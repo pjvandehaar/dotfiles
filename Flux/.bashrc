@@ -4,7 +4,7 @@
 # - `qdel $(qselect -u $USER)`
 # - `checkjob <jobid>`
 # - `mjobctl -q diag <jobid>`
-
+# google for keywords like MAXIJOB.
 
 _reverse_all_but_first_n_lines() {
     perl -ne '$lines .= $_; if ($. >= '$1') { print $lines; print reverse <> }'
@@ -17,7 +17,7 @@ _only_print_if_gt_n_lines() {
 _showq_with_arg() {
     showq -n -v -u $USER $1 |
     tail -n +3 | head -n -5 |
-    perl -ple 's/[A-Z][a-z]{2} ([A-Z][a-z]{2}) ([0-9]+) ([:0-9]{8})/$1$2_$3/' |
+    perl -ple 's/[A-Z][a-z]{2} ([A-Z][a-z]{2}) +([0-9]+) ([:0-9]{8})/$1$2_$3/' |
     perl -ple 's{^([0-9]+)/\g1\.nyx\.arc-ts\.umich\.edu/}{$1 <clip>/}' |
     perl -ple 's{^JOBID }{JOBID SCRIPT }' |
     column -t
