@@ -15,7 +15,8 @@ _only_print_if_gt_n_lines() {
 }
 
 _showq_with_arg() {
-    showq -n -v -u $USER $1 |
+    # -n -v: show more job id info
+    showq -n -v -u $USER $* |
     tail -n +3 | head -n -5 |
     perl -ple 's/[A-Z][a-z]{2} ([A-Z][a-z]{2}) +([0-9]+) ([:0-9]{8})/$1$2_$3/' |
     perl -ple 's{^([0-9]+)/\g1\.nyx\.arc-ts\.umich\.edu/}{$1 <clip>/}' |
@@ -28,9 +29,9 @@ show_my_jobs() {
     (
         showq -u $USER -s
         echo
-        (echo  ---- RUNNING;  _showq_with_arg -r | _reverse_all_but_first_n_lines 1; echo) | _only_print_if_gt_n_lines 3
-        (echo  ---- BLOCKED;  _showq_with_arg -b | _reverse_all_but_first_n_lines 1; echo) | _only_print_if_gt_n_lines 3
+        (echo  ---- RUNNING;  _showq_with_arg -r -o STARTTIME ; echo) | _only_print_if_gt_n_lines 3
         (echo  ---- IDLE;     _showq_with_arg -i | _reverse_all_but_first_n_lines 1; echo) | _only_print_if_gt_n_lines 3
+        (echo  ---- BLOCKED;  _showq_with_arg -b | _reverse_all_but_first_n_lines 1; echo) | _only_print_if_gt_n_lines 3
         (echo  ---- COMPLETE; _showq_with_arg -c | _reverse_all_but_first_n_lines 1; echo) | _only_print_if_gt_n_lines 3
     ) |
     less -XF
