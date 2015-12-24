@@ -4,6 +4,7 @@ beautifulsoup4
 csvkit
 ipython[notebook]
 pip-autoremove
+pomp # smaller py3-compat scrapy
 requests
 #some removed
 
