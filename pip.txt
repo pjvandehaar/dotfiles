@@ -5,6 +5,7 @@ csvkit
 ipython[notebook]
 pip-autoremove
 pomp # smaller py3-compat scrapy
+q # print-style debugging see https://pypi.python.org/pypi/q
 requests
 #some removed
 
