@@ -63,8 +63,9 @@ M-l                     | move window around cursor
 M-r                     | move cursor to center of window
 C-q _tab_               | Indent a literal tab
 C-u 0 C-k               | kill-line-backwards
-C-x _tab_               | Enter indentation mode
+C-x _tab_               | Enter indentation mode (sometimes need C-u)
 C-t                     | Search for a character
+C-c C-{f,b}             | HTML-mode: Go to matching tag
 
 ##emacs + python
 - C-M-a
