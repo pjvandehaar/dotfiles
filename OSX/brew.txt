@@ -28,13 +28,11 @@ alfred
 anki
 box-sync
 brackets
-day-o
 dropbox
 flux
-google-chrome
-google-hangouts
 hugin
 iterm2
+itsycal
 lastpass
 macdown
 nvalt
@@ -47,6 +45,9 @@ quicklook-json
 rstudio
 skype
 sourcetree
-sublime-text 
+speedcrunch
+spotify
+sublime-text
+the-unarchiver
 transmission
 vlc
