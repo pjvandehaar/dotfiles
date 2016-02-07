@@ -59,3 +59,13 @@
     (setq case-fold-search nil)
     (search-forward (string char) nil nil dir)
     (setq case-fold-search old-case-fold-search)))
+
+;; toggle between horizontal and vertical split.  Useful after `emacs foo bar`.
+(defun toggle-window-split ()
+  (interactive)
+  (unless (= (length (window-list)) 2) (error "Can only toggle a frame split in two"))
+  (let* ((next-win-buffer (window-buffer (next-window)))
+         (previously-vertical (window-combined-p)))
+    (delete-other-windows)
+    (if previously-vertical (split-window-horizontally) (split-window-vertically))
+    (set-window-buffer (next-window) next-win-buffer)))
