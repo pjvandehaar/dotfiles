@@ -48,7 +48,7 @@
 key                     | effect
 ------------------------|-------
 M-x `menu-bar-open`, F10|
-C-h k                   | get help on key
+C-h k _chord_           | get help on _chord_
 _region_ `M-|` `pbcopy` | copy region to mac clipboard
 C-x {2,3}               | view current buffer in two "windows"
 C-x 1                   | close all other "windows"
@@ -64,8 +64,9 @@ M-r                     | move cursor to center of window
 C-q _tab_               | Indent a literal tab
 C-u 0 C-k               | kill-line-backwards
 C-x _tab_               | Enter indentation mode (sometimes need C-u)
-C-t                     | Search for a character
+{C,M}-t                 | Jump {forwards, backwards} to a character
 C-c C-{f,b}             | HTML-mode: Go to matching tag
+M-z _char_              | Delete until _char_
 
 ##emacs + python
 - C-M-a
