@@ -11,8 +11,7 @@
 	cdiff = -c color.diff.new='yellow reverse' -c color.diff.old='red reverse' diff --color-words=.
 	wdiff = -c color.diff.new='yellow reverse' -c color.diff.old='red reverse' diff --word-diff=color
 	glog = log --graph --decorate --abbrev-commit
-	lol  = log --graph --decorate --abbrev-commit --pretty=oneline
-	lola = log --graph --decorate --abbrev-commit --pretty=oneline --all
+	lol = log --format=format:'%C(yellow)%h%C(reset) %C(magenta)(%ad)%C(reset)%C(auto)%d%C(reset) %C(white)%s%C(reset) %C(magenta)%an%C(reset)' --graph --date=short
 [diff]
 	algorithm = patience
 [merge]

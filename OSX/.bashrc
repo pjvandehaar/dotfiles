@@ -27,7 +27,7 @@ unalias l ll la cdl mcd h notify 2>/dev/null
 alias e=emacs
 alias gs='git status'
 alias gl='git lol'
-alias gla='git lola'
+alias gla='git lol --all'
 __git_complete gl  _git_log
 __git_complete gla _git_log
 function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
