@@ -20,5 +20,6 @@
 	ui = true
 [pager]
 	status = true
+	diff = /Users/peter/dotfiles/third-party/diff-highlight | less
 [diff "gz"]
 	textconv = zcat
