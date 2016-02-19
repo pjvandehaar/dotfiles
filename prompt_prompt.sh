@@ -27,7 +27,8 @@ _PP_prompt() {
     fi
 
     local _git=''
-    if [[ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = true ]]; then
+    if [[ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = true ]] &&
+       \git show-ref --head --quiet; then
         _git="$(\git symbolic-ref -q HEAD)" && _git="$(printf %q "${_git#refs/heads/}")" || _git="$(\git rev-parse --short -q HEAD)"
         local changes
         git diff-index --quiet --cached HEAD || changes+=i
