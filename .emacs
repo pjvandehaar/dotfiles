@@ -11,6 +11,20 @@
  ;; If there is more than one, they won't work right.
  )
 
+;; Packaging:
+;; On new computers, do `M-x package-install [RET] ess`
+;; sometimes do: `M-x list-packages` to check for updates
+;; When you install a new package, you must `(require 'the-new-package)` here.
+
+(when (>= emacs-major-version 24)
+  (require 'package)
+  (add-to-list 'package-archives
+               '("marmalade" . "https://marmalade-repo.org/packages/")
+               '("melpa" . "http://melpa.org/packages/"))
+  (package-initialize)
+  (require 'ess)
+)
+
 (add-to-list 'load-path "~/dotfiles/third-party/emacs")
 (require 'git)
 (require 'git-blame)
