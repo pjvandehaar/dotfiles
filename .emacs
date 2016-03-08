@@ -18,11 +18,14 @@
 
 (when (>= emacs-major-version 24)
   (require 'package)
+  ;; MELPA-stable is the best repo. It installs the latest tagged commit.
+  ;; ELPA doesn't have ESS. Marmalade is out-of-date. MELPA tracks master.
   (add-to-list 'package-archives
-               '("marmalade" . "https://marmalade-repo.org/packages/")
-               '("melpa" . "http://melpa.org/packages/"))
+               '("melpa-stable" . "https://stable.melpa.org/packages/") t)
   (package-initialize)
   (require 'ess)
+  (require 'expand-region)
+  (global-set-key (kbd "C-\\") 'er/expand-region)
 )
 
 (add-to-list 'load-path "~/dotfiles/third-party/emacs")
