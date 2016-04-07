@@ -3,6 +3,10 @@
 - `sshfs user@host:dir mountpoint`
 - `netstat -rn | grep default`
 
+##process' file usage
+- `htop` followed by `l`
+- **check current read position in file:** `lsof -p <pid> -o` or `lsof -o <filename>`
+
 ##readline
 - **expand inline:** `C-M-e`, `C-x *`
 - **jump to char:**: `C-]`
