@@ -3,7 +3,7 @@
 set -euo pipefail
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-BUILDDIR="$SCRIPTDIR/resources-tmux/build"
+BUILDDIR="$SCRIPTDIR/resources-tmux/install"
 mkdir -p "$BUILDDIR"
 cd "$BUILDDIR/.."
 
@@ -21,8 +21,8 @@ cd ..
 echo '############'
 echo '# ncurses  #'
 echo '############'
-wget -O "ncurses.tar.gz" ftp://ftp.gnu.org/gnu/ncurses/ncurses-6.0.tar.gz # Can tmux handle ncurses6? I see ncurses5 most places.
-# wget -O "ncurses.tar.gz" ftp://ftp.gnu.org/gnu/ncurses/ncurses-5.9.tar.gz
+# wget -O "ncurses.tar.gz" ftp://ftp.gnu.org/gnu/ncurses/ncurses-6.0.tar.gz # Can tmux handle ncurses6? I see ncurses5 most places.
+wget -O "ncurses.tar.gz" ftp://ftp.gnu.org/gnu/ncurses/ncurses-5.9.tar.gz # Is 6.0 causing terminfo problems resulting in strange colors?
 tar -xzf "ncurses.tar.gz"
 cd ncurses-*
 ./configure --prefix="$BUILDDIR"
@@ -36,7 +36,7 @@ echo '############'
 wget -O "tmux.tar.gz" https://github.com/tmux/tmux/releases/download/2.2/tmux-2.2.tar.gz
 tar xzf "tmux.tar.gz"
 cd tmux-*
-./configure CFLAGS="-I$BUILDDIR/include -I$BUILDDIR/include/ncurses" LDFLAGS="-L$BUILDDIR/lib -L$BUILDDIR/include/ncurses -L$BUILDDIR/include"
+./configure --enable-static CFLAGS="-I$BUILDDIR/include -I$BUILDDIR/include/ncurses" LDFLAGS="-static -L$BUILDDIR/lib -L$BUILDDIR/include/ncurses -L$BUILDDIR/include"
 CPPFLAGS="-I$BUILDDIR/include -I$BUILDDIR/include/ncurses" LDFLAGS="-static -L$BUILDDIR/include -L$BUILDDIR/include/ncurses -L$BUILDDIR/lib" make
 
 mkdir -p $HOME/bin/

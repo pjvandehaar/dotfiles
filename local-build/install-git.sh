@@ -4,17 +4,19 @@
 set -euo pipefail
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+BUILDDIR="$SCRIPTDIR/resources-git"
 
-mkdir -p "$SCRIPTDIR/dl"
+mkdir -p "$BUILDDIR"
 
+cd "$BUILDDIR"
 wget -O - https://github.com/git/git/archive/v2.9.0.tar.gz |
-tar -xz -C "$SCRIPTDIR/dl"
+tar -xz
 
-cd "$SCRIPTDIR/dl/git-"*
+cd "$BUILDDIR/git-"*
 
 make configure
 
-INSTALLDIR="$SCRIPTDIR/git-install-dir"
+INSTALLDIR="$BUILDDIR/install"
 mkdir -p "$INSTALLDIR"
 ./configure --prefix="$INSTALLDIR"
 
@@ -26,5 +28,5 @@ cp "$INSTALLDIR/bin/git" ~/bin/git
 
 cd "$SCRIPTDIR"
 
-rm -rf "$SCRIPTDIR/dl" "$INSTALLDIR"
+rm -rf "$SCRIPTDIR/git-*"
 }
