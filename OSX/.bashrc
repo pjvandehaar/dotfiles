@@ -8,7 +8,7 @@ fi
 
 dotfiles_path=$(cd "$(dirname "$(dirname "$(greadlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
 
-export PATH="$dotfiles_path/bin:$HOME/bin:$HOME/.local/bin:$HOME/perl5/bin:$PATH"
+export PATH="$dotfiles_path/OSX/bin:$dotfiles_path/bin:$HOME/bin:$HOME/.local/bin:$HOME/perl5/bin:$PATH"
 
 # following directions at <https://github.com/Homebrew/homebrew/blob/master/Library/Formula/bash-completion.rb>
 bc=`brew --prefix`/etc/bash_completion
@@ -40,8 +40,8 @@ alias python="echo Use python2 or python3! #"
 # options: `ls -G`: color on OSX
 # `CLICOLOR_FORCE` makes `ls` send colors to a non-terminal STDOUT.
 # `egrep --color=never` tells grep to pass through any color escape codes.
-function l  { CLICOLOR_FORCE=1 ls -lhFGAtr "$@" | (egrep --color=never -v '~|#|\.DS_Store$' ||true); } # always return 0.
-function ll { CLICOLOR_FORCE=1 ls -lhFG    "$@" | (egrep --color=never -v '~|#|\.DS_Store$' ||true); }
+function l  { CLICOLOR_FORCE=1 ls -lhFGAtr "$@" | (egrep --color=never -v '(~|#|\.DS_Store)$' ||true); } # always return 0.
+function ll { CLICOLOR_FORCE=1 ls -lhFG    "$@" | (egrep --color=never -v '(~|#|\.DS_Store)$' ||true); }
 alias la="ls -AFG"
 
 ds() { find "${1:-.}" -maxdepth 1 -print0 | xargs -0 -L1 du -sh | gsort -h | perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}'; }
@@ -51,6 +51,17 @@ function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'e
 function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
 function cutdammit { awk "{print \$$1}"; }
 function sumdammit { perl -nale '$s += $_ ; END{print $s}'; }
+function sleeptil { # Accepts "0459" or "0459.59"
+    offset=$(($(date -j "$1" +%s) - $(date +%s)))
+    if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
+    echo "offset: $offset seconds"; sleep $offset
+}
+function sleeptilc { export -f sleeptil; caffeinate -s bash -c "sleeptil $1"; }
+function wakeat {
+    songdir="$(find '/Users/peter/Music/iTunes/iTunes Media' -iregex '.*mp3' -execdir pwd  \; | uniq | gsort -R | head -n1)"; echo "$songdir"
+    sleeptilc $1; osascript -e "set Volume 3"
+    find "$songdir" -iregex '.*mp3' -exec afplay -d {} \;
+}
 
 # OSX-specific
 function ql { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful not to open too many! # TODO: confirm every tenth
