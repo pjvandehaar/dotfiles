@@ -21,6 +21,7 @@ mkdir -p "$INSTALLDIR"
 make
 make install
 
+mkdir -p ~/bin
 cp "$INSTALLDIR/bin/git" ~/bin/git
 
 cd "$SCRIPTDIR"

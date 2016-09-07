@@ -38,6 +38,8 @@ tar xzf "tmux.tar.gz"
 cd tmux-*
 ./configure CFLAGS="-I$BUILDDIR/include -I$BUILDDIR/include/ncurses" LDFLAGS="-L$BUILDDIR/lib -L$BUILDDIR/include/ncurses -L$BUILDDIR/include"
 CPPFLAGS="-I$BUILDDIR/include -I$BUILDDIR/include/ncurses" LDFLAGS="-static -L$BUILDDIR/include -L$BUILDDIR/include/ncurses -L$BUILDDIR/lib" make
+
+mkdir -p $HOME/bin/
 cp tmux $HOME/bin/
 cd ..
 
