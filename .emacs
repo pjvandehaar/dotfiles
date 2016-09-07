@@ -23,9 +23,10 @@
   (add-to-list 'package-archives
                '("melpa-stable" . "https://stable.melpa.org/packages/") t)
   (package-initialize)
-  (require 'ess)
-  (require 'expand-region)
-  (global-set-key (kbd "C-\\") 'er/expand-region)
+  ;; install these with M-x package-install <packagename>
+  (require 'ess nil 'noerror)
+  (when (require 'expand-region nil 'noerror)
+    (global-set-key (kbd "C-\\") 'er/expand-region))
 )
 
 (add-to-list 'load-path "~/dotfiles/third-party/emacs")
