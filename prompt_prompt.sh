@@ -12,27 +12,12 @@ _PP_BLU="\[$(tput setab 4; tput setaf 7)\]"
 _PP_PIN="\[$(tput setab 5; tput setaf 7)\]"
 _PP_NONE="\[$(tput sgr0)\]"
 
-_last_time="$(date +%s.%N)"
-_tdiff() {
-    local _new_time="$(date +%s.%N)"
-    local _offset="$(echo "$_new_time-$_last_time" | bc)"
-    if [[ "$(echo "$_offset > 0.3" | bc)" == 1 ]]; then
-        tput setab 5; tput setaf 7
-        echo "$_offset $@"
-        tput sgr0
-    fi
-    _last_time=$_new_time
-}
-_treset() {
-    _last_time="$(date +%s.%N)"
-}
-
 export PROMPT_COMMAND=_PP_prompt
 _PP_prompt() {
     local _err="$?"
     [[ "$_err" -eq 0 ]] && _err='' || _err="${_PP_RED} ${_err} "
 
-    _tdiff 'until start of _PP_PROMPT'
+    # TODO: s/_pid/_git/
 
     local _runtime=''
     if [[ "$_PP_runtime_seconds" -ge 5 ]]; then
@@ -43,25 +28,61 @@ _PP_prompt() {
         _runtime="${_PP_PIN} ${_runtime} "
     fi
 
-    _tdiff 'until just before git'
-    # TODO: use "timeout 0.3 \git ..."
-    local _git=''
-    if [[ "$(\git rev-parse --is-inside-work-tree 2>/dev/null)" = true ]]; then
-        _tdiff 'to check for .git' # 200ms
-    if \git show-ref --head --quiet; then
-        _tdiff 'to check for HEAD' # >1s
-        _git="$(\git symbolic-ref -q HEAD)" && _git="$(printf %q "${_git#refs/heads/}")" || _git="$(\git rev-parse --short -q HEAD)"
-        _tdiff 'to check  branch'
-        local changes
-        git diff-index --quiet --cached HEAD || changes+=i
-        _tdiff 'to check index' # 700ms
-        git diff-files --quiet || changes+=w
-        _tdiff 'to check workingdir' # >1s
-        # git ls-files --other --exclude-standard --no-empty-directory | grep -q ^ || changes+=u
-        _git="${_PP_YEL} ${_git}${changes:+($changes)} "
+    local _git_branch="$(timeout 0.1 \git rev-parse --is-inside-work-tree 2>/dev/null)"; local _pid=$?
+    if [[ $_pid == 124 ]]; then
+        local _git="${_PP_RED} check for .git timed out ${_PP_NONE}"
+    elif [[ "$_git_branch" != true ]]; then
+        local _git=''
+    elif [[ $_pid != 0 ]]; then
+        local _git="${_PP_RED} AAHHHH why was the PID $_pid ????"
+    else
+        # I think we do this to check for uninitialized repos.
+        timeout 0.2 \git show-ref --head --quiet; local _pid=$?
+        if [[ $_pid == 124 ]]; then
+            local _git="${_PP_RED} checking for HEAD timed out ${_PP_NONE}"
+        elif [[ $_pid == 128 ]]; then
+            local _git="${_PP_RED} no HEAD? ${_PP_NONE}"
+        elif [[ $_pid != 0 ]]; then
+            local _git="${_PP_RED} AAHHHHG why was the PID $_pid ???? ${_PP_NONE}"
+        else
+            local _git_head_ref="$(timeout 0.2 \git symbolic-ref -q HEAD)"; local _pid=$?
+            if [[ $_pid == 124 ]]; then
+                local _git="${_PP_RED} checking branch timed out ${_PP_NONE}"
+            elif [[ $_pid -ge 1 ]]; then
+                local _git=" AH why was the PID $_pid ??"
+            else
+                if [[ -n $_git_head_ref ]]; then
+                    local _git_branch="$(printf %q "${_git_head_ref#refs/heads/}")"
+                else
+                    local _git_branch="$(\git rev-parse --short -q HEAD)"
+                fi
+
+                local _changes
+                timeout 0.2 git diff-index --quiet --cached HEAD; local _pid=$?
+                if [[ $_pid == 1 ]]; then
+                    _changes+=i
+                elif [[ $_pid == 124 ]]; then
+                    _changes+='index_timed_out '
+                elif [[ $_pid != 0 ]]; then
+                    _changes+="what_is_PID_${_pid}_for_index"
+                fi
+                timeout 0.2 git diff-files --quiet; local _pid=$?
+                if [[ $_pid == 1 ]]; then
+                    _changes+=w
+                elif [[ $_pid == 124 ]]; then
+                    _changes+='workdir_timed_out '
+                elif [[ $_pid != 0 ]]; then
+                    _changes+="what_is_PID_${_pid}_for_workdir "
+                fi
+                _changes="${_changes## }"
+                _git="${_PP_YEL} ${_git_branch}${_changes:+($_changes)} "
+
+                # TODO: use with timeout
+                # set pipefail, and use ' | grep -n1 ^ | wc -l'
+                # git ls-files --other --exclude-standard --no-empty-directory | grep -q ^ || changes+=u
+            fi
+        fi
     fi
-    fi
-    _tdiff 'til git is done'
 
     local _tilde=\~ # bash3 vs bash4
     local _pwd="${PWD/#$HOME/$_tilde}"
@@ -69,7 +90,6 @@ _PP_prompt() {
     (( ${#_pwd} > _max_len )) && _pwd=" … ${_pwd:${#_pwd}-${_max_len}}"
     _pwd=$(echo "$_pwd" | sed -e 's_\\_\\\\_g' -e 's_\$_\\\$_g')
 
-    _tdiff 'til end of _PP_PROMPT'
     PS1="${_PP_NONE}${_PP_GRE} \t ${_PP_BLU} ${_pwd} $_git${_runtime}${_err}${_PP_NONE} "
 }
 
@@ -79,12 +99,8 @@ _PP_reset_runtime() {
     if [[ -n "$_PP_prompt_just_ran" ]]; then
         _PP_runtime_last_seconds=$SECONDS
         _PP_runtime_seconds=0
-        #_tdiff "from start of _PP_PROMPT until start-trap for '${BASH_COMMAND:0:80}'"
-        _treset
     else
         _PP_runtime_seconds=$((SECONDS - _PP_runtime_last_seconds))
-        #_tdiff "from start of last command until start-trap for '${BASH_COMMAND:0:80}'"
-        _treset
     fi
 
     [[ "$BASH_COMMAND" = _PP_prompt ]] && _PP_prompt_just_ran=1 || _PP_prompt_just_ran=''
