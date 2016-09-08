@@ -1,7 +1,9 @@
 ##network
 - `lsof -i`
 - `sshfs user@host:dir mountpoint`
-- `netstat -rn | grep default`
+- `netstat -rn` # see routing tables - "default" is router.
+- `sudo ngrep -d any "classbooklist"` # print all packets matching a regex
+    - alternative: capture with tcpdump, then filter with wireshark `frame contains "foo"`.
 
 ##process' file usage
 - `htop` followed by `l`
