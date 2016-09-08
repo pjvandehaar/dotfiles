@@ -8,14 +8,19 @@ fi
 
 dotfiles_path=$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
 
-export PATH="$dotfiles_path/bin:$HOME/bin:$HOME/.local/bin:$HOME/perl5/bin:$PATH"
-export PYTHONPATH="$HOME/.local/lib:$PYTHONPATH"
+export PATH="$dotfiles_path/bin:$HOME/bin:$HOME/perl5/bin:$PATH"
+export PATH="$PATH:/net/mario/cluster/bin/"
+export MANPATH="$MANPATH:/net/mario/cluster/man/"
 
 # bc=/etc/bash_completion
 # [ -f "$bc" ] && . "$bc"
 
 . "$dotfiles_path/third-party/git-completion.bash"
-. "$dotfiles_path/prompt_prompt.sh"
+
+
+# added by Miniconda3 4.0.5 installer
+export PATH="/net/snowwhite/home/pjvh/miniconda3/bin:$PATH"
+# Note: I only want to use miniconda for r and py3.5+
 
 
 # shortcuts
@@ -35,7 +40,7 @@ __git_complete glb _git_log
 function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
 alias diffdammit='diff -dy -W$COLUMNS'
 
-alias pip="echo Use pip2 or pip3! #"
+alias pip="echo Use pip2 or pip3 or pythonX -m pip or conda! #"
 alias ipython="echo Use ipython2 or ipython3! #"
 alias python="echo Use python2 or python3! #"
 alias gotcloud='echo dont use the system gotcloud! #'
@@ -46,9 +51,9 @@ type -t r >/dev/null || alias r=R
 #          `less -X`: `cat` when finished.
 #          `less -F`: quit immediately if output fits on one screen.
 if [[ $TERM != dumb ]]; then
-    function l { ls -lhFABtr --color "$@" | less -RXF ; }
-    function ll { ls -lhBF --color "$@" | less -RXF ; }
-    function la { ls -FACw $COLUMNS --color "$@" | less -RXF ; } # `ls -Cw $COLUMNS` outputs for the terminal's correct number of columns.
+    function l { ls -lhFABtr --color "$@" | less -SRXF ; }
+    function ll { ls -lhBF --color "$@" | less -SRXF ; }
+    function la { ls -FACw $COLUMNS --color "$@" | less -SRXF ; } # `ls -Cw $COLUMNS` outputs for the terminal's correct number of columns.
 else
     alias l='ls -lhFABtr --color'
     alias ll='ls -lhBF --color'
@@ -83,3 +88,7 @@ export HISTIGNORE="ls:l"
 export HISTTIMEFORMAT="%Y/%m/%d %T "
 
 export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"
+
+# final import
+# ============
+. "$dotfiles_path/prompt_prompt.sh"
