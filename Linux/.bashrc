@@ -1,3 +1,11 @@
+export TERM=xterm-256color
+export LANG=en_US.UTF-8
+export HOME="${HOME%/}"
+if [[ $HOME != /tmp/pjvh ]]; then
+    echo "Why is \$HOME $HOME instead of /tmp/pjvh???"
+fi
+cd "$HOME"
+
 if type -t ptrcut >/dev/null; then
     echo "BTW, .bashrc has already been sourced once."
 fi
