@@ -33,6 +33,10 @@
 (require 'git)
 (require 'git-blame)
 
+;; Disable electric-indent-mode.  If you want auto-indent, use C-j.
+(when (fboundp 'electric-indent-mode) (electric-indent-mode -1))
+
+
 ;; I think that `setq-default` will let modes that override this setting do so.
 (setq-default vc-follow-symlinks t)
 (setq-default enable-local-variables nil)
