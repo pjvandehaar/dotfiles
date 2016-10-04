@@ -66,7 +66,8 @@ function mcd { mkdir -p "$1" && cd "$1"; }
 function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
 function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
 function cutdammit { awk "{print \$$1}"; }
-function sumdammit { perl -nale '$s += $_ ; END{print $s}'; }
+function sumdammit { perl -nale '$s += $_; END{print $s}'; }
+function minmaxdammit { perl -nale 'print if m{^[0-9]+$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
 
 spaced_less() {
     ([ -t 0 ] && cat "$1" || cat) |
