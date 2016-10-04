@@ -1,4 +1,4 @@
-if type -t cutdammit > /dev/null; then
+if type -t ptrcut > /dev/null; then
     echo Apparently .bashrc has already been sourced once. I\'m not sourcing it again.
     return
 fi
@@ -31,7 +31,7 @@ alias gla='git lol --all'
 __git_complete gl  _git_log
 __git_complete gla _git_log
 function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
-alias diffdammit='diff -dy -W$COLUMNS'
+alias ptrdiff='diff -dy -W$COLUMNS'
 
 alias pip="echo Use pip2 or pip3! #"
 alias ipython="echo Use ipython2 or ipython3! #"
@@ -49,8 +49,9 @@ function cdl { cd "$1" && l; }
 function mcd { mkdir -p "$1" && cd "$1"; }
 function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
 function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
-function cutdammit { awk "{print \$$1}"; }
-function sumdammit { perl -nale '$s += $_ ; END{print $s}'; }
+function ptrcut { awk "{print \$$1}"; }
+function ptrsum { perl -nale '$s += $_; END{print $s}'; }
+function ptrminmax { perl -nale 'print if m{^[0-9]+$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
 function sleeptil { # Accepts "0459" or "0459.59"
     offset=$(($(date -j "$1" +%s) - $(date +%s)))
     if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
