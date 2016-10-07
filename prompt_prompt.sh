@@ -28,7 +28,15 @@ _PP_prompt() {
         _runtime="${_PP_PIN} ${_runtime} "
     fi
 
-    local _git_branch="$(timeout 0.1 \git rev-parse --is-inside-work-tree 2>/dev/null)"; local _pid=$?
+    local timeout=''
+    if which timeout >/dev/null; then
+        timeout=timeout
+    elif which gtimeout >/dev/null; then
+        timeout=gtimeout
+    else
+        echo "oh noes! TODO: handle this."
+    fi
+    local _git_branch="$($timeout 0.1 \git rev-parse --is-inside-work-tree 2>/dev/null)"; local _pid=$?
     if [[ $_pid == 124 ]]; then
         local _git="${_PP_RED} check for .git timed out ${_PP_NONE}"
     elif [[ "$_git_branch" != true ]]; then
@@ -37,7 +45,7 @@ _PP_prompt() {
         local _git="${_PP_RED} AAHHHH why was the PID $_pid ????"
     else
         # I think we do this to check for uninitialized repos.
-        timeout 0.2 \git show-ref --head --quiet; local _pid=$?
+        $timeout 0.2 \git show-ref --head --quiet; local _pid=$?
         if [[ $_pid == 124 ]]; then
             local _git="${_PP_RED} checking for HEAD timed out ${_PP_NONE}"
         elif [[ $_pid == 128 ]]; then
@@ -45,7 +53,7 @@ _PP_prompt() {
         elif [[ $_pid != 0 ]]; then
             local _git="${_PP_RED} AAHHHHG why was the PID $_pid ???? ${_PP_NONE}"
         else
-            local _git_head_ref="$(timeout 0.2 \git symbolic-ref -q HEAD)"; local _pid=$?
+            local _git_head_ref="$($timeout 0.2 \git symbolic-ref -q HEAD)"; local _pid=$?
             if [[ $_pid == 124 ]]; then
                 local _git="${_PP_RED} checking branch timed out ${_PP_NONE}"
             elif [[ $_pid -ge 1 ]]; then
@@ -58,7 +66,7 @@ _PP_prompt() {
                 fi
 
                 local _changes
-                timeout 0.2 git diff-index --quiet --cached HEAD; local _pid=$?
+                $timeout 0.2 git diff-index --quiet --cached HEAD; local _pid=$?
                 if [[ $_pid == 1 ]]; then
                     _changes+=i
                 elif [[ $_pid == 124 ]]; then
@@ -66,7 +74,7 @@ _PP_prompt() {
                 elif [[ $_pid != 0 ]]; then
                     _changes+="what_is_PID_${_pid}_for_index"
                 fi
-                timeout 0.2 git diff-files --quiet; local _pid=$?
+                $timeout 0.2 git diff-files --quiet; local _pid=$?
                 if [[ $_pid == 1 ]]; then
                     _changes+=w
                 elif [[ $_pid == 124 ]]; then
