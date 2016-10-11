@@ -17,8 +17,6 @@ _PP_prompt() {
     local _err="$?"
     [[ "$_err" -eq 0 ]] && _err='' || _err="${_PP_RED} ${_err} "
 
-    # TODO: s/_pid/_git/
-
     local _runtime=''
     if [[ "$_PP_runtime_seconds" -ge 5 ]]; then
         [[ "$_PP_runtime_seconds" -ge 86400 ]] && _runtime+="$((_PP_runtime_seconds / 86400))d"
@@ -37,28 +35,28 @@ _PP_prompt() {
         timeout=timeout
         timeout() { shift; $*; }
     fi
-    local _git_branch="$($timeout 0.1 \git rev-parse --is-inside-work-tree 2>/dev/null)"; local _pid=$?
-    if [[ $_pid == 124 ]]; then
+    local _git_branch="$($timeout 0.1 \git rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
+    if [[ $_rs == 124 ]]; then
         local _git="${_PP_RED} check for .git timed out ${_PP_NONE}"
     elif [[ "$_git_branch" != true ]]; then
         local _git=''
-    elif [[ $_pid != 0 ]]; then
-        local _git="${_PP_RED} AAHHHH why was the PID $_pid ????"
+    elif [[ $_rs != 0 ]]; then
+        local _git="${_PP_RED} AAHHHH why was the return status $_rs ????"
     else
         # I think we do this to check for uninitialized repos.
-        $timeout 0.2 \git show-ref --head --quiet; local _pid=$?
-        if [[ $_pid == 124 ]]; then
+        $timeout 0.2 \git show-ref --head --quiet; local _rs=$?
+        if [[ $_rs == 124 ]]; then
             local _git="${_PP_RED} checking for HEAD timed out ${_PP_NONE}"
-        elif [[ $_pid == 128 ]]; then
+        elif [[ $_rs == 128 ]]; then
             local _git="${_PP_RED} no HEAD? ${_PP_NONE}"
-        elif [[ $_pid != 0 ]]; then
-            local _git="${_PP_RED} AAHHHHG why was the PID $_pid ???? ${_PP_NONE}"
+        elif [[ $_rs != 0 ]]; then
+            local _git="${_PP_RED} AAHHHHG why was the return status $_rs ???? ${_PP_NONE}"
         else
-            local _git_head_ref="$($timeout 0.2 \git symbolic-ref -q HEAD)"; local _pid=$?
-            if [[ $_pid == 124 ]]; then
+            local _git_head_ref="$($timeout 0.2 \git symbolic-ref -q HEAD)"; local _rs=$?
+            if [[ $_rs == 124 ]]; then
                 local _git="${_PP_RED} checking branch timed out ${_PP_NONE}"
-            elif [[ $_pid -ge 1 ]]; then
-                local _git=" AH why was the PID $_pid ??"
+            elif [[ $_rs -ge 1 ]]; then
+                local _git=" AH why was the return status $_rs ??"
             else
                 if [[ -n $_git_head_ref ]]; then
                     local _git_branch="$(printf %q "${_git_head_ref#refs/heads/}")"
@@ -67,26 +65,25 @@ _PP_prompt() {
                 fi
 
                 local _changes
-                $timeout 0.2 git diff-index --quiet --cached HEAD; local _pid=$?
-                if [[ $_pid == 1 ]]; then
+                $timeout 0.2 git diff-index --quiet --cached HEAD; local _rs=$?
+                if [[ $_rs == 1 ]]; then
                     _changes+=i
-                elif [[ $_pid == 124 ]]; then
+                elif [[ $_rs == 124 ]]; then
                     _changes+='index_timed_out '
-                elif [[ $_pid != 0 ]]; then
-                    _changes+="what_is_PID_${_pid}_for_index"
+                elif [[ $_rs != 0 ]]; then
+                    _changes+="what_is_RS_${_rs}_for_index"
                 fi
-                $timeout 0.2 git diff-files --quiet; local _pid=$?
-                if [[ $_pid == 1 ]]; then
+                $timeout 0.2 git diff-files --quiet; local _rs=$?
+                if [[ $_rs == 1 ]]; then
                     _changes+=w
-                elif [[ $_pid == 124 ]]; then
+                elif [[ $_rs == 124 ]]; then
                     _changes+='workdir_timed_out '
-                elif [[ $_pid != 0 ]]; then
-                    _changes+="what_is_PID_${_pid}_for_workdir "
+                elif [[ $_rs != 0 ]]; then
+                    _changes+="what_is_RS_${_rs}_for_workdir "
                 fi
                 _changes="${_changes## }"
                 _git="${_PP_YEL} ${_git_branch}${_changes:+($_changes)} "
 
-                # TODO: use with timeout
                 # set pipefail, and use ' | grep -n1 ^ | wc -l'
                 # git ls-files --other --exclude-standard --no-empty-directory | grep -q ^ || changes+=u
             fi
