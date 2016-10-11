@@ -34,7 +34,8 @@ _PP_prompt() {
     elif which gtimeout >/dev/null; then
         timeout=gtimeout
     else
-        echo "oh noes! TODO: handle this."
+        timeout=timeout
+        timeout() { shift; $*; }
     fi
     local _git_branch="$($timeout 0.1 \git rev-parse --is-inside-work-tree 2>/dev/null)"; local _pid=$?
     if [[ $_pid == 124 ]]; then
