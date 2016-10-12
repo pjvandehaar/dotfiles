@@ -12,6 +12,16 @@ _PP_BLU="\[$(tput setab 4; tput setaf 7)\]"
 _PP_PIN="\[$(tput setab 5; tput setaf 7)\]"
 _PP_NONE="\[$(tput sgr0)\]"
 
+_PP_timeout=''
+if which timeout >/dev/null; then
+    _PP_timeout=timeout
+elif which gtimeout >/dev/null; then
+    _PP_timeout=gtimeout
+else
+    _PP_timeout=timeout
+    timeout() { shift; $*; }
+fi
+
 export PROMPT_COMMAND=_PP_prompt
 _PP_prompt() {
     local _err="$?"
@@ -26,66 +36,74 @@ _PP_prompt() {
         _runtime="${_PP_PIN} ${_runtime} "
     fi
 
-    local timeout=''
-    if which timeout >/dev/null; then
-        timeout=timeout
-    elif which gtimeout >/dev/null; then
-        timeout=gtimeout
-    else
-        timeout=timeout
-        timeout() { shift; $*; }
-    fi
-    local _git_branch="$($timeout 0.1 \git rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
+    local _git='' # This variable stores the result of all this.
+    local _git_branch="$($_PP_timeout 0.1 \git rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
     if [[ $_rs == 124 ]]; then
-        local _git="${_PP_RED} check for .git timed out ${_PP_NONE}"
+        _git="${_PP_RED} _PP_timeout while checking for .git ${_PP_NONE}"
     elif [[ "$_git_branch" != true ]]; then
-        local _git=''
+        _git=''
     elif [[ $_rs != 0 ]]; then
-        local _git="${_PP_RED} AAHHHH why was the return status $_rs ????"
+        _git="${_PP_RED} AAHHHH why was the return status $_rs ???? ${_PP_NONE}"
     else
-        # I think we do this to check for uninitialized repos.
-        $timeout 0.2 \git show-ref --head --quiet; local _rs=$?
+
+        # Check that the repo has at least one commit.
+        $_PP_timeout 0.2 \git show-ref --head --quiet; local _rs=$?
         if [[ $_rs == 124 ]]; then
-            local _git="${_PP_RED} checking for HEAD timed out ${_PP_NONE}"
+            _git="${_PP_RED} _PP_timeout while checking for HEAD ${_PP_NONE}"
         elif [[ $_rs == 128 ]]; then
-            local _git="${_PP_RED} no HEAD? ${_PP_NONE}"
+            _git="${_PP_RED} no HEAD? ${_PP_NONE}"
         elif [[ $_rs != 0 ]]; then
-            local _git="${_PP_RED} AAHHHHG why was the return status $_rs ???? ${_PP_NONE}"
+            _git="${_PP_RED} AAHHHHG why was the return status $_rs ???? ${_PP_NONE}"
         else
-            local _git_head_ref="$($timeout 0.2 \git symbolic-ref -q HEAD)"; local _rs=$?
+
+            # Get the current branch
+            local _git_head_ref="$($_PP_timeout 0.2 \git symbolic-ref -q HEAD)"; local _rs=$?
             if [[ $_rs == 124 ]]; then
-                local _git="${_PP_RED} checking branch timed out ${_PP_NONE}"
+                _git="${_PP_RED} _PP_timeout while checking branch ${_PP_NONE}"
             elif [[ $_rs -ge 1 ]]; then
-                local _git=" AH why was the return status $_rs ??"
+                _git=" AH why was the return status $_rs ??"
             else
+
+                # If HEAD is on a branch, format it.  If not, get HEAD's commit.
                 if [[ -n $_git_head_ref ]]; then
                     local _git_branch="$(printf %q "${_git_head_ref#refs/heads/}")"
                 else
                     local _git_branch="$(\git rev-parse --short -q HEAD)"
                 fi
 
-                local _changes
-                $timeout 0.2 git diff-index --quiet --cached HEAD; local _rs=$?
-                if [[ $_rs == 1 ]]; then
-                    _changes+=i
-                elif [[ $_rs == 124 ]]; then
-                    _changes+='index_timed_out '
-                elif [[ $_rs != 0 ]]; then
-                    _changes+="what_is_RS_${_rs}_for_index"
+                local _git_state=''
+                local _git_dir="$($_PP_timeout 0.1 \git rev-parse --git-dir 2>/dev/null)"; local _rs=$?
+                if [[ $_rs == 124 ]]; then
+                    _git_state='_PP_timeout while checking for gitdir'
+                elif [[ -f "${_git_dir}/MERGE_HEAD" ]]; then
+                    _git_state='MERGING'
+                elif [[ -d "${_git_dir}/rebase-apply" || -d "${git_dir}/rebase-merge" ]]; then
+                    _git_state='REBASING'
+                elif [[ -f "${_git_dir}/CHERRY_PICK_HEAD" ]]; then
+                    _git_state='CHERRY-PICKING'
                 fi
-                $timeout 0.2 git diff-files --quiet; local _rs=$?
-                if [[ $_rs == 1 ]]; then
-                    _changes+=w
-                elif [[ $_rs == 124 ]]; then
-                    _changes+='workdir_timed_out '
-                elif [[ $_rs != 0 ]]; then
-                    _changes+="what_is_RS_${_rs}_for_workdir "
-                fi
-                _changes="${_changes## }"
-                _git="${_PP_YEL} ${_git_branch}${_changes:+($_changes)} "
 
-                # set pipefail, and use ' | grep -n1 ^ | wc -l'
-                # git ls-files --other --exclude-standard --no-empty-directory | grep -q ^ || changes+=u
+                local _changes=''
+                $_PP_timeout 0.2 git diff-index --quiet --cached HEAD; local _rs=$?
+                if [[ $_rs == 1 ]]; then
+                    _changes+='i'
+                elif [[ $_rs == 124 ]]; then
+                    _changes+=' index_timed_out '
+                elif [[ $_rs != 0 ]]; then
+                    _changes+=" what_is_RS_${_rs}_for_index "
+                fi
+                $_PP_timeout 0.2 git diff-files --quiet; local _rs=$?
+                if [[ $_rs == 1 ]]; then
+                    _changes+='w'
+                elif [[ $_rs == 124 ]]; then
+                    _changes+=' workdir_timed_out '
+                elif [[ $_rs != 0 ]]; then
+                    _changes+=" what_is_RS_${_rs}_for_workdir "
+                fi
+
+                [[ -n "$_changes" ]] && _changes="($_changes)"
+                [[ -n "$_git_state" ]] && _git_state="($_git_state)"
+                _git="${_PP_YEL} ${_git_branch}${_git_state}${_changes} ${_PP_NONE}"
             fi
         fi
     fi
@@ -96,7 +114,7 @@ _PP_prompt() {
     (( ${#_pwd} > _max_len )) && _pwd=" … ${_pwd:${#_pwd}-${_max_len}}"
     _pwd=$(echo "$_pwd" | sed -e 's_\\_\\\\_g' -e 's_\$_\\\$_g')
 
-    PS1="${_PP_NONE}${_PP_GRE} \t ${_PP_BLU} ${_pwd} $_git${_runtime}${_err}${_PP_NONE} "
+    PS1="${_PP_NONE}${_PP_GRE} \t ${_PP_BLU} ${_pwd} ${_git}${_runtime}${_err}${_PP_NONE} "
 }
 
 _PP_runtime_last_seconds=$SECONDS
