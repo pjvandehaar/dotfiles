@@ -68,7 +68,11 @@ function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $
 function ptrcut { awk "{print \$$1}"; }
 function ptrsum { perl -nale '$s += $_; END{print $s}'; }
 function ptrminmax { perl -nale 'print if m{^[0-9]+$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
-
+function sleeptil { # Accepts "0459", etc
+    offset=$(($(date -d "$1" +%s) - $(date +%s)))
+    if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
+    echo "offset: $offset seconds"; sleep $offset
+}
 spaced_less() {
     ([ -t 0 ] && cat "$1" || cat) |
     sed 's_$_\n_' |

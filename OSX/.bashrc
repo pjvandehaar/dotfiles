@@ -28,8 +28,10 @@ alias e=emacs
 alias gs='git status'
 alias gl='git lol'
 alias gla='git lol --all'
+alias glb='git lol --branches'
 __git_complete gl  _git_log
 __git_complete gla _git_log
+__git_complete glb _git_log
 function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
 alias ptrdiff='diff -dy -W$COLUMNS'
 
@@ -57,24 +59,31 @@ function sleeptil { # Accepts "0459" or "0459.59"
     if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
     echo "offset: $offset seconds"; sleep $offset
 }
+spaced_less() {
+    ([ -t 0 ] && cat "$1" || cat) |
+    sed 's_$_\n_' |
+    less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
+}
+
+
+# OSX-specific
+# ============
 function sleeptilc { export -f sleeptil; caffeinate -s bash -c "sleeptil $1"; }
 function wakeat {
     songdir="$(find '/Users/peter/Music/iTunes/iTunes Media' -iregex '.*mp3' -execdir pwd  \; | uniq | gsort -R | head -n1)"; echo "$songdir"
     sleeptilc $1; osascript -e "set Volume 3"
     find "$songdir" -iregex '.*mp3' -exec afplay -d {} \;
 }
-
-# OSX-specific
 function ql { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful not to open too many! # TODO: confirm every tenth
 alias macdown='open -a macdown'
 function clip { [ -t 0 ] && pbpaste || pbcopy; }
 function notify { /usr/bin/osascript -e "display notification \"$*\" with title \"FINISHED\""; }
-
 function snowwhite {
     mount | grep -q /Volumes/SW && echo unmounting... && umount /Volumes/SW
     mkdir -p /Volumes/SW
     sshfs pjvh@snowwhite.sph.umich.edu:/home/pjvh /Volumes/SW/ && cd /Volumes/SW/
 }
+
 
 # settings
 # ========

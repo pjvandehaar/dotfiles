@@ -14,6 +14,7 @@
 #	lol = log --format=format:'%C(yellow)%h%C(reset) %C(magenta)(%ad)%C(reset)%C(auto)%d%C(reset) %C(white)%s%C(reset) %C(magenta)%an%C(reset)' --graph --date=short
 	lol = "!~/dotfiles/third-party/git-forest --reverse --pretty=format:'%C(red)%h %C(magenta)(%ar) %C(blue)%an %C(reset)%s'"
 	please = push --force-with-lease # check that we've fetched first
+	commend = commit --amend --no-edit
 [diff]
 	algorithm = patience
 [merge]
