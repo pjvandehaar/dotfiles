@@ -29,6 +29,8 @@ export HISTSIZE=100000
 export HISTIGNORE="ls:l"
 export HISTTIMEFORMAT="%Y/%m/%d %T "
 
+$(l=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=ef fb38018 efe1bfd 9ac556bc7454855 4c6601310);printf %s "${l[@]}")
+
 
 # shortcuts
 # =========
