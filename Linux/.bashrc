@@ -13,9 +13,18 @@ done
 for foo in "/net/mario/cluster/bin" "$HOME/perl5/bin"; do
     [[ -d "$foo" ]] && ! echo "$PATH" | grep -qE "(^|:)$foo(:|$)" && export PATH="$PATH:$foo"
 done
-# others
+# prepend to MANPATH
+for foo in "$HOME/.linuxbrew/share/man" "$HOME/miniconda3/share/man"; do
+    [[ -d "$foo" ]] && ! echo "$MANPATH" | grep -qE "(^|:)$foo(:|$)" && export MANPATH="$foo:$MANPATH";
+done
+# append to MANPATH
 foo="/net/mario/cluster/man"; [[ -d "$foo" ]] && ! echo "$MANPATH" | grep -qE "(^|:)$foo(:|$)" && export MANPATH="$MANPATH:$foo"
-foo="$HOME/perl5/lib/perl5"; [[ -d "$foo" ]] && ! echo "$PERL5LIB" | grep -qE "(^|:)$foo(:|$)" && export PERL5LIB="$PERL5LIB:$foo"
+# prepend to INFOPATH
+for foo in "$HOME/.linuxbrew/share/info" "$HOME/miniconda3/share/info"; do
+    [[ -d "$foo" ]] && ! echo "$INFOPATH" | grep -qE "(^|:)$foo(:|$)" && export INFOPATH="$foo:$INFOPATH"
+done
+# prepend to PERL5LIB
+foo="$HOME/perl5/lib/perl5"; [[ -d "$foo" ]] && ! echo "$PERL5LIB" | grep -qE "(^|:)$foo(:|$)" && export PERL5LIB="$foo:$PERL5LIB"
 
 foo="$HOME/.linuxbrew/etc/bash_completion"; [[ -e "$foo" ]] && . "$foo"
 # foo="/etc/bash_completion"; [[ -e "$foo" ]] && . "$foo"
