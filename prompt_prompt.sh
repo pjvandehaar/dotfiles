@@ -50,8 +50,8 @@ _PP_prompt() {
         $_PP_timeout 0.2 \git show-ref --head --quiet; local _rs=$?
         if [[ $_rs == 124 ]]; then
             _git="${_PP_RED} _PP_timeout while checking for HEAD ${_PP_NONE}"
-        elif [[ $_rs == 128 ]]; then
-            _git="${_PP_RED} no HEAD? ${_PP_NONE}"
+        elif [[ $_rs == 1 ]]; then
+            _git="${_PP_RED} no HEAD ${_PP_NONE}"
         elif [[ $_rs != 0 ]]; then
             _git="${_PP_RED} AAHHHHG why was the return status $_rs ???? ${_PP_NONE}"
         else
