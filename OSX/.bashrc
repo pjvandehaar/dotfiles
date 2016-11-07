@@ -70,7 +70,7 @@ function sleeptil { # Accepts "0459" or "0459.59"
 }
 spaced_less() {
     ([ -t 0 ] && cat "$1" || cat) |
-    sed 's_$_\n_' |
+    perl -ple 's{$}{\n}' |
     less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
 }
 
