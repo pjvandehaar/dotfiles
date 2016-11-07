@@ -1,27 +1,31 @@
-if type -t ptrcut > /dev/null; then
-    echo Apparently .bashrc has already been sourced once. I\'m not sourcing it again.
+if type -t ptrcut >/dev/null; then
+    echo "Apparently .bashrc has already been sourced once. I'm not sourcing it again."
     return
 fi
 
-# imports
-# =======
-
 dotfiles_path=$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
 
-export PATH="$dotfiles_path/bin:$HOME/bin:$HOME/perl5/bin:$PATH"
-export PATH="$PATH:/net/mario/cluster/bin"
-if [[ -d "$HOME/.linuxbrew/bin" ]]; then export PATH="$HOME/.linuxbrew/bin:$PATH"; fi
-export MANPATH="$MANPATH:/net/mario/cluster/man/"
+# prepend to PATH
+for foo in "$dotfiles_path/bin" "$HOME/bin" "$HOME/miniconda3/bin" "$HOME/.linuxbrew/bin"; do
+    [[ -d "$foo" ]] && ! echo "$PATH" | grep -qE "(^|:)$foo(:|$)" && export PATH="$foo:$PATH"
+done
+# append to PATH
+for foo in "/net/mario/cluster/bin" "$HOME/perl5/bin"; do
+    [[ -d "$foo" ]] && ! echo "$PATH" | grep -qE "(^|:)$foo(:|$)" && export PATH="$PATH:$foo"
+done
+# others
+foo="/net/mario/cluster/man"; [[ -d "$foo" ]] && ! echo "$MANPATH" | grep -qE "(^|:)$foo(:|$)" && export MANPATH="$MANPATH:$foo"
+foo="$HOME/perl5/lib/perl5"; [[ -d "$foo" ]] && ! echo "$PERL5LIB" | grep -qE "(^|:)$foo(:|$)" && export PERL5LIB="$PERL5LIB:$foo"
 
-# bc=/etc/bash_completion
-# [ -f "$bc" ] && . "$bc"
+foo="$HOME/.linuxbrew/etc/bash_completion"; [[ -e "$foo" ]] && . "$foo"
+# foo="/etc/bash_completion"; [[ -e "$foo" ]] && . "$foo"
 
-. "$dotfiles_path/third-party/git-completion.bash"
+type -t emacs >/dev/null && export EDITOR=emacs || export EDITOR=vim
 
-
-# added by Miniconda3 4.0.5 installer
-export PATH="/net/snowwhite/home/pjvh/miniconda3/bin:$PATH"
-# Note: I only want to use miniconda for r and py3.5+
+export HISTFILESIZE=10000000
+export HISTSIZE=100000
+export HISTIGNORE="ls:l"
+export HISTTIMEFORMAT="%Y/%m/%d %T "
 
 
 # shortcuts
@@ -86,14 +90,6 @@ spaced_less() {
 alias grep='grep --color=auto'
 alias egrep='egrep --color=auto'
 alias man='man -a'
-type -t emacs > /dev/null && export EDITOR=emacs || export EDITOR=vim
-
-export HISTFILESIZE=10000000
-export HISTSIZE=100000
-export HISTIGNORE="ls:l"
-export HISTTIMEFORMAT="%Y/%m/%d %T "
-
-export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"
 
 # final import
 # ============
