@@ -10,6 +10,7 @@ dotfiles_path=$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")
 
 export PATH="$dotfiles_path/bin:$HOME/bin:$HOME/perl5/bin:$PATH"
 export PATH="$PATH:/net/mario/cluster/bin/"
+if [[ -d "$HOME/.linuxbrew/bin" ]]; then export PATH="$HOME/.linuxbrew/bin:$PATH"; fi
 export MANPATH="$MANPATH:/net/mario/cluster/man/"
 
 # bc=/etc/bash_completion
