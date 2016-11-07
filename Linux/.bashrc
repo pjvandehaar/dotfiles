@@ -20,6 +20,8 @@ foo="$HOME/perl5/lib/perl5"; [[ -d "$foo" ]] && ! echo "$PERL5LIB" | grep -qE "(
 foo="$HOME/.linuxbrew/etc/bash_completion"; [[ -e "$foo" ]] && . "$foo"
 # foo="/etc/bash_completion"; [[ -e "$foo" ]] && . "$foo"
 
+foo="$dotfiles_path/prompt_prompt.sh"; [[ -e "$foo" ]] && . "$foo"
+
 type -t emacs >/dev/null && export EDITOR=emacs || export EDITOR=vim
 
 export HISTFILESIZE=10000000
@@ -73,7 +75,7 @@ function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $
 function ptrcut { awk "{print \$$1}"; }
 function ptrsum { perl -nale '$s += $_; END{print $s}'; }
 function ptrminmax { perl -nale 'print if m{^[0-9]+$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
-function sleeptil { # Accepts "0459", etc
+function sleeptil { # Accepts "0459" or "04:49:59"
     offset=$(($(date -d "$1" +%s) - $(date +%s)))
     if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
     echo "offset: $offset seconds"; sleep $offset
@@ -84,7 +86,7 @@ spaced_less() {
     less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
 }
 
-# settings
+# overrides
 # ========
 
 alias grep='grep --color=auto'
@@ -100,6 +102,3 @@ man() {
     LESS_TERMCAP_us=$'\e[1;32m' \
     command man -a "$@"
 }
-# final import
-# ============
-. "$dotfiles_path/prompt_prompt.sh"

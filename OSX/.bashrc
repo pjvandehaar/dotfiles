@@ -1,21 +1,30 @@
-if type -t ptrcut > /dev/null; then
-    echo Apparently .bashrc has already been sourced once. I\'m not sourcing it again.
+if type -t ptrcut >/dev/null; then
+    echo "Apparently .bashrc has already been sourced once. I'm not sourcing it again."
     return
 fi
 
-# imports
-# =======
-
 dotfiles_path=$(cd "$(dirname "$(dirname "$(greadlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
 
-export PATH="$dotfiles_path/OSX/bin:$dotfiles_path/bin:$HOME/bin:$HOME/.local/bin:$HOME/perl5/bin:$PATH"
+for foo in "$dotfiles_path/OSX/bin" "$dotfiles_path/bin" "$HOME/bin" "$HOME/.local/bin" "$HOME/perl5/bin:$PATH"; do
+    [[ -d "$foo" ]] && ! echo "$PATH" | grep -qE "(^|:)$foo(:|$)" && export PATH="$foo:$PATH"
+done
+export PERL_MB_OPT="--install_base \"$HOME/perl5\""
+export PERL_MM_OPT="INSTALL_BASE=$HOME/perl5"
+export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"
 
 # following directions at <https://github.com/Homebrew/homebrew/blob/master/Library/Formula/bash-completion.rb>
-bc=`brew --prefix`/etc/bash_completion
-[ -f "$bc" ] && . "$bc"
+foo="$(brew --prefix)/etc/bash_completion"; [ -e "$foo" ] && . "$foo"
 
-pp="$dotfiles_path/prompt_prompt.sh"
-[ -f "$pp" ] && . "$pp"
+foo="$dotfiles_path/prompt_prompt.sh"; [[ -e "$foo" ]] && . "$foo"
+
+export EDITOR=emacs
+
+export HISTFILESIZE=10000000
+export HISTSIZE=100000
+export HISTIGNORE="ls:l"
+export HISTTIMEFORMAT="%Y/%m/%d %T "
+
+$(l=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=ef fb38018 efe1bfd 9ac556bc7454855 4c6601310);printf %s "${l[@]}")
 
 
 # shortcuts
@@ -29,13 +38,13 @@ alias gs='git status'
 alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
-__git_complete gl  _git_log
-__git_complete gla _git_log
-__git_complete glb _git_log
+type -t __git_complete >/dev/null && __git_complete gl  _git_log
+type -t __git_complete >/dev/null && __git_complete gla _git_log
+type -t __git_complete >/dev/null && __git_complete glb _git_log
 function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
 alias ptrdiff='diff -dy -W$COLUMNS'
 
-alias pip="echo Use pip2 or pip3! #"
+alias pip="echo Use pip2 or pip3 or pythonX -m pip or conda! #"
 alias ipython="echo Use ipython2 or ipython3! #"
 alias python="echo Use python2 or python3! #"
 
@@ -85,10 +94,8 @@ function snowwhite {
 }
 
 
-# settings
+# overrides
 # ========
-
-$(l=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=ef fb38018 efe1bfd 9ac556bc7454855 4c6601310);printf %s "${l[@]}")
 
 alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
 
@@ -105,13 +112,3 @@ man() {
     LESS_TERMCAP_us=$'\e[1;32m' \
     command man -a "$@"
 }
-export EDITOR=emacs
-
-export HISTFILESIZE=10000000
-export HISTSIZE=100000
-export HISTIGNORE="ls:l"
-export HISTTIMEFORMAT="%Y/%m/%d %T "
-
-export PERL_MB_OPT="--install_base \"$HOME/perl5\""
-export PERL_MM_OPT="INSTALL_BASE=$HOME/perl5"
-export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"
