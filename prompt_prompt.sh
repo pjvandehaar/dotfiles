@@ -46,7 +46,7 @@ _PP_prompt() {
         _git="${_PP_RED} AAHHHH why was the return status $_rs ???? ${_PP_NONE}"
     else
 
-        # Check that the repo has at least one commit.
+        # Check that the repo has a HEAD
         $_PP_timeout 0.2 \git show-ref --head --quiet; local _rs=$?
         if [[ $_rs == 124 ]]; then
             _git="${_PP_RED} _PP_timeout while checking for HEAD ${_PP_NONE}"
@@ -56,54 +56,65 @@ _PP_prompt() {
             _git="${_PP_RED} AAHHHHG why was the return status $_rs ???? ${_PP_NONE}"
         else
 
-            # Get the current branch
-            local _git_head_ref="$($_PP_timeout 0.2 \git symbolic-ref -q HEAD)"; local _rs=$?
+            # Check that the repo has a commit
+            $_PP_timeout 0.2 \git rev-parse --short -q HEAD &>/dev/null; local _rs=$?
             if [[ $_rs == 124 ]]; then
-                _git="${_PP_RED} _PP_timeout while checking branch ${_PP_NONE}"
-            elif [[ $_rs -ge 1 ]]; then
-                _git=" AH why was the return status $_rs ??"
+                _git="${_PP_RED} _PP_timeout while checking for any commits ${_PP_NONE}"
+            elif [[ $_rs == 1 ]]; then
+                _git="${_PP_RED} no commits ${_PP_NONE}"
+            elif [[ $_rs != 0 ]]; then
+                _git="${_PP_RED} AAHHRG why was the return status $_rs ???? ${_PP_NONE}"
             else
 
-                # If HEAD is on a branch, format it.  If not, get HEAD's commit.
-                if [[ -n $_git_head_ref ]]; then
-                    local _git_branch="$(printf %q "${_git_head_ref#refs/heads/}")"
-                else
-                    local _git_branch="$(\git rev-parse --short -q HEAD)"
-                fi
-
-                local _git_state=''
-                local _git_dir="$($_PP_timeout 0.1 \git rev-parse --git-dir 2>/dev/null)"; local _rs=$?
+                # Get the current branch
+                local _git_head_ref="$($_PP_timeout 0.2 \git symbolic-ref -q HEAD)"; local _rs=$?
                 if [[ $_rs == 124 ]]; then
-                    _git_state='_PP_timeout while checking for gitdir'
-                elif [[ -f "${_git_dir}/MERGE_HEAD" ]]; then
-                    _git_state='MERGING'
-                elif [[ -d "${_git_dir}/rebase-apply" || -d "${git_dir}/rebase-merge" ]]; then
-                    _git_state='REBASING'
-                elif [[ -f "${_git_dir}/CHERRY_PICK_HEAD" ]]; then
-                    _git_state='CHERRY-PICKING'
-                fi
+                    _git="${_PP_RED} _PP_timeout while checking branch ${_PP_NONE}"
+                elif [[ $_rs -ge 1 ]]; then
+                    _git=" AH why was the return status $_rs ??"
+                else
 
-                local _changes=''
-                $_PP_timeout 0.2 git diff-index --quiet --cached HEAD; local _rs=$?
-                if [[ $_rs == 1 ]]; then
-                    _changes+='i'
-                elif [[ $_rs == 124 ]]; then
-                    _changes+=' index_timed_out '
-                elif [[ $_rs != 0 ]]; then
-                    _changes+=" what_is_RS_${_rs}_for_index "
-                fi
-                $_PP_timeout 0.2 git diff-files --quiet; local _rs=$?
-                if [[ $_rs == 1 ]]; then
-                    _changes+='w'
-                elif [[ $_rs == 124 ]]; then
-                    _changes+=' workdir_timed_out '
-                elif [[ $_rs != 0 ]]; then
-                    _changes+=" what_is_RS_${_rs}_for_workdir "
-                fi
+                    # If HEAD is on a branch, format it.  If not, get HEAD's commit.
+                    if [[ -n $_git_head_ref ]]; then
+                        local _git_branch="$(printf %q "${_git_head_ref#refs/heads/}")"
+                    else
+                        local _git_branch="$(\git rev-parse --short -q HEAD)"
+                    fi
 
-                [[ -n "$_changes" ]] && _changes="($_changes)"
-                [[ -n "$_git_state" ]] && _git_state="($_git_state)"
-                _git="${_PP_YEL} ${_git_branch}${_git_state}${_changes} ${_PP_NONE}"
+                    local _git_state=''
+                    local _git_dir="$($_PP_timeout 0.1 \git rev-parse --git-dir 2>/dev/null)"; local _rs=$?
+                    if [[ $_rs == 124 ]]; then
+                        _git_state='_PP_timeout while checking for gitdir'
+                    elif [[ -f "${_git_dir}/MERGE_HEAD" ]]; then
+                        _git_state='MERGING'
+                    elif [[ -d "${_git_dir}/rebase-apply" || -d "${git_dir}/rebase-merge" ]]; then
+                        _git_state='REBASING'
+                    elif [[ -f "${_git_dir}/CHERRY_PICK_HEAD" ]]; then
+                        _git_state='CHERRY-PICKING'
+                    fi
+
+                    local _changes=''
+                    $_PP_timeout 0.2 git diff-index --quiet --cached HEAD; local _rs=$?
+                    if [[ $_rs == 1 ]]; then
+                        _changes+='i'
+                    elif [[ $_rs == 124 ]]; then
+                        _changes+=' index_timed_out '
+                    elif [[ $_rs != 0 ]]; then
+                        _changes+=" what_is_RS_${_rs}_for_index "
+                    fi
+                    $_PP_timeout 0.2 git diff-files --quiet; local _rs=$?
+                    if [[ $_rs == 1 ]]; then
+                        _changes+='w'
+                    elif [[ $_rs == 124 ]]; then
+                        _changes+=' workdir_timed_out '
+                    elif [[ $_rs != 0 ]]; then
+                        _changes+=" what_is_RS_${_rs}_for_workdir "
+                    fi
+
+                    [[ -n "$_changes" ]] && _changes="($_changes)"
+                    [[ -n "$_git_state" ]] && _git_state="($_git_state)"
+                    _git="${_PP_YEL} ${_git_branch}${_git_state}${_changes} ${_PP_NONE}"
+                fi
             fi
         fi
     fi
