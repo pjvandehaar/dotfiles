@@ -88,9 +88,14 @@ alias macdown='open -a macdown'
 function clip { [ -t 0 ] && pbpaste || pbcopy; }
 function notify { /usr/bin/osascript -e "display notification \"$*\" with title \"FINISHED\""; }
 function snowwhite {
-    mount | grep -q /Volumes/SW && echo unmounting... && umount /Volumes/SW
-    mkdir -p /Volumes/SW
-    sshfs pjvh@snowwhite.sph.umich.edu:/home/pjvh /Volumes/SW/ && cd /Volumes/SW/
+    mount | grep -q ~/mount/SW && echo unmounting... && umount ~/mount/SW
+    mkdir -p ~/mount/SW
+    sshfs pjvh@snowwhite.sph.umich.edu:/home/pjvh ~/mount/SW/ && cd ~/mount/SW/
+}
+function csgsites {
+    mount | grep -q ~/mount/CS && echo unmounting... && umount ~/mount/CS
+    mkdir -p ~/mount/CS
+    sshfs pjvh@snowwhite.sph.umich.edu:/net/csgsites/csg/pjvh ~/mount/CS/ && cd ~/mount/CS/
 }
 
 
