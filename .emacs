@@ -12,10 +12,9 @@
  )
 
 ;; Packaging:
-;; On new computers, do `M-x package-install [RET] ess`
+;; when first installing this .emacs, do `M-x package-install <return> <package-name>`
 ;; sometimes do: `M-x list-packages` to check for updates
-;; When you install a new package, you must `(require 'the-new-package)` here.
-
+;; When you install a new package, you must `(require '<package-name>)` here.
 (when (>= emacs-major-version 24)
   (require 'package)
   ;; MELPA-stable is the best repo. It installs the latest tagged commit.
@@ -23,30 +22,36 @@
   (add-to-list 'package-archives
                '("melpa-stable" . "https://stable.melpa.org/packages/") t)
   (package-initialize)
-  ;; install these with M-x package-install <packagename>
-  (require 'ess nil 'noerror)
-  (when (require 'expand-region nil 'noerror)
-    (global-set-key (kbd "C-\\") 'er/expand-region))
+  (unless (require 'ess nil 'noerror)
+    (message "failed to load ess"))
+  (if (require 'expand-region nil 'noerror)
+    (global-set-key (kbd "C-\\") 'er/expand-region)
+    (message "failed to load expand-region"))
+  ;; I'm not interested in this right now.  Maybe enable it later.
+  ;; ;; when you move one-line-at-a-time (eg, C-n repeatedly) (or even a few lines at a time),  this will scroll the screen 5 lines ahead of you.
+  ;; (if (require 'smooth-scrolling nil 'noerror)
+  ;;   (setq smooth-scroll-margin 5)
+  ;;   (smooth-scrolling-mode))
 )
 
 (add-to-list 'load-path "~/dotfiles/third-party/emacs")
 (require 'git)
 (require 'git-blame)
 
-;; Disable electric-indent-mode.  If you want auto-indent, use C-j.
+;; Disable electric-indent-mode (due to pasting problems mostly).  If you want auto-indent, use C-j.
 (when (fboundp 'electric-indent-mode) (electric-indent-mode -1))
-
 
 ;; I think that `setq-default` will let modes that override this setting do so.
 (setq-default vc-follow-symlinks t)
-(setq-default enable-local-variables nil)
-(setq-default indent-tabs-mode nil)
-(setq-default mode-require-final-newline nil)
+(setq-default enable-local-variables nil) ;; ???
+(setq-default indent-tabs-mode nil) ;; never insert a \t.  Always spaces.
+(setq-default mode-require-final-newline nil) ;; don't auto-add \t at EOF, b/c it gets annoying.
 
-(column-number-mode)
-(show-paren-mode)
+(column-number-mode) ;; show column in mode-line
+(show-paren-mode) ;; match parens
 
-(which-func-mode)
+(which-function-mode) ;; show current mode in mode-line
+;; I don't know why this is here. `which-func-modes` changed in emacs 24.3, so maybe I don't need it anymore.
 (eval-after-load "which-func"
   '(setq which-func-modes '(java-mode c++-mode perl-mode)))
 
