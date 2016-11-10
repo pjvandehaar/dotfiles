@@ -23,8 +23,9 @@ foo="/net/mario/cluster/man"; [[ -d "$foo" ]] && ! echo "$MANPATH" | grep -qE "(
 for foo in "$HOME/.linuxbrew/share/info" "$HOME/miniconda3/share/info"; do
     [[ -d "$foo" ]] && ! echo "$INFOPATH" | grep -qE "(^|:)$foo(:|$)" && export INFOPATH="$foo:$INFOPATH"
 done
-# prepend to PERL5LIB
-foo="$HOME/perl5/lib/perl5"; [[ -d "$foo" ]] && ! echo "$PERL5LIB" | grep -qE "(^|:)$foo(:|$)" && export PERL5LIB="$foo:$PERL5LIB"
+# This breaks my `git stage -p`:
+# # prepend to PERL5LIB
+# foo="$HOME/perl5/lib/perl5"; [[ -d "$foo" ]] && ! echo "$PERL5LIB" | grep -qE "(^|:)$foo(:|$)" && export PERL5LIB="$foo:$PERL5LIB"
 
 foo="$HOME/.linuxbrew/etc/bash_completion"; [[ -e "$foo" ]] && . "$foo"
 # foo="/etc/bash_completion"; [[ -e "$foo" ]] && . "$foo"
