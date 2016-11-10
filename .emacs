@@ -55,6 +55,18 @@
 (setq-default whitespace-style '(face trailing indentation::space space-before-tab space-after-tab))
 (global-whitespace-mode)
 
+;; mouse-scrolling to move screen & pointer. copied from <https://iterm2.com/faq.html> & modified.
+(require 'mwheel)
+(require 'mouse)
+(xterm-mouse-mode t)
+(mouse-wheel-mode t)
+;; (global-set-key [mouse-4] 'previous-line) ;; These move the cursor
+;; (global-set-key [mouse-5] 'next-line)
+;; (global-set-key [mouse-4] 'scroll-down-line) ;; These move the screen & drag the cursor.
+;; (global-set-key [mouse-5] 'scroll-up-line)
+(global-set-key [mouse-4] (lambda () (interactive) (scroll-down-line) (set-window-point (selected-window) (window-start)))) ;; These move the screen & put the cursor at the beginning/end
+(global-set-key [mouse-5] (lambda () (interactive) (scroll-up-line) (set-window-point (selected-window) (window-end))))
+
 ;; go-to-char
 (global-set-key (kbd "C-t") 'go-to-char)
 (global-set-key (kbd "M-t") 'go-back-to-char)

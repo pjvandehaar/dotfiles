@@ -66,11 +66,19 @@ alias gotcloud='echo dont use the system gotcloud! #'
 type -t r >/dev/null || alias r=R
 
 # options: `less -R`: pass thru color codes.
-#          `less -X`: `cat` when finished.
+#          `less -X`: `cat` when finished (because of not initializing, breaking scrolling).
 #          `less -F`: quit immediately if output fits on one screen.
 if [[ $TERM != dumb ]]; then
     function l { ls -lhFABtr --color "$@" | less -SRXF ; }
     function ll { ls -lhBF --color "$@" | less -SRXF ; }
+    # TODO: find a way to leave the final view of `less` on the screen, like `-XF` did, but still support mouse scrolling in tmux.
+    #     - option 1: add a special case for less in tmux.  but `#{pane_current_command} == bash` when piping, and I don't see another way to detect it.
+    #     - option 2: in l(), do `tmux bind-key WheelDownPane ...` and then change it back when closing.
+    # ll() {
+    #     local output="$(ls -lhFB --color "$@")"
+    #     if [[ "$(echo "$output" | wc -l)" -lt "$LINES" ]]; then echo "$output"; else echo "$output" | less -SR; fi
+    # }
+    # alias l="ll -Atr"
     function la { ls -FACw $COLUMNS --color "$@" | less -SRXF ; } # `ls -Cw $COLUMNS` outputs for the terminal's correct number of columns.
 else
     alias l='ls -lhFABtr --color'
