@@ -55,6 +55,7 @@ alias gs='git status'
 alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
+type -t __git_complete >/dev/null && __git_complete gs  _git_status
 type -t __git_complete >/dev/null && __git_complete gl  _git_log
 type -t __git_complete >/dev/null && __git_complete gla _git_log
 type -t __git_complete >/dev/null && __git_complete glb _git_log
