@@ -5,6 +5,7 @@ fi
 
 dotfiles_path=$(cd "$(dirname "$(dirname "$(greadlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
 
+# prepend to PATH
 for foo in "$dotfiles_path/OSX/bin" "$dotfiles_path/bin" "$HOME/bin" "$HOME/.local/bin" "$HOME/perl5/bin:$PATH"; do
     [[ -d "$foo" ]] && ! echo "$PATH" | grep -qE "(^|:)$foo(:|$)" && export PATH="$foo:$PATH"
 done
@@ -24,6 +25,8 @@ export HISTSIZE=100000
 export HISTIGNORE="ls:l"
 export HISTTIMEFORMAT="%Y/%m/%d %T "
 
+export MOSH_TITLE_NOPREFIX=1
+
 $(l=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=ef fb38018 efe1bfd 9ac556bc7454855 4c6601310);printf %s "${l[@]}")
 
 
@@ -38,6 +41,7 @@ alias gs='git status'
 alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
+type -t __git_complete >/dev/null && __git_complete gs  _git_status
 type -t __git_complete >/dev/null && __git_complete gl  _git_log
 type -t __git_complete >/dev/null && __git_complete gla _git_log
 type -t __git_complete >/dev/null && __git_complete glb _git_log
