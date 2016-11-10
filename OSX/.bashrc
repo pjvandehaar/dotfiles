@@ -51,6 +51,7 @@ alias python="echo Use python2 or python3! #"
 # options: `ls -G`: color on OSX
 # `CLICOLOR_FORCE` makes `ls` send colors to a non-terminal STDOUT.
 # `egrep --color=never` tells grep to pass through any color escape codes.
+# Note that I could use `gls` to syncronize with Linux but I don't.
 function l  { CLICOLOR_FORCE=1 ls -lhFGAtr "$@" | (egrep --color=never -v '(~|#|\.DS_Store)$' ||true); } # always return 0.
 function ll { CLICOLOR_FORCE=1 ls -lhFG    "$@" | (egrep --color=never -v '(~|#|\.DS_Store)$' ||true); }
 alias la="ls -AFG"
