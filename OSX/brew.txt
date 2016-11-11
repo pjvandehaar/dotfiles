@@ -1,14 +1,19 @@
 $ brew {cask,} cleanup
 
-$ brew leaves
-autossh
+$ brew tap Homebrew/bundle
+$ brew bundle dump # makes Brewfile
+$ brew bundle # installs from Brewfile
+
+$ brew leaves # abridged...
+bash
 bash-completion
-caskroom/cask/brew-cask
 coreutils
 emacs
 ffmpeg --with-faac
+fpp
 gist
 git
+htop
 imagemagick
 jq
 lastpass-cli --with-pinentry --with-doc # security, documentation
@@ -21,36 +26,3 @@ rename
 homebrew/fuse/sshfs (depends on Caskroom/osxfuse or XCode)
 tree
 wget
-youtube-dl
-
-$ brew cask list | cat
-alfred
-anki
-box-sync
-brackets
-dropbox
-firefox
-flux
-google-chrome
-google-hangouts
-hugin
-istumbler
-iterm2
-itsycal
-java
-lastpass
-macdown
-mactex
-nvalt
-omnidisksweeper
-osxfuse
-rstudio
-skype
-sourcetree
-spotify
-sublime-text
-transmission
-vlc
-vmware-horizon-client
-wireshark
-xquartz
