@@ -77,7 +77,8 @@ if [[ $TERM != dumb ]]; then
     function ll { ls -lhBF --color "$@" | less -SRXF ; }
     # TODO: find a way to leave the final view of `less` on the screen, like `-XF` did, but still support mouse scrolling in tmux.
     #     - option 1: add a special case for less in tmux.  but `#{pane_current_command} == bash` when piping, and I don't see another way to detect it.
-    #     - option 2: in l(), do `tmux bind-key WheelDownPane ...` and then change it back when closing.
+    #     - option 2: in l(), do `tmux bind-key WheelDownPane ...` and then change it back when closing. (but other tabs...)
+    #     - option 3: write some kind of wrapper around `less -SRXF` that either enables alternate mode or translates mousescroll to arrows.
     # ll() {
     #     local output="$(ls -lhFB --color "$@")"
     #     if [[ "$(echo "$output" | wc -l)" -lt "$LINES" ]]; then echo "$output"; else echo "$output" | less -SR; fi
