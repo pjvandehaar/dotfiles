@@ -6,12 +6,13 @@ fi
 dotfiles_path=$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
 
 # prepend to PATH
-for foo in "$dotfiles_path/bin" "$HOME/bin" "$HOME/miniconda3/bin" "$HOME/.linuxbrew/bin"; do
-    [[ -d "$foo" ]] && ! echo "$PATH" | grep -qE "(^|:)$foo(:|$)" && export PATH="$foo:$PATH"
+for foo in "$dotfiles_path/bin" "$HOME/bin" "$HOME/.linuxbrew/bin" "$HOME/miniconda3/bin"; do
+    # remove previous copies and put the new one at the start.
+    [[ -d "$foo" ]] && export PATH="$foo:$(echo ":$PATH:" | perl -pale "s{:$foo:}{:}" | perl -pale 's{^:|:$}{}g')"
 done
 # append to PATH
 for foo in "/net/mario/cluster/bin" "$HOME/perl5/bin"; do
-    [[ -d "$foo" ]] && ! echo "$PATH" | grep -qE "(^|:)$foo(:|$)" && export PATH="$PATH:$foo"
+    [[ -d "$foo" ]] && export PATH="$(echo ":$PATH:" | perl -pale "s{:$foo:}{:}" | perl -pale 's{^:|:$}{}g'):$foo"
 done
 # prepend to MANPATH
 for foo in "$HOME/.linuxbrew/share/man" "$HOME/miniconda3/share/man"; do
