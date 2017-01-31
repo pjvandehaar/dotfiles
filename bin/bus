@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+# -*- mode: python -*-
+
+import requests
+import sys
+import json
+import dateutil.parser
+import datetime
+
+url = 'http://www.theride.org/DesktopModules/AATA.EndPoint/Proxy.ashx?method=getpredictionsfromxml&stpid={stop}'
+
+stops = {
+    '22-lanc': ('1781', '22'), # 22: Blake - Pontiac Trail - Dhu Varren - loop of North campus
+    '22-lanc-N': ('1788', '22'),
+    '22-pierpont': ('1714', '22'),
+    '22-blake': ('145', '22'),
+    '22-kroger-N': ('194', '22'),
+    '23-childrens': ('185', '23'), # 23: Blake - hospital - Plymouth - Kroger - (variable) - park&ride by 23.
+    '23-obs': ('184', '23'),
+    '23-kroger': ('1350', '23'),
+    '23-clague': ('628', '23'),
+    '65-geddes': ('1285', '23'), # 65: Geddes->Washtenaw->Huron loop - Broadway bridge - Plymouth - Kroger - southern Green
+    '65-kroger': ('1350', '65'),
+}
+
+if len(sys.argv) <= 1 or sys.argv[1] not in stops:
+    print('Available stops are:')
+    for stop in stops: print(stop)
+    exit(0)
+
+my_stop = stops[sys.argv[1]]
+j = requests.get(url.format(stop=my_stop[0])).json()
+assert list(j) == ['stop'], j
+j = j['stop']
+if list(j) != ['pre']:
+    assert j in [
+        {'noPredictionMessage': 'No arrival times'},
+        {'noPredictionMessage': 'No service scheduled'}
+    ], j
+    print("No arrivals"); exit(0)
+j = j['pre']
+
+if not isinstance(j, list):
+    j = [j] # the silly API skips the list if there's only one bus.
+
+req_keys = ('cars consist zone mode '
+            'pu pt '
+            'fd rn rd '
+            'scheduled v').split()
+opt_keys = 'nextbusonroutetime nextbusminutes'.split()
+
+for bus in j:
+    try:
+        assert all(key in bus for key in req_keys)
+        assert all(key in req_keys+opt_keys for key in bus)
+
+        assert bus['cars'] is None
+        assert bus['consist'] is None
+        assert bus['zone'] is None
+        assert bus['mode'] == '1'
+
+        if bus['pu'] == ' MINUTES':
+            int(bus['pt'])
+        else:
+            assert bus['pu'] == 'APPROACHING'
+            assert bus['pt'] == {"#cdata-section": "&nbsp;"} or bus['pt'] < 5
+
+        assert bus['rn'] == bus['rd']
+        int(bus['rn'])
+        assert len(bus['fd']) > 5
+
+        # TODO: figure out what this all is, probs by looking at the webpage.
+        # TODO: explore the API by checking other stops.
+        assert (bus['scheduled']=='true') == (bus['v'] == 'SCHEDULED')
+        assert (bus['scheduled']=='false') == bus['v'].isdigit() == ('nextbusminutes' in bus) == ('nextbusonroutetime' in bus)
+        if bus['scheduled'] == 'false':
+            dateutil.parser.parse(bus['nextbusonroutetime'])
+            int(bus['nextbusminutes'])
+            if bus['pu'] == ' MINUTES': assert int(bus['pt']) < 45
+        if bus['scheduled'] == 'true':
+            if bus['pu'] == ' MINUTES': assert int(bus['pt']) > 10
+
+
+        # output
+        if bus['pu'] == ' MINUTES':
+            arrival_time = datetime.datetime.now() + datetime.timedelta(minutes=int(bus['pt']))
+
+            print('bus {rn} ({route}) comes in {pt} minutes (at {t.hour}:{t.minute:02}) ({source})'.format(
+                t=arrival_time,
+                source='prediction' if bus['scheduled'] == 'false' else 'scheduled',
+                route=bus['fd'].strip(),
+                **bus))
+        else:
+            print('bus {rn} ({route}) is coming NOW. ({source})'.format(
+                source='prediction' if bus['scheduled'] == 'false' else 'scheduled',
+                route=bus['fd'].strip(),
+                **bus))
+
+        for key in 'nextbusonroutetime nextbusminutes'.split():
+            if key in bus:
+                print('{}: {}'.format(key, bus[key]))
+        if 'v' in bus and bus['v'] != 'SCHEDULED':
+            print('v: {}'.format(bus['v']))
+
+        print('\n')
+
+    except:
+        print('failed for bus:')
+        json.dump(bus, sys.stdout, indent=2)
+        print('')
+        print('---')
+        raise
