@@ -5,3 +5,8 @@
 
 ##network
 - `netstat -tunapl` # see listening programs (Tuna, Please!)
+
+##disk io
+- `dstat -tdc 60`
+- `sudo iotop`
+- `iostat`
