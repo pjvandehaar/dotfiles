@@ -6,6 +6,7 @@ import sys
 import json
 import dateutil.parser
 import datetime
+import os.path
 
 url = 'http://www.theride.org/DesktopModules/AATA.EndPoint/Proxy.ashx?method=getpredictionsfromxml&stpid={stop}'
 
@@ -41,6 +42,7 @@ def get_buses(stop):
     if not isinstance(j, list):
         j = [j] # the silly API skips the list if there's only one bus.
     for bus in j:
+        record(bus, stop)
         try:
             handle_bus(bus, stop)
         except:
@@ -50,6 +52,11 @@ def get_buses(stop):
             print('---')
             raise
 
+
+buslog = os.path.expanduser('~/.buslog')
+def record(bus, stop):
+    with open(buslog, 'a') as f:
+        f.write(json.dumps([bus, stop]) + '\n')
 
 
 def handle_bus(bus, stop):
@@ -69,21 +76,19 @@ def handle_bus(bus, stop):
     assert bus['scheduled'] in ['true', 'false']
     scheduled = (bus['scheduled'] == 'true')
     assert scheduled == (bus['v'] == 'SCHEDULED')
-    assert scheduled == (not bus['v'].isdigit())
-    assert scheduled == ('nextbusminutes' not in bus)
-    assert scheduled == ('nextbusonroutetime' not in bus)
-    if scheduled:
-        assert bus['pu'] == ' MINUTES'
-        assert isinstance(bus['pt'], str) and int(bus['pt']) > 10
-    else:
+    assert scheduled != (bus['v'].isdigit())
+    assert scheduled != ('nextbusminutes' in bus)
+    assert scheduled != ('nextbusonroutetime' in bus)
+
+    if not scheduled:
         dateutil.parser.parse(bus['nextbusonroutetime'])
         int(bus['nextbusminutes'])
-        if bus['pu'] == ' MINUTES':
-            assert isinstance(bus['pt'], str) and int(bus['pt']) < 45
-        else:
-            assert bus['pu'] in ['APPROACHING', 'DELAYED']
-            assert bus['pt'] == {"#cdata-section": "&nbsp;"} or bus['pt'] < 5
 
+    if bus['pu'] == ' MINUTES':
+        assert isinstance(bus['pt'], str) and 0 <= int(bus['pt']) < 100
+    else:
+        assert bus['pu'] in ['APPROACHING', 'DELAYED']
+        assert bus['pt'] == {"#cdata-section": "&nbsp;"} or bus['pt'] < 5
 
     assert len(bus['fd']) > 5
     assert bus['rn'] == bus['rd']
@@ -110,34 +115,6 @@ def handle_bus(bus, stop):
     print('\n')
 
 
-def get_fake_bus():
-    import random
-    luck = lambda: random.random() > 0.5
-    rr = random.randrange
-    stop = (str(rr(100,500)), str(rr(10,50)))
-    bus = {}
-    for key in ['cars', 'consist', 'zone']: bus[key] = None
-    bus['mode'] = '1'
-    if luck():
-        bus['scheduled'] = 'true'
-        bus['v'] = 'SCHEDULED'
-        bus['pu'] = ' MINUTES'
-        bus['pt'] = str(rr(11, 60))
-    else:
-        bus['scheduled'] = 'false'
-        bus['v'] = '4' # TODO
-        bus['nextbusminutes'] = '4' # TODO
-        bus['nextbusonroutetime'] = '4pm' # TODO
-        if luck():
-            bus['pu'], bus['pt'] = ' MINUTES', str(rr(5,45))
-        else:
-            bus['pt'] = {'#cdata-section': '&nbsp;'} if luck() else rr(0,5)
-            bus['pu'] = 'APPROACHING' if luck() else 'DELAYED'
-    bus['fd'] = 'RTRTRRT'
-    bus['rn'] = bus['rd'] = stop[1] if luck() else stop[1]+'4'
-    return bus, stop
-
-
 def help():
     print('Available stops are:')
     for stop in stops: print(stop)
@@ -155,10 +132,11 @@ if __name__ == '__main__':
             print(f'====={stopname}======')
             get_buses(stop)
 
-    elif cmd == 'fake':
-        for _ in range(100):
-            print(f'====={_}=====')
-            handle_bus(*get_fake_bus())
+    elif cmd == 'runlog':
+        with open(buslog) as f:
+            for i, line in enumerate(f):
+                print(f'====={i}=====')
+                handle_bus(*json.loads(line))
 
     else:
         help()
