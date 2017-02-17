@@ -73,27 +73,26 @@ def handle_bus(bus, stop):
     assert bus['zone'] is None
     assert bus['mode'] == '1'
 
+    if bus['pu'] == ' MINUTES':
+        assert isinstance(bus['pt'], str) and 0 <= int(bus['pt']) < 100
+    elif bus['pu'] in ['APPROACHING', 'DELAYED']:
+        assert bus['pt'] == {"#cdata-section": "&nbsp;"} or 0 <= bus['pt'] < 5
+    else: raise
+
+    assert len(bus['fd']) > 5
+    assert bus['rn'] == bus['rd']
+    int(bus['rn'])
+    if bus['rn'] != stop[1]: return
+
     assert bus['scheduled'] in ['true', 'false']
     scheduled = (bus['scheduled'] == 'true')
     assert scheduled == (bus['v'] == 'SCHEDULED')
     assert scheduled != (bus['v'].isdigit())
     assert scheduled != ('nextbusminutes' in bus)
     assert scheduled != ('nextbusonroutetime' in bus)
-
     if not scheduled:
         dateutil.parser.parse(bus['nextbusonroutetime'])
         int(bus['nextbusminutes'])
-
-    if bus['pu'] == ' MINUTES':
-        assert isinstance(bus['pt'], str) and 0 <= int(bus['pt']) < 100
-    else:
-        assert bus['pu'] in ['APPROACHING', 'DELAYED']
-        assert bus['pt'] == {"#cdata-section": "&nbsp;"} or bus['pt'] < 5
-
-    assert len(bus['fd']) > 5
-    assert bus['rn'] == bus['rd']
-    int(bus['rn'])
-    if bus['rn'] != stop[1]: return
 
     # output
     source = 'scheduled' if scheduled else 'prediction'
@@ -132,7 +131,7 @@ if __name__ == '__main__':
             print(f'====={stopname}======')
             get_buses(stop)
 
-    elif cmd == 'runlog':
+    if cmd in ['test', 'test-offline']:
         with open(buslog) as f:
             for i, line in enumerate(f):
                 print(f'====={i}=====')
