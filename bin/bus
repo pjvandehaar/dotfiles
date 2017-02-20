@@ -25,7 +25,13 @@ stops = {
 
     '65-geddes': ('1285', '65'), # 65: Geddes(E)->Washtenaw(N)->Huron(W) loop <-> Broadway bridge <-> Plymouth <-> Kroger <-> southern Green
     '65-kroger': ('1350', '65'),
+
+    # NW: clockwise around Central Campus <-> West of Hosptial <-> Pierpont Commons <-> clockwise around North Campus
+    # CN: Geddes(E) -> above Palmer Field -> around Hospital -> Pierpoint Commons -> Huron&Hubbard/Hayward (South of Kroger)
+    # CS: Geddes(E) <- above Palmer Field <- around Hospital <- Pierpoint Commons <- Huron&Hubbard/Hayward (South of Kroger)
+    # BB: Huron(W)->West of Palmer Commons->Geddes(E)->Couzens/ZinaPitcher/MSII(N) loop <-> Pierpont <-> BB
 }
+
 
 
 def get_buses(stop):
@@ -43,8 +49,9 @@ def get_buses(stop):
         j = [j] # the silly API skips the list if there's only one bus.
     for bus in j:
         record(bus, stop)
+        if bus['rn'] != stop[1]: continue
         try:
-            handle_bus(bus, stop)
+            print_bus(bus)
         except:
             print('failed for bus:')
             json.dump(bus, sys.stdout, indent=2)
@@ -59,7 +66,7 @@ def record(bus, stop):
         f.write(json.dumps([bus, stop]) + '\n')
 
 
-def handle_bus(bus, stop):
+def validate_bus(bus):
     req_keys = ('cars consist zone mode '
                 'pu pt '
                 'fd rn rd '
@@ -82,7 +89,6 @@ def handle_bus(bus, stop):
     assert len(bus['fd']) > 5
     assert bus['rn'] == bus['rd']
     int(bus['rn'])
-    if bus['rn'] != stop[1]: return
 
     assert bus['scheduled'] in ['true', 'false']
     scheduled = (bus['scheduled'] == 'true')
@@ -94,7 +100,9 @@ def handle_bus(bus, stop):
         dateutil.parser.parse(bus['nextbusonroutetime'])
         int(bus['nextbusminutes'])
 
-    # output
+def print_bus(bus):
+    validate_bus(bus)
+    scheduled = (bus['scheduled'] == 'true')
     source = 'scheduled' if scheduled else 'prediction'
     if bus['pu'] == ' MINUTES':
         arrival_time = datetime.datetime.now() + datetime.timedelta(minutes=int(bus['pt']))
@@ -126,16 +134,14 @@ if __name__ == '__main__':
     if cmd in stops:
         get_buses(stops[cmd])
 
-    elif cmd == 'test':
-        for stopname, stop in stops.items():
-            print(f'====={stopname}======')
-            get_buses(stop)
-
-    if cmd in ['test', 'test-offline']:
+    elif cmd in ['test', 'test-offline']:
+        if cmd == 'test':
+            for stopname, stop in stops.items():
+                print(f'====={stopname}======')
+                get_buses(stop)
         with open(buslog) as f:
-            for i, line in enumerate(f):
-                print(f'====={i}=====')
-                handle_bus(*json.loads(line))
+            for line in f:
+                validate_bus(json.loads(line)[0])
 
     else:
         help()
