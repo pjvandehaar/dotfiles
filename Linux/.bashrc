@@ -17,7 +17,7 @@ append_PATH=(
 "/net/mario/cluster/bin"
 "$HOME/perl5/bin"
 )
-for v in "${prepend_PATH[@]}" "{append_PATH[@]}"; do
+for v in "${prepend_PATH[@]}" "${append_PATH[@]}"; do
     # use a lookahead so that we that `echo :a:a:b: | perl -pale 's{:a(?=:)}{}g'` works.
     export PATH="$(echo ":$PATH:" | perl -pale "s{:$v(?=:)}{}g" | perl -pale 's{^:|:$}{}g')"
 done
