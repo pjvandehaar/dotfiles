@@ -23,8 +23,8 @@
 	status = true
         # the interaction of less and diff-highlight causes problems with line-wrapping.
         # if you want wrapped lines, just pipe into `less`.
-	diff = ~/dotfiles/third-party/diff-highlight | less -SRX
-	lol = less +G -RX
+	diff = ~/dotfiles/third-party/diff-highlight | less -SR
+	lol = less +G -SR
 [diff "gz"]
 	textconv = zcat
 [diff "bam"]
