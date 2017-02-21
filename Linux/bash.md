@@ -8,5 +8,6 @@
 
 ##disk io
 - `dstat -tdc 60`
-- `sudo iotop`
+- `sudo iotop --only`
+    - press `a` to see accumulated IO
 - `iostat`
