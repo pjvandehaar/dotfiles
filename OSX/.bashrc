@@ -1,22 +1,33 @@
+__fdsjlkrew() { # don't pollute global namespace
+
 if type -t ptrcut >/dev/null; then
-    echo "Apparently .bashrc has already been sourced once. I'm not sourcing it again."
-    return
+    echo "BTW, .bashrc has already been sourced once."
 fi
 
-dotfiles_path=$(cd "$(dirname "$(dirname "$(greadlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
+local dotfiles_path="$(cd "$(dirname "$(dirname "$(greadlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
+local v
 
-# prepend to PATH
-for foo in "$dotfiles_path/OSX/bin" "$dotfiles_path/bin" "$HOME/bin" "$HOME/.local/bin" "$HOME/perl5/bin:$PATH"; do
-    [[ -d "$foo" ]] && ! echo "$PATH" | grep -qE "(^|:)$foo(:|$)" && export PATH="$foo:$PATH"
+prepend_PATH=(
+"$dotfiles_path/OSX/bin"
+"$dotfiles_path/bin"
+"$HOME/bin"
+"$HOME/.local/bin"
+"$HOME/perl5/bin"
+)
+for v in "${prepend_PATH[@]}"; do
+    # use a lookahead so that we that `echo :a:a:b: | perl -pale 's{:a(?=:)}{}g'` works.
+    export PATH="$(echo ":$PATH:" | perl -pale "s{:$v(?=:)}{}g" | perl -pale 's{^:|:$}{}g')"
 done
+for v in "${prepend_PATH[@]}"; do export PATH="$v:$PATH"; done
+
 export PERL_MB_OPT="--install_base \"$HOME/perl5\""
 export PERL_MM_OPT="INSTALL_BASE=$HOME/perl5"
 export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"
 
 # following directions at <https://github.com/Homebrew/homebrew/blob/master/Library/Formula/bash-completion.rb>
-foo="$(brew --prefix)/etc/bash_completion"; [ -e "$foo" ] && . "$foo"
+v="$(brew --prefix)/etc/bash_completion"; [ -e "$v" ] && . "$v"
 
-foo="$dotfiles_path/prompt_prompt.sh"; [[ -e "$foo" ]] && . "$foo"
+v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"
 
 export EDITOR=emacs
 
@@ -27,7 +38,7 @@ export HISTTIMEFORMAT="%Y/%m/%d %T "
 
 export MOSH_TITLE_NOPREFIX=1
 
-$(l=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=ef fb38018 efe1bfd 9ac556bc7454855 4c6601310);printf %s "${l[@]}")
+$(v=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=ef fb38018 efe1bfd 9ac556bc7454855 4c6601310);printf %s "${v[@]}")
 
 
 # shortcuts
@@ -69,7 +80,7 @@ function ptrcut { awk "{print \$$1}"; }
 function ptrsum { perl -nale '$s += $_; END{print $s}'; }
 function ptrminmax { perl -nale 'print if m{^[0-9]+$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
 function sleeptil { # Accepts "0459" or "0459.59"
-    offset=$(($(date -j "$1" +%s) - $(date +%s)))
+    local offset=$(($(date -j "$1" +%s) - $(date +%s)))
     if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
     echo "offset: $offset seconds"; sleep $offset
 }
@@ -84,7 +95,7 @@ spaced_less() {
 # ============
 function sleeptilc { export -f sleeptil; caffeinate -s bash -c "sleeptil $1"; }
 function wakeat {
-    songdir="$(find '/Users/peter/Music/iTunes/iTunes Media' -iregex '.*mp3' -execdir pwd  \; | uniq | gsort -R | head -n1)"; echo "$songdir"
+    local songdir="$(find '/Users/peter/Music/iTunes/iTunes Media' -iregex '.*mp3' -execdir pwd  \; | uniq | gsort -R | head -n1)"; echo "$songdir"
     sleeptilc $1; osascript -e "set Volume 3"
     find "$songdir" -iregex '.*mp3' -exec afplay -d {} \;
 }
@@ -122,3 +133,19 @@ man() {
     LESS_TERMCAP_us=$'\e[1;32m' \
     command man -a "$@"
 }
+command_not_found_handle() {
+    local cmd="$*"
+    if [[ -d "$cmd" ]]; then
+        echo "[$cmd] is a directory"
+    elif [[ -x "$cmd" ]]; then
+        echo "[$cmd] is executable"
+    elif [[ -f "$cmd" ]]; then
+        echo "[$cmd] is a file with MIME $(file --mime-type --brief "$cmd")"
+    else
+        echo "[$cmd] is not recognized"
+    fi
+}
+
+}
+__fdsjlkrew
+unset __fdsjlkrew

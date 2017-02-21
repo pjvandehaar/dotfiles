@@ -1,37 +1,59 @@
+__fdsjlkrew() { # don't pollute global namespace
+
 if type -t ptrcut >/dev/null; then
     echo "BTW, .bashrc has already been sourced once."
 fi
 
-dotfiles_path=$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
+local dotfiles_path=$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
+local v
 
-# prepend to PATH
-for foo in "$dotfiles_path/bin" "$HOME/bin" "$HOME/.linuxbrew/bin" "$HOME/miniconda3/bin"; do
-    # remove previous copies and put the new one at the start.
-    # Use a lookahead so that we can match multiple copies of the same path in a row.
-    [[ -d "$foo" ]] && export PATH="$foo:$(echo ":$PATH:" | perl -pale "s{:$foo(?=:)}{}g" | perl -pale 's{^:|:$}{}g')"
+prepend_PATH=(
+"$dotfiles_path/bin"
+"$HOME/bin"
+"$HOME/.linuxbrew/bin" # TODO: use $(brew --prefix)
+"$HOME/miniconda3/bin" # TODO: use $(conda info --root)
+)
+append_PATH=(
+"/net/mario/cluster/bin"
+"$HOME/perl5/bin"
+)
+for v in "${prepend_PATH[@]}" "{append_PATH[@]}"; do
+    # use a lookahead so that we that `echo :a:a:b: | perl -pale 's{:a(?=:)}{}g'` works.
+    export PATH="$(echo ":$PATH:" | perl -pale "s{:$v(?=:)}{}g" | perl -pale 's{^:|:$}{}g')"
 done
-# append to PATH
-for foo in "/net/mario/cluster/bin" "$HOME/perl5/bin"; do
-    [[ -d "$foo" ]] && export PATH="$(echo ":$PATH:" | perl -pale "s{:$foo:}{:}g" | perl -pale 's{^:|:$}{}g'):$foo"
+for v in "${prepend_PATH[@]}"; do export PATH="$v:$PATH"; done
+for v in "${append_PATH[@]}"; do export PATH="$PATH:$v"; done
+
+prepend_MANPATH=(
+"$HOME/.linuxbrew/share/man"
+"$HOME/miniconda3/share/man"
+)
+append_MANPATH=(
+"/net/mario/cluster/man"
+)
+for v in "${prepend_MANPATH[@]}" "{append_MANPATH[@]}"; do
+    export MANPATH="$(echo ":$MANPATH:" | perl -pale "s{:$v(?=:)}{}g" | perl -pale 's{^:|:$}{}g')"
 done
-# prepend to MANPATH
-for foo in "$HOME/.linuxbrew/share/man" "$HOME/miniconda3/share/man"; do
-    [[ -d "$foo" ]] && ! echo "$MANPATH" | grep -qE "(^|:)$foo(:|$)" && export MANPATH="$foo:$MANPATH";
+for v in "${prepend_MANPATH[@]}"; do export MANPATH="$v:$MANPATH"; done
+for v in "${append_MANPATH[@]}"; do export MANPATH="$MANPATH:$v"; done
+
+prepend_INFOPATH=(
+"$HOME/.linuxbrew/share/info"
+"$HOME/miniconda3/share/info"
+)
+for v in "${prepend_INFOPATH[@]}"; do
+    export INFOPATH="$(echo ":$INFOPATH:" | perl -pale "s{:$v(?=:)}{}g" | perl -pale 's{^:|:$}{}g')"
 done
-# append to MANPATH
-foo="/net/mario/cluster/man"; [[ -d "$foo" ]] && ! echo "$MANPATH" | grep -qE "(^|:)$foo(:|$)" && export MANPATH="$MANPATH:$foo"
-# prepend to INFOPATH
-for foo in "$HOME/.linuxbrew/share/info" "$HOME/miniconda3/share/info"; do
-    [[ -d "$foo" ]] && ! echo "$INFOPATH" | grep -qE "(^|:)$foo(:|$)" && export INFOPATH="$foo:$INFOPATH"
-done
+for v in "${prepend_INFOPATH[@]}"; do export INFOPATH="$v:$INFOPATH"; done
+
 # This breaks my `git stage -p`:
-# # prepend to PERL5LIB
-# foo="$HOME/perl5/lib/perl5"; [[ -d "$foo" ]] && ! echo "$PERL5LIB" | grep -qE "(^|:)$foo(:|$)" && export PERL5LIB="$foo:$PERL5LIB"
+## prepend to PERL5LIB
+#v="$HOME/perl5/lib/perl5"; [[ -d "$v" ]] && ! echo "$PERL5LIB" | grep -qE "(^|:)$v(:|$)" && export PERL5LIB="$v:$PERL5LIB"
 
-foo="$HOME/.linuxbrew/etc/bash_completion"; [[ -e "$foo" ]] && . "$foo"
-# foo="/etc/bash_completion"; [[ -e "$foo" ]] && . "$foo"
+v="$HOME/.linuxbrew/etc/bash_completion"; [[ -e "$v" ]] && . "$v"
+# v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v"
 
-foo="$dotfiles_path/prompt_prompt.sh"; [[ -e "$foo" ]] && . "$foo"
+local v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"
 
 type -t emacs >/dev/null && export EDITOR=emacs || export EDITOR=vim
 
@@ -129,3 +151,19 @@ man() {
     LESS_TERMCAP_us=$'\e[1;32m' \
     command man -a "$@"
 }
+command_not_found_handle() {
+    local cmd="$*"
+    if [[ -d "$cmd" ]]; then
+        echo "[$cmd] is a directory"
+    elif [[ -x "$cmd" ]]; then
+        echo "[$cmd] is executable"
+    elif [[ -f "$cmd" ]]; then
+        echo "[$cmd] is a file with MIME $(file --mime-type --brief "$cmd")"
+    else
+        echo "[$cmd] is not recognized"
+    fi
+}
+
+}
+__fdsjlkrew
+unset __fdsjlkrew
