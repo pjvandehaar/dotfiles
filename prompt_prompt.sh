@@ -119,13 +119,22 @@ _PP_prompt() {
         fi
     fi
 
+    PS1="${_git}${_runtime}${_err}${_PP_NONE}"
+
+    if [[ -z $COLUMNS ]] || [[ $COLUMNS -ge 115 ]]; then
+        local -i _max_len=$(( ${COLUMNS:-80} / 3 ))
+        local _ending=" "
+    else
+        local -i _max_len=$(( $COLUMNS - ${#PS1} - 5 ))
+        local _ending="\n"
+    fi
+
     local _tilde=\~ # bash3 vs bash4
     local _pwd="${PWD/#$HOME/$_tilde}"
-    local -i _max_len=$(( ${COLUMNS:-80} / 3 ))
     (( ${#_pwd} > _max_len )) && _pwd=" … ${_pwd:${#_pwd}-${_max_len}}"
     _pwd=$(echo "$_pwd" | sed -e 's_\\_\\\\_g' -e 's_\$_\\\$_g')
 
-    PS1="${_PP_NONE}${_PP_GRE} \t ${_PP_BLU} ${_pwd} ${_git}${_runtime}${_err}${_PP_NONE} "
+    PS1="${_PP_NONE}${_PP_GRE} \t ${_PP_BLU} ${_pwd} ${PS1}${_ending}"
 }
 
 _PP_runtime_last_seconds=$SECONDS
