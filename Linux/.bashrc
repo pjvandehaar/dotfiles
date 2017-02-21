@@ -8,11 +8,12 @@ dotfiles_path=$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")
 # prepend to PATH
 for foo in "$dotfiles_path/bin" "$HOME/bin" "$HOME/.linuxbrew/bin" "$HOME/miniconda3/bin"; do
     # remove previous copies and put the new one at the start.
-    [[ -d "$foo" ]] && export PATH="$foo:$(echo ":$PATH:" | perl -pale "s{:$foo:}{:}" | perl -pale 's{^:|:$}{}g')"
+    # Use a lookahead so that we can match multiple copies of the same path in a row.
+    [[ -d "$foo" ]] && export PATH="$foo:$(echo ":$PATH:" | perl -pale "s{:$foo(?=:)}{}g" | perl -pale 's{^:|:$}{}g')"
 done
 # append to PATH
 for foo in "/net/mario/cluster/bin" "$HOME/perl5/bin"; do
-    [[ -d "$foo" ]] && export PATH="$(echo ":$PATH:" | perl -pale "s{:$foo:}{:}" | perl -pale 's{^:|:$}{}g'):$foo"
+    [[ -d "$foo" ]] && export PATH="$(echo ":$PATH:" | perl -pale "s{:$foo:}{:}g" | perl -pale 's{^:|:$}{}g'):$foo"
 done
 # prepend to MANPATH
 for foo in "$HOME/.linuxbrew/share/man" "$HOME/miniconda3/share/man"; do
