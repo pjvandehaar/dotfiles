@@ -5,25 +5,18 @@ if type -t ptrcut >/dev/null; then
 fi
 
 local dotfiles_path=$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
-local v
+local v p a c
 
 prepend_PATH=(
 "$dotfiles_path/bin"
 "$HOME/bin"
-"$HOME/.linuxbrew/bin" # TODO: use $(brew --prefix)
-"$HOME/miniconda3/bin" # TODO: use $(conda info --root)
+"$HOME/.linuxbrew/bin" # TODO: use $(brew --prefix), but only if `type -t brew`
+"$HOME/miniconda3/bin" # TODO: use $(conda info --root), but only if `type -t conda`?
 )
 append_PATH=(
 "/net/mario/cluster/bin"
 "$HOME/perl5/bin"
 )
-for v in "${prepend_PATH[@]}" "${append_PATH[@]}"; do
-    # use a lookahead so that we that `echo :a:a:b: | perl -pale 's{:a(?=:)}{}g'` works.
-    export PATH="$(echo ":$PATH:" | perl -pale "s{:$v(?=:)}{}g" | perl -pale 's{^:|:$}{}g')"
-done
-for v in "${prepend_PATH[@]}"; do export PATH="$v:$PATH"; done
-for v in "${append_PATH[@]}"; do export PATH="$PATH:$v"; done
-
 prepend_MANPATH=(
 "$HOME/.linuxbrew/share/man"
 "$HOME/miniconda3/share/man"
@@ -31,20 +24,16 @@ prepend_MANPATH=(
 append_MANPATH=(
 "/net/mario/cluster/man"
 )
-for v in "${prepend_MANPATH[@]}" "{append_MANPATH[@]}"; do
-    export MANPATH="$(echo ":$MANPATH:" | perl -pale "s{:$v(?=:)}{}g" | perl -pale 's{^:|:$}{}g')"
-done
-for v in "${prepend_MANPATH[@]}"; do export MANPATH="$v:$MANPATH"; done
-for v in "${append_MANPATH[@]}"; do export MANPATH="$MANPATH:$v"; done
-
 prepend_INFOPATH=(
 "$HOME/.linuxbrew/share/info"
 "$HOME/miniconda3/share/info"
 )
-for v in "${prepend_INFOPATH[@]}"; do
-    export INFOPATH="$(echo ":$INFOPATH:" | perl -pale "s{:$v(?=:)}{}g" | perl -pale 's{^:|:$}{}g')"
+for p in PATH MANPATH INFOPATH; do
+    eval "a=(\"\${append_$p[@]}\")"
+    eval "c=(\"\${prepend_$p[@]}\")"
+    v="$(perl -e'@b=split(":",$ENV{$ARGV[0]}); @a=@ARGV[2..1+$ARGV[1]]; @c=@ARGV[2+$ARGV[1]..$#ARGV]; foreach$k(@a,@c){@b=grep(!/^$k$/,@b)}; print join(":",(@a,@b,@c));' "$p" "${#a[@]}" "${a[@]}" "${c[@]}")"
+    eval "export $p='$v'"
 done
-for v in "${prepend_INFOPATH[@]}"; do export INFOPATH="$v:$INFOPATH"; done
 
 # This breaks my `git stage -p`:
 ## prepend to PERL5LIB
@@ -53,7 +42,7 @@ for v in "${prepend_INFOPATH[@]}"; do export INFOPATH="$v:$INFOPATH"; done
 v="$HOME/.linuxbrew/etc/bash_completion"; [[ -e "$v" ]] && . "$v"
 # v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v"
 
-local v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"
+v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"
 
 type -t emacs >/dev/null && export EDITOR=emacs || export EDITOR=vim
 
