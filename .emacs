@@ -43,7 +43,7 @@
 
 ;; I think that `setq-default` will let modes that override this setting do so.
 (setq-default vc-follow-symlinks t)
-(setq-default enable-local-variables nil) ;; ???
+;; (setq-default enable-local-variables nil) ;; this line prevents handling lines that declare file type
 (setq-default indent-tabs-mode nil) ;; never insert a \t.  Always spaces.
 (setq-default mode-require-final-newline nil) ;; don't auto-add \t at EOF, b/c it gets annoying.
 
