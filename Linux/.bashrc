@@ -1,6 +1,5 @@
 if type -t ptrcut >/dev/null; then
-    echo "Apparently .bashrc has already been sourced once. I'm not sourcing it again."
-    return
+    echo "BTW, .bashrc has already been sourced once."
 fi
 
 dotfiles_path=$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
