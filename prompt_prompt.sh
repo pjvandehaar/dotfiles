@@ -126,7 +126,7 @@ _PP_prompt() {
         local _ending=" "
     else
         local -i _max_len=$(( $COLUMNS - ${#PS1} - 5 ))
-        local _ending="\n"
+        local _ending="\n$ "
     fi
 
     local _tilde=\~ # bash3 vs bash4
