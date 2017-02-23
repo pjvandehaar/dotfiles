@@ -29,8 +29,8 @@ prepend_INFOPATH=(
 "$HOME/miniconda3/share/info"
 )
 for p in PATH MANPATH INFOPATH; do
-    eval "a=(\"\${append_$p[@]}\")"
-    eval "c=(\"\${prepend_$p[@]}\")"
+    eval "a=(\"\${prepend_$p[@]}\")"
+    eval "c=(\"\${append_$p[@]}\")"
     v="$(perl -e'@b=split(":",$ENV{$ARGV[0]}); @a=@ARGV[2..1+$ARGV[1]]; @c=@ARGV[2+$ARGV[1]..$#ARGV]; foreach$k(@a,@c){@b=grep(!/^$k$/,@b)}; print join(":",(@a,@b,@c));' "$p" "${#a[@]}" "${a[@]}" "${c[@]}")"
     eval "export $p='$v'"
 done
