@@ -67,10 +67,18 @@ alias gs='git status'
 alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
-type -t __git_complete >/dev/null && __git_complete gs  _git_status
-type -t __git_complete >/dev/null && __git_complete gl  _git_log
-type -t __git_complete >/dev/null && __git_complete gla _git_log
-type -t __git_complete >/dev/null && __git_complete glb _git_log
+glq() {
+    git log --graph --decorate --oneline --max-count=$((LINES-3)) --color=always --all |
+    perl -pale 's{\|(\S*)(/|\\)}{|\1&\2}g; s{&/}{\\}g; s{&\\}{/}g' |
+    tac
+}
+if type -t __git_complete >/dev/null; then
+    __git_complete gs  _git_status
+    __git_complete gl  _git_log
+    __git_complete gla _git_log
+    __git_complete glb _git_log
+    __git_complete glq _git_log
+fi
 function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
 alias ptrdiff='diff -dy -W$COLUMNS'
 
