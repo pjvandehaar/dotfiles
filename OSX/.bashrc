@@ -5,20 +5,23 @@ if type -t ptrcut >/dev/null; then
 fi
 
 local dotfiles_path="$(cd "$(dirname "$(dirname "$(greadlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
-local v
+local v p a c
 
 prepend_PATH=(
 "$dotfiles_path/OSX/bin"
 "$dotfiles_path/bin"
 "$HOME/bin"
 "$HOME/.local/bin"
+)
+append_PATH=(
 "$HOME/perl5/bin"
 )
-for v in "${prepend_PATH[@]}"; do
-    # use a lookahead so that we that `echo :a:a:b: | perl -pale 's{:a(?=:)}{}g'` works.
-    export PATH="$(echo ":$PATH:" | perl -pale "s{:$v(?=:)}{}g" | perl -pale 's{^:|:$}{}g')"
+for p in PATH MANPATH INFOPATH; do
+    eval "a=(\"\${prepend_$p[@]}\")"
+    eval "c=(\"\${append_$p[@]}\")"
+    v="$(perl -e'@b=split(":",$ENV{$ARGV[0]}); @a=@ARGV[2..1+$ARGV[1]]; @c=@ARGV[2+$ARGV[1]..$#ARGV]; foreach$k(@a,@c){@b=grep(!/^$k$/,@b)}; print join(":",(@a,@b,@c));' "$p" "${#a[@]}" "${a[@]}" "${c[@]}")"
+    eval "export $p='$v'"
 done
-for v in "${prepend_PATH[@]}"; do export PATH="$v:$PATH"; done
 
 export PERL_MB_OPT="--install_base \"$HOME/perl5\""
 export PERL_MM_OPT="INSTALL_BASE=$HOME/perl5"
@@ -52,10 +55,18 @@ alias gs='git status'
 alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
-type -t __git_complete >/dev/null && __git_complete gs  _git_status
-type -t __git_complete >/dev/null && __git_complete gl  _git_log
-type -t __git_complete >/dev/null && __git_complete gla _git_log
-type -t __git_complete >/dev/null && __git_complete glb _git_log
+glq() {
+    git log --graph --decorate --oneline --max-count=$((LINES-3)) --color=always --all |
+    perl -pale 's{\|(\S*)(/|\\)}{|\1&\2}g; s{&/}{\\}g; s{&\\}{/}g' |
+    gtac
+}
+if type -t __git_complete >/dev/null; then
+    __git_complete gs  _git_status
+    __git_complete gl  _git_log
+    __git_complete gla _git_log
+    __git_complete glb _git_log
+    __git_complete glq _git_log
+fi
 function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
 alias ptrdiff='diff -dy -W$COLUMNS'
 
