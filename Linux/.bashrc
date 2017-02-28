@@ -5,19 +5,15 @@ if type -t ptrcut >/dev/null; then
 fi
 
 local dotfiles_path=$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)
-local v p a c
+local v
 
-prepend_PATH=(
-"$dotfiles_path/bin"
-"$HOME/bin"
-"$HOME/.linuxbrew/bin" # TODO: use $(brew --prefix), but only if `type -t brew`
-"$HOME/miniconda3/bin" # TODO: use $(conda info --root), but only if `type -t conda`?
-)
-append_PATH=(
-"/net/mario/cluster/bin"
-"$HOME/perl5/bin"
-)
-export PATH="$(perl -e'@b=split(":",$ENV{"PATH"}); @a=@ARGV[1..$ARGV[0]]; @c=@ARGV[1+$ARGV[0]..$#ARGV-1]; foreach$k(@a,@c){@b=grep(!/^$k$/,@b)}; print join(":",(@a,@b,@c));' "${#prepend_PATH[@]}" "${prepend_PATH[@]}" "${append_PATH[@]}")"
+PATH="$dotfiles_path/bin:$PATH"
+PATH="$HOME/bin:$PATH"
+PATH="$HOME/.linuxbrew/bin:$PATH"
+PATH="$HOME/miniconda3/bin:$PATH"
+PATH="$PATH:/net/mario/cluster/bin"
+PATH="$PATH:$HOME/perl5/bin"
+export PATH="$(perl -e'@p=split(":",$ENV{"PATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
 MANPATH="$(env -u MANPATH man -w)" # gets defaults from /etc/manpath.config (see `man -dw`).  This seems gross, but `man man` breaks without this.
 
 # This breaks my `git stage -p`:
