@@ -17,23 +17,8 @@ append_PATH=(
 "/net/mario/cluster/bin"
 "$HOME/perl5/bin"
 )
-prepend_MANPATH=(
-"$HOME/.linuxbrew/share/man"
-"$HOME/miniconda3/share/man"
-)
-append_MANPATH=(
-"/net/mario/cluster/man"
-)
-prepend_INFOPATH=(
-"$HOME/.linuxbrew/share/info"
-"$HOME/miniconda3/share/info"
-)
-for p in PATH MANPATH INFOPATH; do
-    eval "a=(\"\${prepend_$p[@]}\")"
-    eval "c=(\"\${append_$p[@]}\")"
-    v="$(perl -e'@b=split(":",$ENV{$ARGV[0]}); @a=@ARGV[2..1+$ARGV[1]]; @c=@ARGV[2+$ARGV[1]..$#ARGV]; foreach$k(@a,@c){@b=grep(!/^$k$/,@b)}; print join(":",(@a,@b,@c));' "$p" "${#a[@]}" "${a[@]}" "${c[@]}")"
-    eval "export $p='$v'"
-done
+export PATH="$(perl -e'@b=split(":",$ENV{"PATH"}); @a=@ARGV[1..$ARGV[0]]; @c=@ARGV[1+$ARGV[0]..$#ARGV-1]; foreach$k(@a,@c){@b=grep(!/^$k$/,@b)}; print join(":",(@a,@b,@c));' "${#prepend_PATH[@]}" "${prepend_PATH[@]}" "${append_PATH[@]}")"
+MANPATH="$(env -u MANPATH man -w)" # gets defaults from /etc/manpath.config (see `man -dw`).  This seems gross, but `man man` breaks without this.
 
 # This breaks my `git stage -p`:
 ## prepend to PERL5LIB
