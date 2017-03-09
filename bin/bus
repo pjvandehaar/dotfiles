@@ -113,9 +113,19 @@ def print_bus(bus):
         status = 'COMING NOW' if bus['pu'] == 'APPROACHING' else 'DELAYED'
         print(f'bus {bus["rn"]} ({bus["fd"].strip()}) is {status}. ({source})')
 
-    for key in 'nextbusonroutetime nextbusminutes'.split():
-        if key in bus:
-            print(f'{key}: {bus[key]}')
+    if 'nextbusonroutetime' in bus:
+        t = dateutil.parser.parse(bus['nextbusonroutetime'])
+        try:
+            arrival_time
+        except:
+            print(f'scheduled time: {t.hour}:{t.minute:02}')
+        else:
+            minutes_late = int((arrival_time - t).total_seconds()) // 60
+            if minutes_late == 0: print('on time')
+            elif minutes_late > 0: print(f'scheduled time: {t.hour}:{t.minute:02} ({minutes_late} minutes late)')
+            else: print(f'scheduled time: {t.hour}:{t.minute:02} ({-minutes_late} minutes early)')
+    if 'nextbusminutes' in bus:
+        print(f'nextbusminutes: {bus["nextbusminutes"]}')
     if 'v' in bus and bus['v'] != 'SCHEDULED':
         print(f'v: {bus["v"]}')
 

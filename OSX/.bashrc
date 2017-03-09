@@ -56,6 +56,7 @@ alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
 glq() {
+    # TODO: make this handle complex trees better.  Just replace all [\\/] until you hit a [0-9a-f].
     git log --graph --decorate --oneline --max-count=$((LINES-3)) --color=always --all |
     perl -pale 's{\|(\S*)(/|\\)}{|\1&\2}g; s{&/}{\\}g; s{&\\}{/}g' |
     gtac
