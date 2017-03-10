@@ -100,36 +100,31 @@ def validate_bus(bus):
         dateutil.parser.parse(bus['nextbusonroutetime'])
         int(bus['nextbusminutes'])
 
+
 def print_bus(bus):
     validate_bus(bus)
     scheduled = (bus['scheduled'] == 'true')
-    source = 'scheduled' if scheduled else 'prediction'
+    print('====>', bus["fd"].strip())
     if bus['pu'] == ' MINUTES':
         arrival_time = datetime.datetime.now() + datetime.timedelta(minutes=int(bus['pt']))
-        print(f'bus {bus["rn"]} ({bus["fd"].strip()}) comes in {bus["pt"]} minutes'
-              f'(at {arrival_time.hour}:{arrival_time.minute:02}) ({source})')
-
+        a = f'comes at {arrival_time.hour}:{arrival_time.minute:02} - in {bus["pt"]} minutes'
+    elif bus['pu'] == 'APPROACHING':
+        a = 'COMING NOW'
     else:
-        status = 'COMING NOW' if bus['pu'] == 'APPROACHING' else 'DELAYED'
-        print(f'bus {bus["rn"]} ({bus["fd"].strip()}) is {status}. ({source})')
-
+        a = 'DELAYED'
     if 'nextbusonroutetime' in bus:
         t = dateutil.parser.parse(bus['nextbusonroutetime'])
         try:
-            arrival_time
-        except:
-            print(f'scheduled time: {t.hour}:{t.minute:02}')
-        else:
             minutes_late = int((arrival_time - t).total_seconds()) // 60
-            if minutes_late == 0: print('on time')
-            elif minutes_late > 0: print(f'scheduled time: {t.hour}:{t.minute:02} ({minutes_late} minutes late)')
-            else: print(f'scheduled time: {t.hour}:{t.minute:02} ({-minutes_late} minutes early)')
-    if 'nextbusminutes' in bus:
-        print(f'nextbusminutes: {bus["nextbusminutes"]}')
-    if 'v' in bus and bus['v'] != 'SCHEDULED':
-        print(f'v: {bus["v"]}')
-
-    print('\n')
+            if minutes_late == 0:
+                a += ' - on time'
+            elif minutes_late > 0:
+                a += f' - scheduled time was {t.hour}:{t.minute:02} - running {minutes_late} minutes late'
+            else:
+                a += f' - scheduled time was {t.hour}:{t.minute:02} - running {-minutes_late} minutes early'
+        except NameError:
+            a += f' - scheduled time: {t.hour}:{t.minute:02}'
+    print(a, end='\n\n\n')
 
 
 def help():
