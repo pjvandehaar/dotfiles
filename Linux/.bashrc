@@ -49,8 +49,15 @@ alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
 glq() {
+    # &%<> marks the end of the graph
     git log --graph --decorate --oneline --max-count=$((LINES-3)) --color=always --all |
-    perl -pale 's{\|(\S*)(/|\\)}{|\1&\2}g; s{&/}{\\}g; s{&\\}{/}g' |
+    perl -pale 's{([0-9a-f]{6})}{&%<>\1}' |
+    perl -pale '$_ .= "&%<>" if (!m{&%<>})' |
+    perl -pale 's{(/)(?=.*&%<>)}{%}g' |
+    perl -pale 's{(\\)(?=.*&%<>)}{/}g' |
+    perl -pale 's{(%)(?=.*&%<>)}{\\}g' |
+    perl -pale 's{(_)(?=.*&%<>)}{'$(echo -e '\u23ba')'}g' |
+    perl -pale 's{&%<>}{}' |
     tac
 }
 if type -t __git_complete >/dev/null; then
