@@ -22,8 +22,11 @@ MANPATH="$(env -u MANPATH man -w)" # gets defaults from /etc/manpath.config (see
 
 v="$HOME/.linuxbrew/etc/bash_completion"; [[ -e "$v" ]] && . "$v"
 # v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v"
+# v="/usr/share/bash-completion/bash_completion"; [[ -e "$v" ]] && . "$v"
 
 v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"
+
+shopt -s checkwinsize # update LINES/COLUMNS afer each command
 
 type -t emacs >/dev/null && export EDITOR=emacs || export EDITOR=vim
 
@@ -126,7 +129,9 @@ ptrview() { (head -n 1000; echo '~FIN~') | tabview - --delimiter $'\t'; }
 
 alias grep='grep --color=auto'
 alias egrep='egrep --color=auto'
-#alias man='man -a'
+
+[[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)" # ?? from Ubuntu .bashrc
+
 man() {
     # from http://boredzo.org/blog/archives/2016-08-15/colorized-man-pages-understood-and-customized
     LESS_TERMCAP_md=$'\e[1;36m' \

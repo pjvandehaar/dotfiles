@@ -32,7 +32,11 @@ v="$(brew --prefix)/etc/bash_completion"; [ -e "$v" ] && . "$v"
 
 v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"
 
+shopt -s checkwinsize # update LINES/COLUMNS afer each command
+
 export EDITOR=emacs
+
+export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
 export HISTFILESIZE=10000000
 export HISTSIZE=100000
@@ -140,7 +144,9 @@ alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
 
 alias grep='grep --color=auto'
 alias egrep='egrep --color=auto'
-#alias man='man -a'
+
+[[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)" # ?? from Ubuntu .bashrc
+
 man() {
     # from http://boredzo.org/blog/archives/2016-08-15/colorized-man-pages-understood-and-customized
     LESS_TERMCAP_md=$'\e[1;36m' \
