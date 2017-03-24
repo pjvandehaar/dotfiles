@@ -37,7 +37,7 @@ export HISTTIMEFORMAT="%Y/%m/%d %T "
 
 export MOSH_TITLE_NOPREFIX=1
 
-$(l=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=ef fb38018 efe1bfd 9ac556bc7454855 4c6601310);printf %s "${l[@]}")
+$(v=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=75 53f37 98ca 21e1f6 815d 2eab1b 6974ba 701b20e);printf %s "${v[@]}")
 
 
 # shortcuts
