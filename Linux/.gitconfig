@@ -29,5 +29,7 @@
 	textconv = zcat
 [diff "bam"]
 	textconv = samtools view -h
+[diff "bcf"]
+	textconv = ~/PROJECTS/gotcloud/src/htslib/htsfile -c
 [rebase]
 	autosquash = true
