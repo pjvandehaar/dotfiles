@@ -130,6 +130,11 @@ function snowwhite {
     mkdir -p ~/mount/SW
     sshfs pjvh@snowwhite.sph.umich.edu:/home/pjvh ~/mount/SW/ && cd ~/mount/SW/
 }
+function mini {
+    mount | grep -q ~/mount/mini && echo unmounting... && umount ~/mount/mini
+    mkdir -p ~/mount/mini
+    sshfs cephas@192.168.56.20:/ ~/mount/mini/ && cd ~/mount/mini/
+}
 function csgsites {
     mount | grep -q ~/mount/CS && echo unmounting... && umount ~/mount/CS
     mkdir -p ~/mount/CS
