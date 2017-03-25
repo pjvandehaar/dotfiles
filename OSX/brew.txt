@@ -1,7 +1,7 @@
 $ brew {cask,} cleanup
 
 $ brew tap Homebrew/bundle
-$ brew bundle dump # makes Brewfile
+$ brew bundle dump --force # overwrites Brewfile
 $ brew bundle # installs from Brewfile
 
 $ brew leaves # abridged...
