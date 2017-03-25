@@ -70,6 +70,14 @@ if type -t __git_complete >/dev/null; then
     __git_complete glb _git_log
     __git_complete glq _git_log
 fi
+function gh {
+    for remote in $(git remote); do
+        echo "## $remote"
+        \git remote get-url $remote |
+        perl -nale 'if (m{^git\@github\.com:(.*?)\.git$}i) { print "https://github.com/$1" } elsif (m{^https://github.com/(.*?).git$}) { print "https://github.com/$1" } else { print "nope" }' |
+        perl -nale 'print "$_\n$_/issues\n$_/issues/new"'
+    done
+}
 function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
 alias ptrdiff='diff -dy -W$COLUMNS'
 
