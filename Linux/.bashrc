@@ -129,7 +129,7 @@ spaced_less() {
     sed 's_$_\n_' |
     less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
 }
-ptrt() { python3 -c 'for col in zip(*[l.rstrip("\n").split("\t") for l in __import__("sys").stdin.readlines()]): print("\t\t".join(col))'; }
+ptrt() { python3 -c 'for col in __import__("itertools").zip_longest(*[l.rstrip("\n").split("\t") for l in __import__("sys").stdin.readlines()], fillvalue="<><"): print("\t\t".join(col))'; }
 ptrview() { (head -n 1000; echo '~FIN~') | tabview - --delimiter $'\t'; }
 
 # overrides

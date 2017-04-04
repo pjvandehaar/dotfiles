@@ -119,7 +119,8 @@ spaced_less() {
     perl -ple 's{$}{\n}' |
     less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
 }
-
+ptrt() { python3 -c 'for col in __import__("itertools").zip_longest(*[l.rstrip("\n").split("\t") for l in __import__("sys").stdin.readlines()], fillvalue="<><"): print("\t\t".join(col))'; }
+ptrview() { (head -n 1000; echo '~FIN~') | tabview - --delimiter $'\t'; }
 
 # OSX-specific
 # ============
@@ -159,6 +160,7 @@ alias grep='grep --color=auto'
 alias egrep='egrep --color=auto'
 
 [[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)" # ?? from Ubuntu .bashrc
+alias zcat="gzip -cdfq"
 
 man() {
     # from http://boredzo.org/blog/archives/2016-08-15/colorized-man-pages-understood-and-customized
