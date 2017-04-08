@@ -19,6 +19,7 @@
 	algorithm = patience
 [merge]
 	tool = emerge
+	conflictstyle = diff3
 [color]
 	ui = true
 [pager]
@@ -29,3 +30,4 @@
 	textconv = zcat
 [rebase]
 	autosquash = true
+	autostash = true
