@@ -87,6 +87,7 @@ function gh {
         perl -nale 'print "$_\n$_/issues\n$_/issues/new"'
     done
 }
+complete -r zcat # remove default macOS .Z-only-completion
 function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
 alias ptrdiff='diff -dy -W$COLUMNS'
 
@@ -161,7 +162,6 @@ alias grep='grep --color=auto'
 alias egrep='egrep --color=auto'
 
 [[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)" # ?? from Ubuntu .bashrc
-alias zcat="gzip -cdfq"
 
 man() {
     # from http://boredzo.org/blog/archives/2016-08-15/colorized-man-pages-understood-and-customized

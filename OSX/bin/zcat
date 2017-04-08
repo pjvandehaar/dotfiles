@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# /usr/bin/zcat on macOS is bad, so use the linux version instead:
+gzip -cdfq "$*"
