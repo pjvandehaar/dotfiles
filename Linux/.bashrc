@@ -46,6 +46,7 @@ $(v=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=75 53f37 98ca 21e1f6 815d 2eab1
 # aliases mask functions
 unalias l ll la cdl mcd h 2>/dev/null
 
+path() { echo "$PATH" | tr : "\n"; }
 alias e=emacs
 alias gs='git status'
 alias gl='git lol'
