@@ -174,7 +174,8 @@ man() {
     command man -a "$@"
 }
 command_not_found_handle() {
-    local cmd="$*"
+    local argv="$*"
+    local cmd="$0"
     if [[ -d "$cmd" ]]; then
         echo "[$cmd] is a directory"
     elif [[ -x "$cmd" ]]; then
