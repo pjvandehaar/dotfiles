@@ -87,7 +87,6 @@ function gh {
         perl -nale 'print "$_\n$_/issues\n$_/issues/new"'
     done
 }
-complete -r zcat # remove default macOS .Z-only-completion
 function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
 alias ptrdiff='diff -dy -W$COLUMNS'
 
@@ -151,6 +150,7 @@ function csgsites {
     mkdir -p ~/mount/CS
     sshfs pjvh@snowwhite.sph.umich.edu:/net/csgsites/csg-old/pjvh ~/mount/CS/ && cd ~/mount/CS/
 }
+complete -r zcat # remove default macOS .Z-only-completion
 
 
 # overrides
@@ -174,8 +174,7 @@ man() {
     command man -a "$@"
 }
 command_not_found_handle() {
-    local argv="$*"
-    local cmd="$0"
+    local cmd="$1"
     if [[ -d "$cmd" ]]; then
         echo "[$cmd] is a directory"
     elif [[ -x "$cmd" ]]; then

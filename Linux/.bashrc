@@ -30,6 +30,8 @@ shopt -s checkwinsize # update LINES/COLUMNS afer each command
 
 type -t emacs >/dev/null && export EDITOR=emacs || export EDITOR=vim
 
+export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+
 export HISTFILESIZE=10000000
 export HISTSIZE=100000
 export HISTIGNORE="ls:l"
@@ -152,7 +154,7 @@ man() {
     command man -a "$@"
 }
 command_not_found_handle() {
-    local cmd="$*"
+    local cmd="$1"
     if [[ -d "$cmd" ]]; then
         echo "[$cmd] is a directory"
     elif [[ -x "$cmd" ]]; then
