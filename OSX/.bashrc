@@ -120,8 +120,15 @@ spaced_less() {
     perl -ple 's{$}{\n}' |
     less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
 }
-ptrt() { python3 -c 'for col in __import__("itertools").zip_longest(*[l.rstrip("\n").split("\t") for l in __import__("sys").stdin.readlines()], fillvalue="<><"): print("\t\t".join(col))'; }
-ptrview() { (head -n 1000; echo '~FIN~') | tabview - --delimiter $'\t'; }
+ptrt() {
+    ([ -t 0 ] && cat "$1" || cat) |
+    python3 -c 'for col in __import__("itertools").zip_longest(*[l.rstrip("\n").split("\t") for l in __import__("sys").stdin.readlines()], fillvalue="<><"): print("\t\t".join(col))'
+}
+ptrview() {
+    ([ -t 0 ] && cat "$1" || cat) |
+    (head -n 1000; echo '~FIN~') |
+    tabview - --delimiter $'\t'
+}
 
 # OSX-specific
 # ============
