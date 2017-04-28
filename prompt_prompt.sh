@@ -121,20 +121,26 @@ _PP_prompt() {
 
     PS1="${_git}${_runtime}${_err}${_PP_NONE}"
 
+    local _tilde=\~ # bash3 vs bash4
+    if [[ -n ${VIRTUAL_ENV:-} ]]; then
+        local _venv="[${VIRTUAL_ENV/#$HOME/$_tilde}]"
+    else
+        local _venv=" "
+    fi
+
     if [[ -z $COLUMNS ]] || [[ $COLUMNS -ge 115 ]]; then
         local -i _max_len=$(( ${COLUMNS:-80} / 3 ))
         local _ending=" "
     else
-        local -i _max_len=$(( $COLUMNS - ${#PS1} - 5 ))
+        local -i _max_len=$(( $COLUMNS - ${#PS1} - ${#_venv} - 5 ))
         local _ending="\n$ "
     fi
 
-    local _tilde=\~ # bash3 vs bash4
     local _pwd="${PWD/#$HOME/$_tilde}"
     (( ${#_pwd} > _max_len )) && _pwd=" … ${_pwd:${#_pwd}-${_max_len}}"
     _pwd=$(echo "$_pwd" | sed -e 's_\\_\\\\_g' -e 's_\$_\\\$_g')
 
-    PS1="${_PP_NONE}${_PP_GRE} \t ${_PP_BLU} ${_pwd} ${PS1}${_ending}"
+    PS1="${_PP_NONE}${_PP_GRE} \t${_venv}${_PP_BLU} ${_pwd} ${PS1}${_ending}"
 }
 
 _PP_runtime_last_seconds=$SECONDS
