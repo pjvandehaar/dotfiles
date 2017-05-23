@@ -81,7 +81,7 @@ M-z _char_              | Delete until _char_
 - M-e
 - C-M-f
 - C-M-b
-- **toggle comment:** M-;
+- **toggle comment:** <select region> M-;
 
 ##python
 - **postmortem debugger:** `python3 -m pdb foo.py`
