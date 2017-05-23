@@ -39,7 +39,7 @@ _PP_prompt() {
     local _git='' # This variable stores the result of all this.
     local _git_branch="$($_PP_timeout 0.1 \git rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
     if [[ $_rs == 124 ]]; then
-        _git="${_PP_RED} _PP_timeout while checking for .git ${_PP_NONE}"
+        _git="${_PP_RED} looking for .git timedout ${_PP_NONE}"
     elif [[ "$_git_branch" != true ]]; then
         _git=''
     elif [[ $_rs != 0 ]]; then
@@ -49,7 +49,7 @@ _PP_prompt() {
         # Check that the repo has a HEAD
         $_PP_timeout 0.2 \git show-ref --head --quiet; local _rs=$?
         if [[ $_rs == 124 ]]; then
-            _git="${_PP_RED} _PP_timeout while checking for HEAD ${_PP_NONE}"
+            _git="${_PP_RED} looking up HEAD timedout ${_PP_NONE}"
         elif [[ $_rs == 1 ]]; then
             _git="${_PP_RED} no HEAD ${_PP_NONE}"
         elif [[ $_rs != 0 ]]; then
@@ -59,7 +59,7 @@ _PP_prompt() {
             # Check that the repo has a commit
             $_PP_timeout 0.2 \git rev-parse --short -q HEAD &>/dev/null; local _rs=$?
             if [[ $_rs == 124 ]]; then
-                _git="${_PP_RED} _PP_timeout while checking for any commits ${_PP_NONE}"
+                _git="${_PP_RED} checking for commits timedout ${_PP_NONE}"
             elif [[ $_rs == 1 ]]; then
                 _git="${_PP_RED} no commits ${_PP_NONE}"
             elif [[ $_rs != 0 ]]; then
@@ -69,74 +69,88 @@ _PP_prompt() {
                 # Get the current branch
                 local _git_head_ref="$($_PP_timeout 0.2 \git symbolic-ref -q HEAD)"; local _rs=$?
                 if [[ $_rs == 124 ]]; then
-                    _git="${_PP_RED} _PP_timeout while checking branch ${_PP_NONE}"
+                    _git="${_PP_RED} checking the branch timedout ${_PP_NONE}"
                 elif [[ $_rs -ge 1 ]]; then
                     _git=" AH why was the return status $_rs ??"
                 else
 
-                    # If HEAD is on a branch, format it.  If not, get HEAD's commit.
+                    # If HEAD is on a branch, strip junk.  If not, get HEAD's commit's hash.
+                    local _git_branch
                     if [[ -n $_git_head_ref ]]; then
-                        local _git_branch="$(printf %q "${_git_head_ref#refs/heads/}")"
+                        _git_branch="$(printf %q "${_git_head_ref#refs/heads/}")"
                     else
-                        local _git_branch="$(\git rev-parse --short -q HEAD)"
+                        _git_branch="$(\git rev-parse --short -q HEAD)"
                     fi
 
                     local _git_state=''
+
+                    # check if we're in the middle of merging/rebasing/cherry-picking
                     local _git_dir="$($_PP_timeout 0.1 \git rev-parse --git-dir 2>/dev/null)"; local _rs=$?
                     if [[ $_rs == 124 ]]; then
-                        _git_state='_PP_timeout while checking for gitdir'
-                    elif [[ -f "${_git_dir}/MERGE_HEAD" ]]; then
-                        _git_state='MERGING'
-                    elif [[ -d "${_git_dir}/rebase-apply" || -d "${git_dir}/rebase-merge" ]]; then
-                        _git_state='REBASING'
-                    elif [[ -f "${_git_dir}/CHERRY_PICK_HEAD" ]]; then
-                        _git_state='CHERRY-PICKING'
+                        _git_state+=' gitdir_timedout'
+                    else
+                        if [[ -f "${_git_dir}/MERGE_HEAD" ]]; then
+                            _git_state+=' MERGING '
+                        fi
+                        if [[ -d "${_git_dir}/rebase-apply" || -d "${git_dir}/rebase-merge" ]]; then
+                            _git_state+=' REBASING '
+                        fi
+                        if [[ -f "${_git_dir}/CHERRY_PICK_HEAD" ]]; then
+                            _git_state+=' CHERRY-PICKING '
+                        fi
+
+                        # check whether there are unpushed commits.
+                        local _git_remote="$(git config --get branch.${_git_branch}.remote 2>/dev/null)"
+                        if [[ -n "$_git_remote" ]]; then
+                            local _remote_branch="$(git config --get "branch.${_git_branch}.merge")"
+                            echo "$_remote_branch" | grep -q '^refs/heads/' || echo "ohnoes:${_remote_branch}"
+                            _remote_branch="${_remote_branch#refs/heads/}"
+                            local _remote_branch_ref="refs/remotes/${_git_remote}/${_remote_branch}"
+                            local _num_unpushed_comms="$(git rev-list --no-merges --count "${_remote_branch_ref}..HEAD" 2>/dev/null)"
+                            if [[ -n $_num_unpushed_comms ]] && [[ _num_unpushed_comms -gt 0 ]]; then
+                                _git_state+=' PUSH! '
+                            fi
+                        fi
+
+                        # check for staged & unstaged-but-tracked changes
+                        $_PP_timeout 0.2 git diff-index --quiet --cached HEAD; local _rs=$?
+                        if [[ $_rs == 124 ]]; then
+                            _git_state+=' index_timedout '
+                        else
+                            if [[ $_rs == 1 ]]; then
+                                _git_state+='i'
+                            elif [[ $_rs != 0 ]]; then
+                                _git_state+=" what_is_RS_${_rs}_for_index "
+                            fi
+
+                            $_PP_timeout 0.2 git diff-files --quiet; local _rs=$?
+                            if [[ $_rs == 124 ]]; then
+                                _git_state+=' workdir_timedout '
+                            elif [[ $_rs == 1 ]]; then
+                                _git_state+='w'
+                            elif [[ $_rs != 0 ]]; then
+                                _git_state+=" what_is_RS_${_rs}_for_workdir "
+                            fi
+                        fi
                     fi
 
-                    local _changes=''
-                    $_PP_timeout 0.2 git diff-index --quiet --cached HEAD; local _rs=$?
-                    if [[ $_rs == 1 ]]; then
-                        _changes+='i'
-                    elif [[ $_rs == 124 ]]; then
-                        _changes+=' index_timed_out '
-                    elif [[ $_rs != 0 ]]; then
-                        _changes+=" what_is_RS_${_rs}_for_index "
-                    fi
-                    $_PP_timeout 0.2 git diff-files --quiet; local _rs=$?
-                    if [[ $_rs == 1 ]]; then
-                        _changes+='w'
-                    elif [[ $_rs == 124 ]]; then
-                        _changes+=' workdir_timed_out '
-                    elif [[ $_rs != 0 ]]; then
-                        _changes+=" what_is_RS_${_rs}_for_workdir "
-                    fi
-
-                    # TODO: check whether there are unpushed commits.
-                    # _branch # master
-                    # _remote="$(git config --get "branch.${_branch}.remote")" # origin
-                    # _remote_branch="$(git config --get "branch.${_branch}.merge")" # refs/heads/master
-                    # echo "_remote_branch" | grep -q '^refs/heads/' || echo ohnoes
-                    # _remote_branch="${_remote_branch#refs/heads/}"
-                    # _remote_branch_ref="refs/remotes/${_remote}/${_branch}"
-                    # use `git rev-list --no-merges --count refs/remotes/origin/master..HEAD`
-
-                    [[ -n "$_changes" ]] && _changes="($_changes)"
-                    [[ -n "$_git_state" ]] && _git_state="($_git_state)"
-                    _git="${_PP_YEL} ${_git_branch}${_git_state}${_changes} ${_PP_NONE}"
+                    [[ -n "$_git_state" ]] && _git_state="($(echo "$_git_state" | perl -ple 's{ +}{ }g; s{^ | \z}{}g'))"
+                    _git="${_PP_YEL} ${_git_branch}${_git_state} ${_PP_NONE}"
                 fi
             fi
         fi
     fi
 
     PS1="${_git}${_runtime}${_err}${_PP_NONE}"
-
     local _tilde=\~ # bash3 vs bash4
+
     if [[ -n ${VIRTUAL_ENV:-} ]]; then
         local _venv="[${VIRTUAL_ENV/#$HOME/$_tilde}]"
     else
         local _venv=" "
     fi
 
+    # newline-or-not depends on width of the terminal to keep it consistent
     if [[ -z $COLUMNS ]] || [[ $COLUMNS -ge 115 ]]; then
         local -i _max_len=$(( ${COLUMNS:-80} / 3 ))
         local _ending=" "
