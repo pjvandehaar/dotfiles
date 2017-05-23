@@ -1,6 +1,6 @@
 if [[ -z $TERM || $TERM = dumb || $- != *i* ]]; then
     unset PROMPT_COMMAND
-    export PS1="\w $ "
+    PS1="\w $ "
     return
 fi
 
@@ -22,7 +22,7 @@ else
     timeout() { shift; $*; }
 fi
 
-export PROMPT_COMMAND=_PP_prompt
+PROMPT_COMMAND=_PP_prompt
 _PP_prompt() {
     local _err="$?"
     [[ "$_err" -eq 0 ]] && _err='' || _err="${_PP_RED} ${_err} "
