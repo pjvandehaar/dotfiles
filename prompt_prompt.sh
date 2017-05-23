@@ -111,6 +111,15 @@ _PP_prompt() {
                         _changes+=" what_is_RS_${_rs}_for_workdir "
                     fi
 
+                    # TODO: check whether there are unpushed commits.
+                    # _branch # master
+                    # _remote="$(git config --get "branch.${_branch}.remote")" # origin
+                    # _remote_branch="$(git config --get "branch.${_branch}.merge")" # refs/heads/master
+                    # echo "_remote_branch" | grep -q '^refs/heads/' || echo ohnoes
+                    # _remote_branch="${_remote_branch#refs/heads/}"
+                    # _remote_branch_ref="refs/remotes/${_remote}/${_branch}"
+                    # use `git rev-list --no-merges --count refs/remotes/origin/master..HEAD`
+
                     [[ -n "$_changes" ]] && _changes="($_changes)"
                     [[ -n "$_git_state" ]] && _git_state="($_git_state)"
                     _git="${_PP_YEL} ${_git_branch}${_git_state}${_changes} ${_PP_NONE}"
