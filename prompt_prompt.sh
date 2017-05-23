@@ -162,6 +162,7 @@ _PP_prompt() {
     local _pwd="${PWD/#$HOME/$_tilde}"
     (( ${#_pwd} > _max_len )) && _pwd=" … ${_pwd:${#_pwd}-${_max_len}}"
     _pwd=$(echo "$_pwd" | sed -e 's_\\_\\\\_g' -e 's_\$_\\\$_g')
+    [[ -w "$PWD" ]] || _pwd="(ro) ${_pwd}" # read-only
 
     PS1="${_PP_NONE}${_PP_GRE} \t${_venv}${_PP_BLU} ${_pwd} ${PS1}${_ending}"
 }
