@@ -5,36 +5,33 @@ if type -t ptrcut >/dev/null; then
 fi
 
 local dotfiles_path="$(cd "$(dirname "$(dirname "$(greadlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
-local v p a c
+local v
 
-prepend_PATH=(
-"$dotfiles_path/OSX/bin"
-"$dotfiles_path/bin"
-"$HOME/bin"
-"$HOME/.local/bin"
-)
-append_PATH=(
-"$HOME/perl5/bin"
-)
-for p in PATH MANPATH INFOPATH; do
-    eval "a=(\"\${prepend_$p[@]}\")"
-    eval "c=(\"\${append_$p[@]}\")"
-    v="$(perl -e'@b=split(":",$ENV{$ARGV[0]}); @a=@ARGV[2..1+$ARGV[1]]; @c=@ARGV[2+$ARGV[1]..$#ARGV]; foreach$k(@a,@c){@b=grep(!/^$k$/,@b)}; print join(":",(@a,@b,@c));' "$p" "${#a[@]}" "${a[@]}" "${c[@]}")"
-    eval "export $p='$v'"
-done
+PATH="$dotfiles_path/OSX/bin:$PATH"
+PATH="$dotfiles_path/bin:$PATH"
+PATH="$HOME/bin:$PATH"
+PATH="$HOME/.local/bin:$PATH"
+PATH="$PATH:$HOME/perl5/bin"
+export PATH="$(perl -e'@p=split(":",$ENV{"PATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
+
+MANPATH="$MANPATH:$(env -u MANPATH man -w)" # gets defaults from /etc/manpath.config (see `man -dw`).  This seems gross, but `man man` breaks without this.
 
 export PERL_MB_OPT="--install_base \"$HOME/perl5\""
 export PERL_MM_OPT="INSTALL_BASE=$HOME/perl5"
 export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"
 
-# following directions at <https://github.com/Homebrew/homebrew/blob/master/Library/Formula/bash-completion.rb>
-v="$(brew --prefix)/etc/bash_completion"; [ -e "$v" ] && . "$v"
+# see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion.rb>
+# see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion@2.rb>
+if type -t brew >/dev/null; then
+     v="$(brew --prefix)/etc//bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion
+     v="$(brew --prefix)/share/bash-completion/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion@2
+fi
 
 v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"
 
 shopt -s checkwinsize # update LINES/COLUMNS afer each command
 
-export EDITOR=emacs
+type -t emacs >/dev/null && export EDITOR=emacs || export EDITOR=vim
 
 export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
@@ -52,17 +49,22 @@ $(v=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=75 53f37 98ca 21e1f6 815d 2eab1
 # =========
 
 # aliases mask functions
-unalias l ll la cdl mcd h notify 2>/dev/null
+unalias path glq gh h l ll la ds cdl mcd 2>/dev/null
 
 path() { echo "$PATH" | tr : "\n"; }
-alias e=emacs
+alias e=$EDITOR
 alias gs='git status'
 alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
 glq() {
-    # &%<> marks the end of the graph
-    git log --graph --decorate --oneline --max-count=$((LINES-3)) --color=always --all |
+    # &%<> marks the right-edge of the graph
+    if [[ $# -ge 1 ]]; then
+        local _target="$*"
+    else
+        local _target="--all"
+    fi
+    git log --graph --decorate --oneline --max-count=$((LINES-3)) --color=always $_target |
     perl -pale 's{([0-9a-f]{6})}{&%<>\1}' |
     perl -pale '$_ .= "&%<>" if (!m{&%<>})' |
     perl -pale 's{(/)(?=.*&%<>)}{%}g' |
@@ -94,15 +96,38 @@ alias pip="echo Use pip2 or pip3 or pythonX -m pip or conda! #"
 alias ipython="echo Use ipython2 or ipython3! #"
 alias python="echo Use python2 or python3! #"
 
-# options: `ls -G`: color on OSX
-# `CLICOLOR_FORCE` makes `ls` send colors to a non-terminal STDOUT.
-# `egrep --color=never` tells grep to pass through any color escape codes.
-# Note that I could use `gls` to syncronize with Linux but I don't.
-function l  { CLICOLOR_FORCE=1 ls -lhFGAtr "$@" | (egrep --color=never -v '(~|#|\.DS_Store)$' ||true); } # always return 0.
-function ll { CLICOLOR_FORCE=1 ls -lhFG    "$@" | (egrep --color=never -v '(~|#|\.DS_Store)$' ||true); }
-alias la="ls -AFG"
+if [[ $TERM != dumb ]]; then
+    # options: `less -R`: pass thru color codes.
+    #          `less -X`: leave last frame on terminal (breaks scrolling).
+    #          `less -F`: quit immediately if output fits on one screen.
+    function l {
+        gls -lhFBAtr "$@" |
+        egrep --color=never -v '(~|#|\.DS_Store)$' |
+        cat # return 0
+    }
+    function ll {
+        gls -lhFB "$@" |
+        egrep --color=never -v '(~|#|\.DS_Store)$' |
+        cat # return 0
+    }
+    function la {
+        # `ls -Cw $COLUMNS` outputs cols filling terminal's width even when piping stdout
+        ls -FACw $COLUMNS --color "$@" |
+        cat
+    }
 
-ds() { find "${1:-.}" -maxdepth 1 -print0 | xargs -0 -L1 du -sh | gsort -h | perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}'; }
+else
+    alias l='gls -lhFABtr --color'
+    alias ll='gls -lhBF --color'
+    alias la='gls -FACw $COLUMNS --color "$@"'
+fi
+
+ds() {
+    find "${1:-.}" -maxdepth 1 -print0 |
+    xargs -0 -L1 du -sh |
+    gsort -h |
+    perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}'
+}
 function cdl { cd "$1" && l; }
 function mcd { mkdir -p "$1" && cd "$1"; }
 function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
@@ -110,8 +135,8 @@ function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $
 function ptrcut { awk "{print \$$1}"; }
 function ptrsum { perl -nale '$s += $_; END{print $s}'; }
 function ptrminmax { perl -nale 'print if m{^[0-9]+$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
-function sleeptil { # Accepts "0459" or "0459.59"
-    local offset=$(($(date -j "$1" +%s) - $(date +%s)))
+function sleeptil { # Accepts "0459" or "04:59:59"
+    local offset=$(($(gdate -d "$1" +%s) - $(gdate +%s)))
     if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
     echo "offset: $offset seconds"; sleep $offset
 }
@@ -159,11 +184,11 @@ function csgsites {
 }
 complete -r zcat # remove default macOS .Z-only-completion
 
+alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
+
 
 # overrides
-# ========
-
-alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
+# =========
 
 alias grep='grep --color=auto'
 alias egrep='egrep --color=auto'
