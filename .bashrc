@@ -64,7 +64,7 @@ if type -t __git_complete >/dev/null; then
     __git_complete glb _git_log
     __git_complete glq _git_log
 fi
-function gh {
+gh() {
     for remote in $(git remote); do
         echo "## $remote"
         \git remote get-url $remote |
@@ -72,17 +72,17 @@ function gh {
         perl -nale 'print "$_\n$_/issues\n$_/issues/new"'
     done
 }
-function h { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
+h() { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
 alias ptrdiff='diff -dy -W$COLUMNS'
 
-function cdl { cd "$1" && l; }
-function mcd { mkdir -p "$1" && cd "$1"; }
-function check_repos { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
-function getPass { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
-function ptrcut { awk "{print \$$1}"; }
-function ptrsum { perl -nale '$s += $_; END{print $s}'; }
-function ptrminmax { perl -nale 'print if m{^[0-9]+$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
-function sleeptil { # Accepts "0459" or "04:59:59"
+cdl() { cd "$1" && l; }
+mcd() { mkdir -p "$1" && cd "$1"; }
+check_repos() { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
+getPass() { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
+ptrcut() { awk "{print \$$1}"; }
+ptrsum() { perl -nale '$s += $_; END{print $s}'; }
+ptrminmax() { perl -nale 'print if m{^[0-9]+$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
+sleeptil() { # Accepts "0459" or "04:59:59"
     local offset=$(($(gdate -d "$1" +%s) - $(gdate +%s)))
     if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
     echo "offset: $offset seconds"; sleep $offset

@@ -37,17 +37,17 @@ if [[ $TERM != dumb ]]; then
     # options: `less -R`: pass thru color codes.
     #          `less -X`: leave last frame on terminal (breaks scrolling).
     #          `less -F`: quit immediately if output fits on one screen.
-    function l {
+    l() {
         gls -lhFBAtr "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
         less -SRXF
     }
-    function ll {
+    ll() {
         gls -lhFB "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
         less -SRXF
     }
-    function la {
+    la() {
         # `ls -Cw $COLUMNS` outputs cols filling terminal's width even when piping stdout
         ls -FACw $COLUMNS --color "$@" |
         less -SRXF

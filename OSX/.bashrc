@@ -31,17 +31,17 @@ if [[ $TERM != dumb ]]; then
     # options: `less -R`: pass thru color codes.
     #          `less -X`: leave last frame on terminal (breaks scrolling).
     #          `less -F`: quit immediately if output fits on one screen.
-    function l {
+    l() {
         gls -lhFBAtr "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
         cat # return 0
     }
-    function ll {
+    ll() {
         gls -lhFB "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
         cat # return 0
     }
-    function la {
+    la() {
         # `ls -Cw $COLUMNS` outputs cols filling terminal's width even when piping stdout
         gls -FACw $COLUMNS --color "$@" |
         cat
@@ -63,27 +63,27 @@ ds() {
 
 # OSX-specific
 # ============
-function sleeptilc { export -f sleeptil; caffeinate -s bash -c "sleeptil $1"; }
-function wakeat {
+sleeptilc() { export -f sleeptil; caffeinate -s bash -c "sleeptil $1"; }
+wakeat() {
     local songdir="$(find '/Users/peter/Music/iTunes/iTunes Media' -iregex '.*mp3' -execdir pwd  \; | uniq | gsort -R | head -n1)"; echo "$songdir"
     sleeptilc $1; osascript -e "set Volume 3"
     find "$songdir" -iregex '.*mp3' -exec afplay -d {} \;
 }
-function ql { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful not to open too many! # TODO: confirm every tenth
+ql() { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful not to open too many! # TODO: confirm every tenth
 alias macdown='open -a macdown'
-function clip { [ -t 0 ] && pbpaste || pbcopy; }
-function notify { /usr/bin/osascript -e "display notification \"$*\" with title \"FINISHED\""; }
-function snowwhite {
+clip() { [ -t 0 ] && pbpaste || pbcopy; }
+notify() { /usr/bin/osascript -e "display notification \"$*\" with title \"FINISHED\""; }
+snowwhite() {
     mount | grep -q ~/mount/SW && echo unmounting... && umount ~/mount/SW
     mkdir -p ~/mount/SW
     sshfs pjvh@snowwhite.sph.umich.edu:/home/pjvh ~/mount/SW/ && cd ~/mount/SW/
 }
-function mini {
+mini() {
     mount | grep -q ~/mount/mini && echo unmounting... && umount ~/mount/mini
     mkdir -p ~/mount/mini
     sshfs cephas@192.168.56.20:/ ~/mount/mini/ && cd ~/mount/mini/
 }
-function csgsites {
+csgsites() {
     mount | grep -q ~/mount/CS && echo unmounting... && umount ~/mount/CS
     mkdir -p ~/mount/CS
     sshfs pjvh@snowwhite.sph.umich.edu:/net/csgsites/csg-old/pjvh ~/mount/CS/ && cd ~/mount/CS/
