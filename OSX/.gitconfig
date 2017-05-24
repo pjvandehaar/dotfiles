@@ -1,12 +1,10 @@
 [user]
 	name = Peter VandeHaar
 	email = pjvandehaar@gmail.com
-[credential]
-	helper = osxkeychain
 [push]
 	default = current # this means `simple` in modern versions
 [core]
-	excludesfile = /Users/peter/.gitignore_global
+	excludesfile = ~/.gitignore_global
 [alias]
 	cdiff = -c color.diff.new='yellow reverse' -c color.diff.old='red reverse' diff --color-words=.
 	wdiff = -c color.diff.new='yellow reverse' -c color.diff.old='red reverse' diff --word-diff=color
@@ -20,14 +18,25 @@
 [merge]
 	tool = emerge
 	conflictstyle = diff3
+[rebase]
+	autosquash = true
+	autostash = true
 [color]
 	ui = true
 [pager]
 	status = true
-	diff = ~/dotfiles/third-party/diff-highlight | less
-	lol = less +G -RX
+	# the interaction of less and diff-highlight causes problems with line-wrapping.
+	# if you want wrapped lines, just pipe into `less`.
+	diff = ~/dotfiles/third-party/diff-highlight | less -SR
+	lol = less +G -RS
 [diff "gz"]
 	textconv = zcat
-[rebase]
-	autosquash = true
-	autostash = true
+[diff "bam"]
+	textconv = samtools view -h
+[diff "bcf"]
+	textconv = htsfile -c
+
+# OS-specific:
+
+[credential]
+	helper = osxkeychain

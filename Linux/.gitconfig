@@ -17,19 +17,21 @@
 	algorithm = patience
 [merge]
 	tool = emerge
+	conflictstyle = diff3
+[rebase]
+	autosquash = true
+	autostash = true
 [color]
 	ui = true
 [pager]
 	status = true
-        # the interaction of less and diff-highlight causes problems with line-wrapping.
-        # if you want wrapped lines, just pipe into `less`.
+	# the interaction of less and diff-highlight causes problems with line-wrapping.
+	# if you want wrapped lines, just pipe into `less`.
 	diff = ~/dotfiles/third-party/diff-highlight | less -SR
-	lol = less +G -SR
+	lol = less +G -RS
 [diff "gz"]
 	textconv = zcat
 [diff "bam"]
 	textconv = samtools view -h
 [diff "bcf"]
-	textconv = ~/PROJECTS/gotcloud/src/htslib/htsfile -c
-[rebase]
-	autosquash = true
+	textconv = htsfile -c
