@@ -137,6 +137,7 @@ command_not_found_handle() {
     else
         echo "[$cmd] is not recognized"
     fi
+    echo "command was: [$*]"
 }
 
 
