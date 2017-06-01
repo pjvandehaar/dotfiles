@@ -1,5 +1,11 @@
 __fdsjlkrex() { # don't pollute global namespace
 
+if uname -a | grep -iq linux; then
+    local tac=tac date=date
+else
+    local tac=gtac date=gdate
+fi
+
 v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
 v="/usr/share/bash-completion/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
 
@@ -55,7 +61,7 @@ glq() {
     perl -pale 's{(%)(?=.*&%<>)}{\\}g' |
     perl -pale 's{(_)(?=.*&%<>)}{'$(echo -e '\u23ba')'}g' |
     perl -pale 's{&%<>}{}' |
-    gtac
+    $tac
 }
 if type -t __git_complete >/dev/null; then
     __git_complete gs  _git_status
@@ -83,7 +89,7 @@ ptrcut() { awk "{print \$$1}"; }
 ptrsum() { perl -nale '$s += $_; END{print $s}'; }
 ptrminmax() { perl -nale 'print if m{^[0-9]+$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
 sleeptil() { # Accepts "0459" or "04:59:59"
-    local offset=$(($(gdate -d "$1" +%s) - $(gdate +%s)))
+    local offset=$(($($date -d "$1" +%s) - $($date +%s)))
     if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
     echo "offset: $offset seconds"; sleep $offset
 }

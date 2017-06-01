@@ -4,14 +4,7 @@ if type -t ptrcut >/dev/null; then
     echo "BTW, .bashrc has already been sourced once."
 fi
 
-# include coreutils aliases to allow alignment with homebrewed OSX
-alias gdate=date
-alias greadlink=readlink
-alias gsort=sort
-alias gls=ls
-alias gtac=tac
-
-local dotfiles_path="$(cd "$(dirname "$(dirname "$(greadlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
+local dotfiles_path="$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
 local v
 
 PATH="$dotfiles_path/bin:$PATH"
@@ -38,12 +31,12 @@ if [[ $TERM != dumb ]]; then
     #          `less -X`: leave last frame on terminal (breaks scrolling).
     #          `less -F`: quit immediately if output fits on one screen.
     l() {
-        gls -lhFBAtr "$@" |
+        ls -lhFBAtr "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
         less -SRXF
     }
     ll() {
-        gls -lhFB "$@" |
+        ls -lhFB "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
         less -SRXF
     }
@@ -65,15 +58,15 @@ if [[ $TERM != dumb ]]; then
     # alias l="ll -Atr"
 
 else
-    alias l='gls -lhFABtr --color'
-    alias ll='gls -lhBF --color'
-    alias la='gls -FACw $COLUMNS --color "$@"'
+    alias l='ls -lhFABtr --color'
+    alias ll='ls -lhBF --color'
+    alias la='ls -FACw $COLUMNS --color "$@"'
 fi
 
 ds() {
     find -L "${1:-.}" -maxdepth 1 -print0 |
     xargs -0 -L1 du -sh |
-    gsort -h |
+    sort -h |
     perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}'
 }
 
