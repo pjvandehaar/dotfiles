@@ -2,6 +2,9 @@ Config
 ======
 - Preferences > Keys > Hotkey > Show/hide with hotkey > Option-Space
 - Preferences > Keys > Hotkey > Hotkey toggles... > Hotkey Window
+- Preferences > Keys > Key Mappings > ctrl-tab > next_tab
+- Preferences > Keys > Key Mappings > ctrl-shift-tab > prev_tab
+- Preferences > Keys > Hotkey > Hotkey toggles... > Hotkey Window
 - Preferences > Profiles > * > Colors > Minimum Contrast >  Low------|-----High
 - Preferences > Profiles > Hotkey Window > Window > Transparency > Opaque|-------Transparent
 - Preferences > Profiles > Hotkey Window > Window > Rows > 42
