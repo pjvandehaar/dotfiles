@@ -74,7 +74,6 @@ ds() {
 # Linux-specific
 # ==============
 alias gotcloud='echo dont use the system gotcloud! #'
-alias phewebdev='PYTHONPATH=/var/www/pheweb-dev/pheweb:/net/snowwhite/home/pjvh/miniconda3/lib/python35.zip:/net/snowwhite/home/pjvh/miniconda3/lib/python3.5:/net/snowwhite/home/pjvh/miniconda3/lib/python3.5/site-packages python3 -S /var/www/pheweb-dev/pheweb/bin/pheweb'
 type -t r >/dev/null || alias r=R
 
 

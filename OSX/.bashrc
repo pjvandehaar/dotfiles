@@ -63,11 +63,15 @@ ds() {
 
 # OSX-specific
 # ============
-sleeptilc() { export -f sleeptil; caffeinate -s bash -c "sleeptil $1"; }
 wakeat() {
     local songdir="$(find '/Users/peter/Music/iTunes/iTunes Media' -iregex '.*mp3' -execdir pwd  \; | uniq | gsort -R | head -n1)"; echo "$songdir"
     sleeptilc $1; osascript -e "set Volume 3"
     find "$songdir" -iregex '.*mp3' -exec afplay -d {} \;
+}
+sleeptilc() { # Accepts "0459" or "04:59:59"
+    local offset=$(($(gdate -d "$1" +%s) - $(gdate +%s)))
+    if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
+    echo "offset: $offset seconds"; caffeinate -s sleep $offset
 }
 ql() { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful not to open too many! # TODO: confirm every tenth
 alias macdown='open -a macdown'

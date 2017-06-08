@@ -2,10 +2,8 @@ __fdsjlkrex() { # don't pollute global namespace
 
 if uname -a | grep -iq linux; then
     _ptr_tac=tac
-    _ptr_date=date
 else
     _ptr_tac=gtac
-    _ptr_date=gdate
 fi
 
 v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
@@ -90,11 +88,6 @@ getPass() { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>
 ptrcut() { awk "{print \$$1}"; }
 ptrsum() { perl -nale '$s += $_; END{print $s}'; }
 ptrminmax() { perl -nale 'print if m{^[0-9]+$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
-sleeptil() { # Accepts "0459" or "04:59:59"
-    local offset=$(($($_ptr_date -d "$1" +%s) - $($_ptr_date +%s)))
-    if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
-    echo "offset: $offset seconds"; sleep $offset
-}
 spaced_less() {
     ([ -t 0 ] && cat "$1" || cat) |
     perl -ple 's{$}{\n}' |
