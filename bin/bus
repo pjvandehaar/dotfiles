@@ -80,7 +80,7 @@ def validate_bus(bus):
     assert bus['zone'] is None
     assert bus['mode'] == '1'
 
-    if bus['pu'] == ' MINUTES':
+    if bus['pu'] in [' MINUTES', ' MINUTE']:
         assert isinstance(bus['pt'], str) and 0 <= int(bus['pt']) < 100
     elif bus['pu'] in ['APPROACHING', 'DELAYED']:
         assert bus['pt'] == {"#cdata-section": "&nbsp;"} or 0 <= bus['pt'] < 5
