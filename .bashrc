@@ -6,13 +6,14 @@ else
     _ptr_tac=gtac
 fi
 
-v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
-v="/usr/share/bash-completion/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
+## comment b/c cluster slow.
+# v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
+# v="/usr/share/bash-completion/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
 
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion.rb>
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion@2.rb>
 if type -t brew >/dev/null; then
-     v="$(brew --prefix)/etc//bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion
+     v="$(brew --prefix)/etc/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion
      v="$(brew --prefix)/share/bash-completion/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion@2
 fi
 
@@ -94,8 +95,9 @@ spaced_less() {
     less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
 }
 ptrt() {
-    ([ -t 0 ] && cat "$1" || cat) |
-    python3 -c 'for col in __import__("itertools").zip_longest(*[l.rstrip("\n").split("\t") for l in __import__("sys").stdin.readlines()], fillvalue="<><"): print("\t\t".join(col))'
+    local delim="${1:-\\t}"
+    python3 -c 'for col in __import__("itertools").zip_longest(*[l.rstrip("\n").split("'"$delim"'") for l in __import__("sys").stdin.readlines()], fillvalue="<><"): print("\t\t".join(col))' |
+    column -t
 }
 ptrview() {
     ([ -t 0 ] && cat "$1" || cat) |
