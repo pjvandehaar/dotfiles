@@ -7,6 +7,7 @@ fi
 local dotfiles_path="$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
 local v
 
+PATH="$dotfiles_path/Linux/bin:$PATH"
 PATH="$dotfiles_path/bin:$PATH"
 PATH="$HOME/bin:$PATH"
 PATH="$HOME/.linuxbrew/bin:$PATH"
