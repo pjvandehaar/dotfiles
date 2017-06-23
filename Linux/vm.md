@@ -9,6 +9,5 @@ Set up sshd with `sudo apt-get install openssh-server`.
 Set up network as per <http://askubuntu.com/a/293817>:
 - for virtualbox as a whole, create a host-only network ("vboxnet0") on ipv4 192.168.56.1 with no dhcp
 - for the Ubuntu vm, make "Adapter 2" use vboxnet0.
-- from the host machine, `ssh watman@192.168.56.1`.
-
-To run headless, shift-click the VM.
+- start the Ubuntu vm (shift-click for headless), run `ifconfig`, and find the ip 192.168.56.X
+- from the host machine, `ssh watman@192.168.56.X`.
