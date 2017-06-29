@@ -35,7 +35,8 @@ stops = {
 
 
 def get_buses(stop):
-    j = requests.get(url.format(stop=stop[0])).json()
+    try: j = requests.get(url.format(stop=stop[0])).json()
+    except requests.exceptions.ConnectionError: print('No network'); exit(0)
     assert list(j) == ['stop'], j
     j = j['stop']
     if list(j) != ['pre']:
@@ -103,7 +104,6 @@ def validate_bus(bus):
 
 def print_bus(bus):
     validate_bus(bus)
-    scheduled = (bus['scheduled'] == 'true')
     print('====>', bus["fd"].strip())
     if bus['pu'] == ' MINUTES':
         arrival_time = datetime.datetime.now() + datetime.timedelta(minutes=int(bus['pt']))
