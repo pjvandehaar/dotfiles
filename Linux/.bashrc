@@ -32,12 +32,12 @@ if [[ $TERM != dumb ]]; then
     #          `less -X`: leave last frame on terminal (breaks scrolling).
     #          `less -F`: quit immediately if output fits on one screen.
     l() {
-        ls -lhFBAtr "$@" |
+        ls -lhFBAtr --color "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
         less -SRXF
     }
     ll() {
-        ls -lhFB "$@" |
+        ls -lhFB --color "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
         less -SRXF
     }
