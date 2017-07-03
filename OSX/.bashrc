@@ -4,7 +4,9 @@ if type -t ptrcut >/dev/null; then
     echo "BTW, .bashrc has already been sourced once."
 fi
 
-local dotfiles_path="$(cd "$(dirname "$(dirname "$(greadlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
+ptrtry() { type -t "${1%% *}" >/dev/null && echo "$1" || echo "$2"; }
+
+local dotfiles_path="$(cd "$(dirname "$(dirname "$($(ptrtry greadlink readlink) -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
 local v
 
 export PATH
@@ -31,29 +33,26 @@ export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"
 unalias l ll la 2>/dev/null
 
 if [[ $TERM != dumb ]]; then
-    # options: `less -R`: pass thru color codes.
-    #          `less -X`: leave last frame on terminal (breaks scrolling).
-    #          `less -F`: quit immediately if output fits on one screen.
     l() {
-        gls -lhFBAtr "$@" |
+        $(ptrtry gls ls) --color -lhFBAtr "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
-        cat # return 0
+        cat # returns 0
     }
     ll() {
-        gls -lhFB "$@" |
+        $(ptrtry gls ls) --color -lhFB "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
-        cat # return 0
+        cat # returns 0
     }
     la() {
         # `ls -Cw $COLUMNS` outputs cols filling terminal's width even when piping stdout
-        gls -FACw $COLUMNS --color "$@" |
-        cat
+        $(ptrtry gls ls) --color -FACw $COLUMNS "$@" |
+        cat # returns 0
     }
 
 else
-    alias l='gls -lhFABtr --color'
-    alias ll='gls -lhBF --color'
-    alias la='gls -FACw $COLUMNS --color "$@"'
+    alias l="$(ptrtry gls ls) -lhFABtr --color"
+    alias ll="$(ptrtry gls ls) -lhBF --color"
+    alias la="$(ptrtry gls ls) -FACw $COLUMNS --color"
 fi
 
 
