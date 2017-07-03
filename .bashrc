@@ -1,11 +1,5 @@
 __fdsjlkrex() { # don't pollute global namespace
 
-if uname -a | grep -iq linux; then
-    _ptr_tac=tac
-else
-    _ptr_tac=gtac
-fi
-
 ## comment b/c cluster slow.
 # v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
 # v="/usr/share/bash-completion/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
@@ -54,7 +48,7 @@ glq() {
     else
         local _target="--all"
     fi
-    git log --graph --decorate --oneline --max-count=$((LINES-3)) --color=always $_target |
+    git log --graph --decorate --oneline --max-count=$((LINES-2)) --color=always $_target |
     perl -pale 's{([0-9a-f]{6})}{&%<>\1}' |
     perl -pale '$_ .= "&%<>" if (!m{&%<>})' |
     perl -pale 's{(/)(?=.*&%<>)}{%}g' |
@@ -62,7 +56,8 @@ glq() {
     perl -pale 's{(%)(?=.*&%<>)}{\\}g' |
     perl -pale 's{(_)(?=.*&%<>)}{'$(echo -e '\u23ba')'}g' |
     perl -pale 's{&%<>}{}' |
-    $_ptr_tac
+    (type -t tac>/dev/null && tac || gtac) |
+    tail -n $((LINES-2)) # fork/merge wastes lines, so we need tail
 }
 if type -t __git_complete >/dev/null; then
     __git_complete gs  _git_status
@@ -103,6 +98,12 @@ ptrview() {
     ([ -t 0 ] && cat "$1" || cat) |
     (head -n 1000; echo '~FIN~') |
     tabview - --delimiter $'\t'
+}
+ds() {
+    find -L "${1:-.}" -maxdepth 1 -print0 |
+    xargs -0 -L1 du -sh |
+    (type -t gsort>/dev/null && gsort -h || sort -h) |
+    perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}'
 }
 
 

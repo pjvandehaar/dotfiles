@@ -7,15 +7,18 @@ fi
 local dotfiles_path="$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
 local v
 
+export PATH
 PATH="$dotfiles_path/Linux/bin:$PATH"
 PATH="$dotfiles_path/bin:$PATH"
 PATH="$HOME/bin:$PATH"
 PATH="$HOME/.linuxbrew/bin:$PATH"
 PATH="$PATH:/net/mario/cluster/bin"
 PATH="$PATH:$HOME/perl5/bin"
-export PATH="$(perl -e'@p=split(":",$ENV{"PATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
+PATH="$(perl -e'@p=split(":",$ENV{"PATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
 
+export MANPATH
 MANPATH="$MANPATH:$(env -u MANPATH man -w)" # gets defaults from /etc/manpath.config (see `man -dw`).  This seems gross, but `man man` breaks without this.
+MANPATH="$(perl -e'@p=split(":",$ENV{"MANPATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
 
 # This breaks my `git stage -p`:
 #v="$HOME/perl5/lib/perl5"; [[ -d "$v" ]] && ! echo "$PERL5LIB" | grep -qE "(^|:)$v(:|$)" && export PERL5LIB="$v:$PERL5LIB"
@@ -63,13 +66,6 @@ else
     alias ll='ls -lhBF --color'
     alias la='ls -FACw $COLUMNS --color "$@"'
 fi
-
-ds() {
-    find -L "${1:-.}" -maxdepth 1 -print0 |
-    xargs -0 -L1 du -sh |
-    sort -h |
-    perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}'
-}
 
 
 # Linux-specific
