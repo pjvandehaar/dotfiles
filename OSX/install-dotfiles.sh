@@ -4,7 +4,7 @@ set -euo pipefail
 #       emacs-shell only reads .bashrc
 
 cd "$HOME"
-for filename in .inputrc .emacs .hgrc .gitignore_global OSX/.gitconfig OSX/.bash_profile OSX/.bashrc; do
+for filename in .inputrc .emacs .hgrc .gitignore_global .Rprofile OSX/.gitconfig OSX/.bash_profile OSX/.bashrc; do
     linkfile="$HOME/$(basename $filename)"
     targetfile="$HOME/dotfiles/$filename"
     if [[ ! -e "$linkfile" ]]; then
