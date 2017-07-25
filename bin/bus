@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 # -*- mode: python -*-
 
+# 22: Blake <-> Pontiac Trail <-> Dhu Varren <-> Nixon <-> Teubingen <-> Kroger <-> loop of North campus
+# 23: Blake <-> Geddes <-> hospital <-> Plymouth <-> Kroger <-> (variable) <-> park&ride by 23.
+# 65: Geddes(E)->Washtenaw(N)->Huron(W) loop <-> Broadway bridge <-> Plymouth <-> Kroger <-> southern Green
+# NW: clockwise around Central Campus <-> West of Hosptial <-> Pierpont Commons <-> clockwise around North Campus
+# CN: Geddes(E) -> above Palmer Field -> around Hospital -> Pierpoint Commons -> Huron&Hubbard/Hayward (South of Kroger)
+# CS: Geddes(E) <- above Palmer Field <- around Hospital <- Pierpoint Commons <- Huron&Hubbard/Hayward (South of Kroger)
+# BB: Huron(W)->West of Palmer Commons->Geddes(E)->Couzens/ZinaPitcher/MSII(N) loop <-> Pierpont <-> BB
+# NES: ?
+
 import requests
 import sys
 import json
@@ -8,34 +17,30 @@ import dateutil.parser
 import datetime
 import os.path
 
+def getidx(lst, idx, default=None):
+    if len(lst) > idx: return lst[idx]
+    return default
+
 url = 'http://www.theride.org/DesktopModules/AATA.EndPoint/Proxy.ashx?method=getpredictionsfromxml&stpid={stop}'
 
 stops = {
-    '22-lanc': ('1781', '22'), # 22: Blake <-> Pontiac Trail <-> Dhu Varren <-> Nixon <-> Teubingen <-> Kroger <-> loop of North campus
-    '22-lanc-N': ('1788', '22'),
-    '22-pierpont': ('1714', '22'),
-    '22-blake': ('145', '22'),
-    '22-kroger-N': ('194', '22'),
+    'clague': '628',
+    'lanc': '1781',
+    'lanc-N': '1788',
+    'kroger': '1350',
+    'kroger-N': '194',
+    'pierpont': '1714',
 
-    '23-geddes': ('1285', '23'), # 23: Blake <-> Geddes <-> hospital <-> Plymouth <-> Kroger <-> (variable) <-> park&ride by 23.
-    '23-childrens': ('185', '23'),
-    '23-obs': ('184', '23'),
-    '23-kroger': ('1350', '23'),
-    '23-clague': ('628', '23'),
-
-    '65-geddes': ('1285', '65'), # 65: Geddes(E)->Washtenaw(N)->Huron(W) loop <-> Broadway bridge <-> Plymouth <-> Kroger <-> southern Green
-    '65-kroger': ('1350', '65'),
-
-    # NW: clockwise around Central Campus <-> West of Hosptial <-> Pierpont Commons <-> clockwise around North Campus
-    # CN: Geddes(E) -> above Palmer Field -> around Hospital -> Pierpoint Commons -> Huron&Hubbard/Hayward (South of Kroger)
-    # CS: Geddes(E) <- above Palmer Field <- around Hospital <- Pierpoint Commons <- Huron&Hubbard/Hayward (South of Kroger)
-    # BB: Huron(W)->West of Palmer Commons->Geddes(E)->Couzens/ZinaPitcher/MSII(N) loop <-> Pierpont <-> BB
+    'childrens': '185',
+    'obs': '184',
+    'geddes': '1285',
+    'blake': '145',
 }
 
 
 
-def get_buses(stop):
-    try: j = requests.get(url.format(stop=stop[0])).json()
+def get_buses(stop, route=None):
+    try: j = requests.get(url.format(stop=stop)).json()
     except requests.exceptions.ConnectionError: print('No network'); exit(0)
     assert list(j) == ['stop'], j
     j = j['stop']
@@ -50,9 +55,9 @@ def get_buses(stop):
         j = [j] # the silly API skips the list if there's only one bus.
     for bus in j:
         record(bus, stop)
-        if bus['rn'] != stop[1]: continue
+        if route and route != bus['rn']: continue
         try:
-            print_bus(bus)
+            print_bus(bus, route=route)
         except:
             print('failed for bus:')
             json.dump(bus, sys.stdout, indent=2)
@@ -83,8 +88,8 @@ def validate_bus(bus):
 
     if bus['pu'] in [' MINUTES', ' MINUTE']:
         assert isinstance(bus['pt'], str) and 0 <= int(bus['pt']) < 100
-    elif bus['pu'] in ['APPROACHING', 'DELAYED']:
-        assert bus['pt'] == {"#cdata-section": "&nbsp;"} or 0 <= bus['pt'] < 5
+    elif bus['pu'] in ['APPROACHING', 'DELAYED', 'DUE']:
+        assert bus['pt'] == {"#cdata-section": "&nbsp;"} or bus['pt'] in range(0, 5+1)
     else: raise
 
     assert len(bus['fd']) > 5
@@ -102,9 +107,9 @@ def validate_bus(bus):
         int(bus['nextbusminutes'])
 
 
-def print_bus(bus):
+def print_bus(bus, route=None):
     validate_bus(bus)
-    print('====>', bus["fd"].strip())
+    print('====>', bus['rn'].strip(), bus["fd"].strip())
     if bus['pu'] == ' MINUTES':
         arrival_time = datetime.datetime.now() + datetime.timedelta(minutes=int(bus['pt']))
         a = f'comes at {arrival_time.hour}:{arrival_time.minute:02} - in {bus["pt"]} minutes'
@@ -130,14 +135,14 @@ def print_bus(bus):
 def help():
     print('Available stops are:')
     for stop in stops: print(stop)
-
+    print('\nOther commands:\n- test\n- test-offline')
 
 if __name__ == '__main__':
 
     cmd = sys.argv[1] if len(sys.argv)>1 else ''
 
     if cmd in stops:
-        get_buses(stops[cmd])
+        get_buses(stops[cmd], getidx(sys.argv, 2))
 
     elif cmd in ['test', 'test-offline']:
         if cmd == 'test':
@@ -146,7 +151,8 @@ if __name__ == '__main__':
                 get_buses(stop)
         with open(buslog) as f:
             for line in f:
-                validate_bus(json.loads(line)[0])
+                try: validate_bus(json.loads(line)[0])
+                except: raise Exception(json.loads(line)[0])
 
     else:
         help()
