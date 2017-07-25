@@ -14,6 +14,7 @@ fi
 type -t emacs >/dev/null && export EDITOR=emacs || export EDITOR=vim
 
 shopt -s checkwinsize # update LINES/COLUMNS afer each command
+shopt -s autocd
 
 v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"
 
