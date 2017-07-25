@@ -1,0 +1,275 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# -*- mode: python -*-
+
+# requirements: pip3 install beautifulsoup4 requests
+
+'''
+PROBLEMS:
+- on <http://m.endic.naver.com/search.nhn?searchOption=all&query=cat>, the title "cat2" comes through from a `<sup>2</sup>`.
+'''
+
+import traceback
+import unicodedata
+import sys
+import bs4
+import re
+import urllib.parse
+import argparse
+import logging
+import requests
+import threading
+import json
+import xml.etree.ElementTree as ET
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    filename='/tmp/alfred-nv.log',
+    format='%(asctime)s %(message)s')
+
+assert sys.version_info >= (3,6)
+
+DEFINITION_URL_TEMPLATE = 'http://m.endic.naver.com/search.nhn?searchOption=all&query={}'
+SUGGESTION_URL_TEMPLATE = 'http://ac.endic.naver.com/ac?q={}&q_enc=utf-8&st=1100&r_format=json&r_enc=utf-8&r_lt=1000&r_unicode=0&r_escape=1'
+
+
+def print_display_items(display_items, fmt):
+    if fmt == 'plaintext':
+        for item in display_items: print(item.to_plaintext())
+    elif fmt == 'wrap':
+        for item in display_items: print(TextWrapper().wrap(item.to_plaintext()))
+    elif fmt == 'json':
+        for item in display_items: print(json.dumps(item.to_dict(), indent=1))
+    elif fmt == 'xml':
+        print('<?xml version="1.0" encoding="utf-8"?>\n' + '<items>' + ''.join(item.to_xml() for item in display_items) + '</items>')
+    else: raise Exception()
+
+def get_display_items(query):
+    query = unicodedata.normalize('NFC', query) # b/c Alfred sends Korean through as Jamo instead of Hangul
+    query = urllib.parse.quote(query)
+    dfns_response, sugg_response = fetch_urls([
+        DEFINITION_URL_TEMPLATE.format(query),
+        SUGGESTION_URL_TEMPLATE.format(query)
+    ])
+    sugg = list(parse_suggestions(sugg_response))
+    dfns = list(parse_definitions(dfns_response))
+    if len(sugg) + len(dfns) == 0:
+        return [DisplayItem('no results found')]
+    else:
+        default_action_url = DEFINITION_URL_TEMPLATE.format(query)
+        for item in dfns: item.set_default_action_url(default_action_url)
+        return dfns + sugg
+
+def fetch_urls(urls):
+    rv = [None] * len(urls)
+    def fetch_url_by_idx(idx):
+        rv[idx] = requests.get(urls[idx])
+        rv[idx].raise_for_status()
+    threads = [threading.Thread(target=fetch_url_by_idx, args=(i,)) for i in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    return rv
+
+
+class DisplayItem:
+    def __init__(self, maintext, subtext=None, action_url=None, autocomplete=None):
+        self._maintext, self._subtext, self._action_url, self._autocomplete = maintext, subtext, action_url, autocomplete
+
+    def set_default_action_url(self, url):
+        if self._action_url is None:
+            self._action_url = url
+
+    def to_plaintext(self):
+        return f'{self._maintext:25} {self._subtext.strip()}' if self._subtext else self._maintext
+    def to_dict(self):
+        d = {'maintext': self._maintext}
+        if self._subtext is not None: d['subtext'] = self._subtext
+        if self._action_url is not None: d['action_url'] = self._action_url
+        if self._autocomplete is not None: d['autocomplete'] = self._autocomplete
+        return d
+    def to_xml(self):
+        return ET.tostring(
+            E('item', {'autocomplete': self._autocomplete or self._maintext, 'valid':'yes'}, children=[
+                E('title', text=self._maintext),
+                E('subtitle', text=self._subtext),
+                E('arg', text=self._action_url),
+                E('text', attr={'type':'copy'}, text=self._maintext),
+            ])).decode('utf-8')
+
+def E(tag, attr={}, children=[], text=None):
+    elem = ET.Element(tag, attrib=attr)
+    if text: elem.text = "" + text
+    for child in children: elem.append(child)
+    return elem
+
+def parse_suggestions(sugg_response):
+    for idx, item_list in enumerate(sugg_response.json()['items']):
+        for item_pair in item_list:
+            possible_query, brief_definition = item_pair[0][0], item_pair[1][0]
+            url_to_pass = DEFINITION_URL_TEMPLATE.format(urllib.parse.quote(possible_query.encode('utf-8')))
+            yield DisplayItem(
+                'sugg[{}]: '.format(idx) + possible_query,
+                brief_definition,
+                action_url=url_to_pass,
+                autocomplete=possible_query
+            )
+
+
+def parse_definitions(dnfs_response):
+
+    soup = bs4.BeautifulSoup(dnfs_response.text, 'html.parser')
+
+    # Hopefully these are exactly the <div>s that we want.
+    divs = soup.select('div#content div.entry_wrap div.section_card div.entry_search_word')
+
+    # for div in divs:
+    #     print('\n===========\n')
+    #     print(div)
+    # print('\n====#=#=#=#=======\n\n')
+
+    for div in divs:
+
+        title_text = None
+        definition_texts = []
+        example_texts = []
+
+        title = div.select('div.h_word')
+        if len(title) != 1:
+            raise Exception('no title for {}'.format(repr(title)))
+        else:
+            title = title[0]
+            title = title.select('strong.target')[0].text.strip()
+            title_text = clean_whitespace(title)
+
+        single_dfn = div.select('p.desc_lst')
+        if len(single_dfn) > 1:
+            raise Exception('multiple single definitions!')
+        elif len(single_dfn) == 1:
+            single_dfn = single_dfn[0]
+            dfn_text = single_dfn.text
+            definition_texts.append(clean_whitespace(dfn_text))
+
+        dfns = div.select('ul.desc_lst li')
+        for dfn in dfns:
+            p_descs = dfn.select('p.desc')
+            if len(p_descs) == 0:
+                # must be a web collection
+                dfn_text = dfn.text
+            elif len(p_descs) == 1:
+                dfn_text = p_descs[0].text
+            else:
+                raise Exception('there are {} `p.desc`s in {}'.format(len(p_descs), repr(dfn)))
+            definition_texts.append(clean_whitespace(dfn_text))
+
+        examples = div.select('div.example_wrap')
+        for example in examples:
+            kor = example.select('p.example_mean')[0].text
+
+            # this is to avoid the pesky "Play" or "발음듣기" at the end of the line.
+            eng_spans = example.select('p.example_stc span.autolink')
+            eng = ' '.join(span.text for span in eng_spans)
+
+            example_text = kor  +' = ' + eng
+            example_texts.append(clean_whitespace(example_text))
+
+        # make some output!
+        if len(example_texts) <=1 and sum(len(dfn_text) for dfn_text in definition_texts) <= 40:
+            # we'll concatenate some definitions together to qualify for a one-liner.
+            definition_texts = [' || '.join(dfn_text for dfn_text in definition_texts)]
+
+        if len(definition_texts) <= 1 and len(example_texts) <= 1:
+            # make a one-liner.
+            d_text = '' if len(definition_texts) ==0 else definition_texts[0]
+            e_text = '' if len(example_texts) ==0 else example_texts[0]
+            yield DisplayItem(f'{title_text} = {d_text}', e_text)
+
+        else:
+            # print a title line followed by everything else.
+            yield DisplayItem(f'== {title_text} ==')
+            for definition_text in definition_texts:
+                yield DisplayItem(f'    {definition_text}')
+            for example_text in example_texts:
+                yield DisplayItem(f'    {example_text}')
+
+def clean_whitespace(s):
+    for bad_letter in '\n\r\t':
+        s = s.replace(bad_letter, ' ')
+    s = re.sub(r'\s+', ' ', s)
+    return s.strip()
+
+class TextWrapper:
+    def __init__(self):
+        import unicodedata
+        import shutil
+        self.cols = shutil.get_terminal_size().columns
+    def wrap(self, text):
+        ret = ''
+        x = self.how_many_chars_fit_in_width(text, self.cols)
+        ret += (text[:x])
+        while x < len(text):
+            text = text[x:]
+            x = self.how_many_chars_fit_in_width(text, self.cols - 8)
+            ret += '\n' + ' '*8 + text[:x]
+        return ret
+    def how_many_chars_fit_in_width(self, s, width):
+        for i, c in enumerate(s):
+            width -= self.width_of_char(c)
+            if width < 0: return i
+        return len(s)
+    def width_of_char(self, c):
+        ## A: ambiguous (1 in iterm)
+        ## F: full width (2)
+        ## H: halfwidth (1)
+        ## N : not asian (1)
+        ## Na: narrow (1)
+        ## W: wide (2)
+        u_eaw = unicodedata.east_asian_width(c)
+        if u_eaw in ('H','N','Na','A'): return 1
+        elif u_eaw in ('F','W'): return 2
+        else: raise Exception(ord(c))
+
+if __name__ == u'__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--fmt', default='plaintext', choices=['plaintext', 'wrap', 'xml', 'json'])
+    parser.add_argument('--test', action='store_true')
+    parser.add_argument('--handle-errors', action='store_true', help='catch all errors and put them into the normal output stream')
+    parser.add_argument('--ipdb', action='store_true')
+    parser.add_argument('query', nargs='?', default=None)
+    args = parser.parse_args()
+
+    logging.debug(args)
+
+    if not args.test and args.query is None:
+        parser.print_help()
+        exit(1)
+
+    if args.test:
+        queries = ['강', '조언', '뭘 해야 할까요', '그리기에', '집중할', 'cat', 'I am a potato']
+        for query in queries:
+            print('TESTING QUERY:', query)
+            display_items = get_display_items(query)
+            print_display_items(display_items, args.fmt)
+            print('')
+
+    elif args.handle_errors:
+        try:
+            display_items = get_display_items(args.query)
+            print_display_items(display_items, args.fmt)
+        except:
+            err_filepath = '/tmp/alfred-k.err'
+            import traceback
+            with open(err_filepath, 'w') as f: f.write(traceback.format_exc())
+            print_display_items([DisplayItem(f'ERROR logged to {err_filepath}')], args.fmt)
+            #print(f'<?xml version="1.0"?>\n<items><item><title>ERROR logged to {err_filepath}</title><arg>{err_filepath}</arg><text type="copy">{err_filepath}</text></items>')
+
+    else:
+        if args.ipdb:
+            # from <http://ipython.readthedocs.io/en/stable/interactive/reference.html#post-mortem-debugging>
+            import sys
+            from IPython.core import ultratb
+            sys.excepthook = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1)
+
+        display_items = get_display_items(args.query)
+        print_display_items(display_items, args.fmt)
