@@ -38,6 +38,7 @@ unalias path glq gh h cdl mcd 2>/dev/null
 path() { echo "$PATH" | tr : "\n"; }
 alias e=$EDITOR
 alias gs='git status'
+alias gg='git grep'
 alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
@@ -61,6 +62,7 @@ glq() {
 }
 if type -t __git_complete >/dev/null; then
     __git_complete gs  _git_status
+    __git_complete gg  _git_grep
     __git_complete gl  _git_log
     __git_complete gla _git_log
     __git_complete glb _git_log
