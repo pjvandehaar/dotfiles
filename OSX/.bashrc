@@ -13,7 +13,6 @@ export PATH
 PATH="$dotfiles_path/OSX/bin:$PATH"
 PATH="$dotfiles_path/bin:$PATH"
 PATH="$HOME/bin:$PATH"
-PATH="$HOME/.local/bin:$PATH"
 PATH="$PATH:$HOME/perl5/bin"
 PATH="$(perl -e'@p=split(":",$ENV{"PATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
 
@@ -26,38 +25,15 @@ export PERL_MM_OPT="INSTALL_BASE=$HOME/perl5"
 export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"
 
 
-# platform-specific
-# =================
-
-# aliases mask functions
-unalias l ll la 2>/dev/null
-
-if [[ $TERM != dumb ]]; then
-    l() {
-        $(ptrtry gls ls) --color -lhFBAtr "$@" |
-        egrep --color=never -v '(~|#|\.DS_Store)$' |
-        cat # returns 0
-    }
-    ll() {
-        $(ptrtry gls ls) --color -lhFB "$@" |
-        egrep --color=never -v '(~|#|\.DS_Store)$' |
-        cat # returns 0
-    }
-    la() {
-        # `ls -Cw $COLUMNS` outputs cols filling terminal's width even when piping stdout
-        $(ptrtry gls ls) --color -FACw $COLUMNS "$@" |
-        cat # returns 0
-    }
-
-else
-    alias l="$(ptrtry gls ls) -lhFABtr --color"
-    alias ll="$(ptrtry gls ls) -lhBF --color"
-    alias la="$(ptrtry gls ls) -FACw $COLUMNS --color"
-fi
+# OS-specific impl
+# ================
+alias  l="exa --ignore-glob='.DS_Store|*~|*#*' -F -la --sort=modified --git --time-style=long-iso"
+alias ll="exa --ignore-glob='.DS_Store|*~|*#*' -F -l  --sort=Name     --git --time-style=long-iso"
+alias la="exa --ignore-glob='.DS_Store|*~|*#*' -F  -a --sort=Name"
 
 
-# OSX-specific
-# ============
+# OS-specific features
+# ====================
 wakeat() {
     local songdir="$(find '/Users/peter/Music/iTunes/iTunes Media' -iregex '.*mp3' -execdir pwd  \; | uniq | gsort -R | head -n1)"; echo "$songdir"
     sleeptilc $1; osascript -e "set Volume 3"
@@ -87,7 +63,6 @@ csgsites() {
     mkdir -p ~/mount/CS
     sshfs pjvh@snowwhite.sph.umich.edu:/net/csgsites/csg-old/pjvh ~/mount/CS/ && cd ~/mount/CS/
 }
-complete -r zcat # remove default macOS .Z-only-completion
 
 alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
 

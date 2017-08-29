@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 
-# /usr/bin/zcat on macOS is bad, so use the linux version instead:
+# /usr/bin/zcat on macOS expects the file extension `.Z`.
+# in some cases it is useful to add `complete -r zcat` in .bashrc.
 gzip -cdfq "$*"

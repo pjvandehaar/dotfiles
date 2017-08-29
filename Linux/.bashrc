@@ -26,8 +26,8 @@ MANPATH="$(perl -e'@p=split(":",$ENV{"MANPATH"}); @p=grep(-e,@p); for($i=0;$i<$#
 #v="$HOME/perl5/lib/perl5"; [[ -d "$v" ]] && ! echo "$PERL5LIB" | grep -qE "(^|:)$v(:|$)" && export PERL5LIB="$v:$PERL5LIB"
 
 
-# platform-specific
-# =================
+# OS-specific impl
+# ================
 
 # aliases mask functions
 unalias l ll la 2>/dev/null
@@ -70,8 +70,8 @@ else
 fi
 
 
-# Linux-specific
-# ==============
+# OS-specific features
+# ====================
 alias gotcloud='echo dont use the system gotcloud! #'
 if ! type -t r >/dev/null; then alias r=R; fi
 if type -t dircolors >/dev/null; then eval "$(dircolors -b)"; fi

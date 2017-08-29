@@ -4,28 +4,56 @@
 
 # requirements: pip3 install beautifulsoup4 requests
 
+# PROBLEM: on <http://m.endic.naver.com/search.nhn?searchOption=all&query=cat>, the title "cat2" comes through from a `<sup>2</sup>`.
+# TODO: look into <http://dic.daum.net/search.do?q=cat&dic=eng>
+
 '''
-PROBLEMS:
-- on <http://m.endic.naver.com/search.nhn?searchOption=all&query=cat>, the title "cat2" comes through from a `<sup>2</sup>`.
+TIMING:
+*     50ms: python startup
+*    200ms: import requests bs4 (110ms requests, 90ms bs4)
+*      1ms: def, class, argparse
+*     15ms: ? (from finished argparse until requests starts HTTP connection)
+|\
+*|   370ms: m.endic.naver.com
+|*  1000ms: ac.endic.naver.com
+|/
+*   40ms: parse
+*    1ms: fmt,print
+(1400ms)
+
+MORE THREADING & urllib.request.urlopen(url)
+*     50ms: startup
+*     15ms: ?
+|\
+*|\   90ms: import bs4
+|*|  370ms: m.endic.naver.com
+||* 1000ms: ac.endic.naver.com
+||/
+|/
+*     40ms: parse
+*      1ms: fmt,print
+(1100ms)
 '''
+
+import logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    filename='/tmp/alfred-nv.log',
+#    format='%(relativeCreated)d %(asctime)s %(message)s',
+    format='%(relativeCreated)d %(message)s',
+)
 
 import traceback
 import unicodedata
 import sys
-import bs4
 import re
 import urllib.parse
 import argparse
-import logging
-import requests
 import threading
 import json
 import xml.etree.ElementTree as ET
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    filename='/tmp/alfred-nv.log',
-    format='%(asctime)s %(message)s')
+from bs4 import BeautifulSoup
+import requests
 
 assert sys.version_info >= (3,6)
 
@@ -119,7 +147,7 @@ def parse_suggestions(sugg_response):
 
 def parse_definitions(dnfs_response):
 
-    soup = bs4.BeautifulSoup(dnfs_response.text, 'html.parser')
+    soup = BeautifulSoup(dnfs_response.text, 'html.parser')
 
     # Hopefully these are exactly the <div>s that we want.
     divs = soup.select('div#content div.entry_wrap div.section_card div.entry_search_word')
@@ -230,16 +258,16 @@ class TextWrapper:
         elif u_eaw in ('F','W'): return 2
         else: raise Exception(ord(c))
 
+
 if __name__ == u'__main__':
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--fmt', default='plaintext', choices=['plaintext', 'wrap', 'xml', 'json'])
+    parser.add_argument('--fmt', default='wrap', choices=['plaintext', 'wrap', 'xml', 'json'])
     parser.add_argument('--test', action='store_true')
     parser.add_argument('--handle-errors', action='store_true', help='catch all errors and put them into the normal output stream')
     parser.add_argument('--ipdb', action='store_true')
     parser.add_argument('query', nargs='?', default=None)
     args = parser.parse_args()
-
-    logging.debug(args)
 
     if not args.test and args.query is None:
         parser.print_help()
@@ -261,7 +289,7 @@ if __name__ == u'__main__':
             err_filepath = '/tmp/alfred-k.err'
             import traceback
             with open(err_filepath, 'w') as f: f.write(traceback.format_exc())
-            print_display_items([DisplayItem(f'ERROR logged to {err_filepath}')], args.fmt)
+            print_display_items([DisplayItem(f'ERROR logged to {err_filepath}', subtext='cmd-c to copy')], args.fmt)
             #print(f'<?xml version="1.0"?>\n<items><item><title>ERROR logged to {err_filepath}</title><arg>{err_filepath}</arg><text type="copy">{err_filepath}</text></items>')
 
     else:
