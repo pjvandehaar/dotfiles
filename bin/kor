@@ -193,14 +193,17 @@ def parse_definitions(dnfs_response):
 
         examples = div.select('div.example_wrap')
         for example in examples:
-            kor = example.select('p.example_mean')[0].text
+            try:
+                kor = example.select('p.example_mean')[0].text
 
-            # this is to avoid the pesky "Play" or "발음듣기" at the end of the line.
-            eng_spans = example.select('p.example_stc span.autolink')
-            eng = ' '.join(span.text for span in eng_spans)
+                # this is to avoid the pesky "Play" or "발음듣기" at the end of the line.
+                eng_spans = example.select('p.example_stc span.autolink')
+                eng = ' '.join(span.text for span in eng_spans)
 
-            example_text = kor  +' = ' + eng
-            example_texts.append(clean_whitespace(example_text))
+                example_text = kor  +' = ' + eng
+                example_texts.append(clean_whitespace(example_text))
+            except:
+                print('example = [[[\n', example.prettify(), '\n]]] caused error [[[\n', traceback.format_exc(), ']]]', file=sys.stderr)
 
         # make some output!
         if len(example_texts) <=1 and sum(len(dfn_text) for dfn_text in definition_texts) <= 40:
@@ -287,7 +290,6 @@ if __name__ == u'__main__':
             print_display_items(display_items, args.fmt)
         except:
             err_filepath = '/tmp/alfred-k.err'
-            import traceback
             with open(err_filepath, 'w') as f: f.write(traceback.format_exc())
             print_display_items([DisplayItem(f'ERROR logged to {err_filepath}', subtext='cmd-c to copy')], args.fmt)
             #print(f'<?xml version="1.0"?>\n<items><item><title>ERROR logged to {err_filepath}</title><arg>{err_filepath}</arg><text type="copy">{err_filepath}</text></items>')
