@@ -17,7 +17,7 @@ ppl = {}
 for line in o[1:]:
     try:
         username, state, ncpus, mem = line[0:15].strip(), line[15:18].strip(), int(line[18:23]), line[23:33].strip()
-        assert state in states, state
+        if state not in states: state = 'other'
         if mem.endswith('M'): mem = float(mem[:-1]) / 1024
         elif mem.endswith('G'): mem = float(mem[:-1])
         else: raise mem
@@ -27,14 +27,15 @@ for line in o[1:]:
     except Exception as exc: raise Exception('BAD LINE: ' + repr(line)) from exc
 
 print('')
-print('-------pending-------'+' '*18+'-------running-------   ------completing-----')
-print('mem(GB)  #cpus  #jobs'+' '*18+'mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #jobs')
+print('-------pending-------'+' '*18+'-------running-------   ------completing-----   ---------other-------')
+print('mem(GB)  #cpus  #jobs'+' '*18+'mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #jobs')
 for username in sorted(ppl.keys(), key=lambda u: -ppl[u]['cpus']['R']):
-    for state in states: ppl[username]['mem'][state] = int(ppl[username]['mem'][state])
-    print('{:6}{:7}{:7}   {:13}  {:7}{:7}{:7}   {:7}{:7}{:7}    {}'.format(
+    for state in states+['other']: ppl[username]['mem'][state] = int(ppl[username]['mem'][state])
+    print('{:6}{:7}{:7}   {:13}  {:7}{:7}{:7}   {:7}{:7}{:7}    {:7}{:7}{:7}    {}'.format(
         *[ppl[username][metric][state] or '' for state in states[:1] for metric in ['mem','cpus','jobs']],
         f'{users[username]}'[:13],
         *[ppl[username][metric][state] or '' for state in states[1:] for metric in ['mem','cpus','jobs']],
+        *[ppl[username][metric][state] or '' for state in ['other']  for metric in ['mem','cpus','jobs']],
         f'{username}  ({users[username]})',
     ))
 print('\n')
