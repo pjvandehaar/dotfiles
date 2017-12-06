@@ -18,19 +18,25 @@ for line in o[1:]:
     try:
         username, state, ncpus, mem = line[0:15].strip(), line[15:18].strip(), int(line[18:23]), line[23:33].strip()
         if state not in states: state = 'other'
-        if mem.endswith('M'): mem = float(mem[:-1]) / 1024
-        elif mem.endswith('G'): mem = float(mem[:-1])
+        # mem is in GB.
+        if mem.isdigit(): mem = int(mem) / 1024 # old SLURM version
+        elif mem.endswith('K'): mem = int(mem[:-1]) # old SLURM version
+        elif mem.endswith('M'): mem = float(mem[:-1]) / 1024 # new SLURM version
+        elif mem.endswith('G'): mem = float(mem[:-1]) # new SLURM version
         else: raise mem
         ppl.setdefault(username, {}).setdefault('jobs', Counter())[state] += 1
         ppl.setdefault(username, {}).setdefault('cpus', Counter())[state] += ncpus
         ppl.setdefault(username, {}).setdefault('mem', Counter())[state] += mem
     except Exception as exc: raise Exception('BAD LINE: ' + repr(line)) from exc
+for username in ppl.keys():
+    for state in states+['other']:
+        ppl[username]['mem'][state] = int(ppl[username]['mem'][state])
 
+# TODO: only show states that have jobs?
 print('')
 print('-------pending-------'+' '*18+'-------running-------   ------completing-----   ---------other-------')
 print('mem(GB)  #cpus  #jobs'+' '*18+'mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #jobs')
 for username in sorted(ppl.keys(), key=lambda u: -ppl[u]['cpus']['R']):
-    for state in states+['other']: ppl[username]['mem'][state] = int(ppl[username]['mem'][state])
     print('{:6}{:7}{:7}   {:13}  {:7}{:7}{:7}   {:7}{:7}{:7}    {:7}{:7}{:7}    {}'.format(
         *[ppl[username][metric][state] or '' for state in states[:1] for metric in ['mem','cpus','jobs']],
         f'{users[username]}'[:13],
