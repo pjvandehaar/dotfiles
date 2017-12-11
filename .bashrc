@@ -78,7 +78,7 @@ gh() {
     done
 }
 h() { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
-alias ptrdiff='diff -dy -W$COLUMNS'
+alias ptrdiff='diff -dyb -W$COLUMNS'
 
 cdl() { cd "$1" && l; }
 mcd() { mkdir -p "$1" && cd "$1"; }
@@ -108,7 +108,7 @@ ds() {
     (type -t gsort>/dev/null && gsort -h || sort -h) |
     perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}'
 }
-
+ptrcount() { perl -nle '$h{$_}++; END{foreach my $k (sort {$h{$b}<=>$h{$a}} keys(%h)){print "$h{$k}\t$k"}}'; }
 
 
 # overrides

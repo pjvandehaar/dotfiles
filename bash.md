@@ -88,3 +88,18 @@ M-z _char_              | Delete until _char_
   - **stack:** `where`, `up`, `down`
   - **run code:**: `!`, `p`, `pp`, `interact`
   - **context:** `list`, `list start, end`, `args`
+
+##encryption
+```
+tar -cz foo | openssl aes-256-cbc > foo.tar.gz.a2c
+mkdir -p foo2 && cat foo.tar.gz.a2c | openssl aes-256-cbc -d | tar -xz -C foo2
+
+export GPG_TTY=$(tty) && tar -cz foo | gpg -c > foo.tar.gz.gpg
+mkdir -p foo2 && cat foo.tar.gz.gpg | gpg -d | tar -xz -C foo2
+
+zip -e -r foo foo
+unzip -d foo2 foo.zip
+```
+
+##vid -> gif
+ffmpeg -i IMG_1246.m4v -s 360x640 -pix_fmt rgb24 -r 10  -f gif - | gifsicle --optimize=3 --delay=10 > out.gif
