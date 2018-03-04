@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+
+import shelve, json, sys
+
+with shelve.open(sys.argv[1]) as shelf:
+    print(json.dumps(list(shelf.items())))
