@@ -36,13 +36,13 @@ def get_img():
 
 
 def overlay_text(base, text):
-    location = (0.1, 0.1)
-    minisize = (base.size[0]//64, base.size[1]//64)
-    txt = Image.new('RGBA', minisize, (255,255,255,255))
+    size = (33, 7)
+    txt = Image.new('RGB', size, (255,255,255))
     fnt = ImageFont.load_default()
     d = ImageDraw.Draw(txt)
-    d.text((minisize[0]*location[0], minisize[1]*location[1]), text, font=fnt, fill=(0,0,0,255))
-    txt = txt.resize((minisize[0]*4, minisize[1]*4))
+    d.text((0,-3), text, font=fnt, fill=(0,0,0))
+    final_dim = (base.size[0]//8, int(base.size[0]/8*size[1]/size[0]))
+    txt = txt.resize(final_dim)
     base.paste(txt)
 
 screenshot = get_img()
@@ -52,15 +52,11 @@ def make_image(channel_order):
     img = Image.merge('RGB', [bands[i] for i in channel_order])
     overlay_text(img, ' '.join('RGB'[i] for i in channel_order))
     return img
-
 orders, duration = [(1,2,0), (2,0,1)], 1000
-#orders, duration = [(0,1,2), (0,2,1), (1,2,0), (1,0,2), (2,0,1), (2,1,0)], 500
-#orders, duration = itertools.permutations([0,1,2]), 200
-#orders, duration = list(itertools.product(*[[0,1,2]]*3), 200
 images = [make_image(order) for order in orders]
-#images.append(images[0].point(lambda x:0)) # all black
 
-# images[0].save('/tmp/x.gif', save_all=True, append_images=images[1:], duration=duration)
-# subprocess.call('qlmanage -p /tmp/x.gif'.split(), stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
-
-for img in images: img.show()
+def ql_image(img):
+    img.save('/tmp/x.png')
+    subprocess.call('qlmanage -p /tmp/x.png'.split(), stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+for img in images: ql_image(img)
+#for img in images: img.show()
