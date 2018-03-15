@@ -63,7 +63,7 @@
 ;; mouse-scrolling to move screen & pointer. copied from <https://iterm2.com/faq.html> & modified.
 (require 'mwheel)
 (require 'mouse)
-(xterm-mouse-mode t)
+;; (xterm-mouse-mode t) ;; this enables selection-by-mouse, which is sometimes convenient but usually bothersome
 (mouse-wheel-mode t)
 ;; (global-set-key [mouse-4] 'previous-line) ;; These move the cursor
 ;; (global-set-key [mouse-5] 'next-line)
