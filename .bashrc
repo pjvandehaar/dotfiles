@@ -86,7 +86,7 @@ check_repos() { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd
 getPass() { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
 ptrcut() { awk "{print \$$1}"; }
 ptrsum() { perl -nale '$s += $_; END{print $s}'; }
-ptrminmax() { perl -nale 'print if m{^[0-9]+$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
+ptrminmax() { perl -nale 'print if m{^-?[0-9]+(?:\.[0-9]+)?$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
 spaced_less() {
     ([ -t 0 ] && cat "$1" || cat) |
     perl -ple 's{$}{\n}' |
