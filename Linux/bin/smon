@@ -3,12 +3,6 @@
 
 from subprocess import check_output
 from collections import Counter
-from math import floor, ceil
-
-
-o = check_output(['getent','passwd']).decode('ascii').rstrip('\n').split('\n')
-o = [line.split(':') for line in o]
-users = {line[0]: line[4] for line in o}
 
 states = 'PD R CG'.split()
 o = check_output('squeue --array --Format=username:15,statecompact:3,numcpus:5,minmemory:10'.split()).decode('ascii').rstrip('\n').split('\n')
@@ -18,7 +12,7 @@ for line in o[1:]:
     try:
         username, state, ncpus, mem = line[0:15].strip(), line[15:18].strip(), int(line[18:23]), line[23:33].strip()
         if state not in states: state = 'other'
-        # mem is in GB.
+        # we want mem in GB.  SLURM uses different units depending on version.
         if mem.isdigit(): mem = int(mem) / 1024 # old SLURM version
         elif mem.endswith('K'): mem = int(mem[:-1]) # old SLURM version
         elif mem.endswith('M'): mem = float(mem[:-1]) / 1024 # new SLURM version
@@ -32,17 +26,15 @@ for username in ppl.keys():
     for state in states+['other']:
         ppl[username]['mem'][state] = int(ppl[username]['mem'][state])
 
-# TODO: only show states that have jobs?
 print('')
 print('-------pending-------'+' '*18+'-------running-------   ------completing-----   ---------other-------')
 print('mem(GB)  #cpus  #jobs'+' '*18+'mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #jobs')
 for username in sorted(ppl.keys(), key=lambda u: -ppl[u]['cpus']['R']):
-    print('{:6}{:7}{:7}   {:13}  {:7}{:7}{:7}   {:7}{:7}{:7}    {:7}{:7}{:7}    {}'.format(
+    print('{:6}{:7}{:7}   {:13}  {:7}{:7}{:7}   {:7}{:7}{:7}    {:7}{:7}{:7}'.format(
         *[ppl[username][metric][state] or '' for state in states[:1] for metric in ['mem','cpus','jobs']],
-        f'{users[username]}'[:13],
+        f'{username}'[:13],
         *[ppl[username][metric][state] or '' for state in states[1:] for metric in ['mem','cpus','jobs']],
         *[ppl[username][metric][state] or '' for state in ['other']  for metric in ['mem','cpus','jobs']],
-        f'{username}  ({users[username]})',
     ))
 print('\n')
 
@@ -52,3 +44,6 @@ assert o[0] == 'CPUS(A/I/O/T)'
 print('CPUS ON CLUSTER:')
 for label, ncpus in zip('allocated idle other total'.split(), [int(x) for x in o[1].split('/')]):
     print('{:>10}:{:5}'.format(label, ncpus))
+
+# TODO: show info from `sinfo -a` and `sinfo -a --summarize` (is it same?) and `sinfo -aR`
+#       maybe make a matrix showing which nodes are in which partitions?
