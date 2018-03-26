@@ -1,7 +1,7 @@
 set -euo pipefail
 
 cd "$HOME"
-for filename in .inputrc .emacs .hgrc .gitignore_global .Rprofile .byoburc.tmux .tmux.conf Linux/.gitconfig Linux/.bash_profile Linux/.bashrc; do
+for filename in .inputrc .emacs .hgrc .gitignore_global .tigrc .Rprofile .byoburc.tmux .tmux.conf Linux/.gitconfig Linux/.bash_profile Linux/.bashrc; do
     linkfile="$HOME/$(basename $filename)"
     targetfile="$HOME/dotfiles/$filename"
     if [[ ! -e "$linkfile" ]]; then

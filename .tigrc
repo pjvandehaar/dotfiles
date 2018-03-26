@@ -1,0 +1,8 @@
+set diff-highlight = diff-highlight
+#set line-graphics = utf-8 # doesn't look great
+
+set main-view-id-display = true # width set by `~/.gitconfig::core.abbrev`
+color id red black
+set main-view-date-display = custom # relative # relative-compact
+set main-view-date-format = "%Y %b %d"
+set main-view-date-local = true

@@ -5,6 +5,7 @@
 	default = current # this means `simple` in modern versions
 [core]
 	excludesfile = ~/.gitignore_global
+	abbrev = 5 # 5 char hashes
 [alias]
 	cdiff = -c color.diff.new='yellow reverse' -c color.diff.old='red reverse' diff --color-words=.
 	wdiff = -c color.diff.new='yellow reverse' -c color.diff.old='red reverse' diff --word-diff=color
@@ -28,7 +29,7 @@
 	status = true
 	# the interaction of less and diff-highlight causes problems with line-wrapping.
 	# if you want wrapped lines, just pipe into `less`.
-	diff = ~/dotfiles/third-party/diff-highlight | less -SR
+	diff = ~/dotfiles/bin/diff-highlight | less -SR
 	lol = less +G -RS
 [diff "gz"]
 	textconv = zcat
@@ -38,6 +39,5 @@
 	textconv = htsfile -c
 
 # OS-specific:
-
 [credential]
 	helper = osxkeychain
