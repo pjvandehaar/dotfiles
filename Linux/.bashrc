@@ -4,9 +4,7 @@ if type -t ptrcut >/dev/null; then
     echo "BTW, .bashrc has already been sourced once."
 fi
 
-ptrtry() { type -t "${1%% *}" >/dev/null && echo "$1" || echo "$2"; }
-
-local dotfiles_path="$(cd "$(dirname "$(dirname "$($(ptrtry greadlink readlink) -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
+local dotfiles_path="$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
 local v
 
 export PATH
@@ -37,18 +35,18 @@ if [[ $TERM != dumb ]]; then
     #          `less -X`: leave last frame on terminal (breaks scrolling).
     #          `less -F`: quit immediately if output fits on one screen.
     l() {
-        $(ptrtry gls ls) --color -lhFBAtr "$@" |
+        ls --color -lhFBAtr "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
         less -SRXF
     }
     ll() {
-        $(ptrtry gls ls) --color -lhFB "$@" |
+        ls --color -lhFB "$@" |
         egrep --color=never -v '(~|#|\.DS_Store)$' |
         less -SRXF
     }
     la() {
         # `ls -Cw $COLUMNS` outputs cols filling terminal's width even when piping stdout
-        $(ptrtry gls ls) --color -FACw $COLUMNS "$@" |
+        ls --color -FACw $COLUMNS "$@" |
         less -SRXF
     }
 
@@ -64,9 +62,9 @@ if [[ $TERM != dumb ]]; then
     # alias l="ll -Atr"
 
 else
-    alias l="$(ptrtry gls ls) -lhFABtr --color"
-    alias ll="$(ptrtry gls ls) -lhBF --color"
-    alias la="$(ptrtry gls ls) -FACw $COLUMNS --color"
+    alias l="ls -lhFABtr --color"
+    alias ll="ls -lhBF --color"
+    alias la="ls -FACw $COLUMNS --color"
 fi
 
 

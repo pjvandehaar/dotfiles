@@ -4,14 +4,17 @@ __fdsjlkrex() { # don't pollute global namespace
 # v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
 # v="/usr/share/bash-completion/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
 
+exists() { type -t "$1" >/dev/null; }
+exists_else() { exists "$1" && echo "$1" || echo "$2"; }
+
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion.rb>
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion@2.rb>
-if type -t brew >/dev/null; then
+if exists brew; then
      v="$(brew --prefix)/etc/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion
      v="$(brew --prefix)/share/bash-completion/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion@2
 fi
 
-type -t emacs >/dev/null && export EDITOR=emacs || export EDITOR=vim
+export EDITOR="$(exists_else emacs vim)"
 
 shopt -s checkwinsize # update LINES/COLUMNS afer each command
 shopt -s autocd
@@ -58,10 +61,10 @@ glq() {
     perl -pale 's{(%)(?=.*&%<>)}{\\}g' |
     perl -pale 's{(_)(?=.*&%<>)}{'$(echo -e '\u23ba')'}g' |
     perl -pale 's{&%<>}{}' |
-    (type -t tac>/dev/null && tac || gtac) |
+    "$(exists_else tac gtac)" |
     tail -n $((LINES-2)) # fork/merge wastes lines, so we need tail
 }
-if type -t __git_complete >/dev/null; then
+if exists __git_complete; then
     __git_complete gs  _git_status
     __git_complete gg  _git_grep
     __git_complete gl  _git_log
@@ -104,11 +107,12 @@ ptrview() {
 }
 ds() {
     find -L "${1:-.}" -maxdepth 1 -print0 |
-    xargs -0 -L1 du -sh |
-    (type -t gsort>/dev/null && gsort -h || sort -h) |
+    xargs -0 -L1 "$(exists_else gdu du)" -sh --apparent-size |
+    "$(exists_else gsort sort)" -h |
     perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}'
 }
 ptrcount() { perl -nle '$h{$_}++; END{foreach my $k (sort {$h{$b}<=>$h{$a}} keys(%h)){print "$h{$k}\t$k"}}'; }
+ptrsu() { sudo su --preserve-environment; }
 
 
 # overrides

@@ -165,6 +165,9 @@ _PP_prompt() {
     [[ -w "$PWD" ]] || _pwd="(ro) ${_pwd}" # read-only
 
     PS1="${_PP_NONE}${_PP_GRE} \t${_venv}${_PP_BLU} ${_pwd} ${PS1}${_ending}"
+    if [[ $USER == root ]]; then
+        PS1="${_PP_RED} ROOT ${PS1}"
+    fi
 }
 
 _PP_runtime_last_seconds=$SECONDS
