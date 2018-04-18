@@ -62,7 +62,7 @@ mini() {
 csgsites() {
     mount | grep -q ~/mount/CS && echo unmounting... && umount ~/mount/CS
     mkdir -p ~/mount/CS
-    sshfs pjvh@snowwhite.sph.umich.edu:/net/csgsites/csg-old/pjvh ~/mount/CS/ && cd ~/mount/CS/
+    sshfs pjvh@snowwhite.sph.umich.edu:/net/csgsites/csg/pjvh ~/mount/CS/ && cd ~/mount/CS/
 }
 
 alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"

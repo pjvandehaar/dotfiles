@@ -87,33 +87,40 @@ cdl() { cd "$1" && l; }
 mcd() { mkdir -p "$1" && cd "$1"; }
 check_repos() { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
 getPass() { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
-ptrcut() { awk "{print \$$1}"; }
-ptrsum() { perl -nale '$s += $_; END{print $s}'; }
-ptrminmax() { perl -nale 'print if m{^-?[0-9]+(?:\.[0-9]+)?$}' | perl -nale '$min=$_ if $.==1 or $_ < $min; $max=$_ if $.==1 or $_ > $max; END{print $min, "\t", $max}'; }
-spaced_less() {
-    ([ -t 0 ] && cat "$1" || cat) |
-    perl -ple 's{$}{\n}' |
-    less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
-}
-ptrt() {
-    local delim="${1:-\\t}"
-    python3 -c 'for col in __import__("itertools").zip_longest(*[l.rstrip("\n").split("'"$delim"'") for l in __import__("sys").stdin.readlines()], fillvalue="<><"): print("\t\t".join(col))' |
-    column -t
-}
-ptrview() {
-    ([ -t 0 ] && cat "$1" || cat) |
-    (head -n 1000; echo '~FIN~') |
-    tabview - --delimiter $'\t'
-}
 ds() {
     find -L "${1:-.}" -maxdepth 1 -print0 |
     xargs -0 -L1 "$(exists_else gdu du)" -sh --apparent-size |
     "$(exists_else gsort sort)" -h |
     perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}'
 }
-ptrcount() { perl -nle '$h{$_}++; END{foreach my $k (sort {$h{$b}<=>$h{$a}} keys(%h)){print "$h{$k}\t$k"}}'; }
 ptrsu() { sudo su --preserve-environment; }
 ptrwrite() { cp -p "$1" "$1.ptrwrite.tmp"; cat > "$1.ptrwrite.tmp"; mv "$1.ptrwrite.tmp" "$1"; }
+ptr_ipynb() { cat $1 | jq -r '.cells | .[] | select(.cell_type=="code") | .source | join("")'; }
+
+ptrcut() { awk "{print \$$1}"; }
+ptrsum() { perl -nale '$s += $_; END{print $s}'; }
+ptrfilternum() { perl -nale 'print if m{^[-+]?[0-9]+(?:\.[0-9]+)?(?:[eE][-+]?[0-9]+)?$}'; }
+ptrminmax() { ptrfilternum | perl -nale '$min=$_ if $.==1 or $_<$min; $max=$_ if $.==1 or $_>$max; END{print "$min  \t$max"}'; }
+ptrt() {
+    local delim="${1:-\\t}"
+    python3 -c 'for col in __import__("itertools").zip_longest(*[l.rstrip("\n").split("'"$delim"'") for l in __import__("sys").stdin.readlines()], fillvalue="<><"): print("\t\t".join(col))' |
+    column -t
+}
+ptrstat() {
+    local delim="${1:-\\t}"
+    python3 -c "import pandas as pd; import sys; d = pd.read_csv(sys.stdin, sep='$delim'); print(pd.DataFrame.from_items((str(col), [str(d[col].dtype)] + ([d[col].min(), d[col].mean(), d[col].max()] if str(d[col].dtype)=='float64' else [0,0,0])) for col in list(d.columns)))"
+}
+ptrcount() { perl -nle '$h{$_}++; END{foreach my $k (sort {$h{$b}<=>$h{$a}} keys(%h)){print "$h{$k}\t$k"}}'; }
+ptrview() {
+    ([ -t 0 ] && cat "$1" || cat) |
+    (head -n 1000; echo '~FIN~') |
+    tabview - --delimiter $'\t'
+}
+spaced_less() {
+    ([ -t 0 ] && cat "$1" || cat) |
+    perl -ple 's{$}{\n}' |
+    less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
+}
 
 
 # overrides
