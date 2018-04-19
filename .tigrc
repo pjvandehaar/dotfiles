@@ -6,3 +6,5 @@ color id red black
 set main-view-date-display = custom # relative # relative-compact
 set main-view-date-format = "%Y %b %d"
 set main-view-date-local = true
+
+set main-options = HEAD %(repo:head) %(repo:remote) master
