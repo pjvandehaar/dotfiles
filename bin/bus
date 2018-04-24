@@ -58,9 +58,11 @@ def fetch_buses(stop):
     if list(j) != ['prd']:
         assert j in [
             {'noPredictionMessage': 'No arrival times'},
-            {'noPredictionMessage': 'No service scheduled'}
+            {'noPredictionMessage': 'No service scheduled'},
+            {'error': {'stpid': stop, 'msg': 'No arrival times'}},
         ], j
-        print("No arrivals\n"); return None
+        print("No arrivals\n")
+        return []
     buses = j['prd']
     if isinstance(buses, dict): buses = [buses]
     buses = [order_bus_keys(bus) for bus in buses]
