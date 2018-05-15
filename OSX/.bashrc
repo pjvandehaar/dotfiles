@@ -46,6 +46,7 @@ sleeptilc() { # Accepts "0459" or "04:59:59"
     echo "offset: $offset seconds"; caffeinate -s sleep $offset
 }
 ql() { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful not to open too many! # TODO: confirm every tenth
+plist_cat() { cp "$1" /tmp/new.plist; plutil -convert xml1 /tmp/new.plist; cat /tmp/new.plist; }
 alias macdown='open -a macdown'
 clip() { [ -t 0 ] && pbpaste || pbcopy; }
 notify() { /usr/bin/osascript -e "display notification \"$*\" with title \"FINISHED\""; }

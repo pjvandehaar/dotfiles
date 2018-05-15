@@ -3,7 +3,7 @@
 ## setup: pip3 install pillow
 
 from PIL import Image, ImageDraw, ImageFont, ImageGrab
-import itertools, time, subprocess, re, urllib.request, sys, pyperclip
+import time, subprocess, re, urllib.request, sys, pyperclip
 
 
 def download_img(url):

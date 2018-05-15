@@ -41,7 +41,7 @@ def fetch_and_print_buses(stop):
     for bus in buses:
         try:
             print_bus(bus)
-        except:
+        except Exception:
             print('Error:')
             print(traceback.format_exc())
             print('failed for bus:'); json.dump(bus, sys.stdout, indent=2); print('\n---')
@@ -176,7 +176,7 @@ if __name__ == '__main__':
             for line in tqdm.tqdm(list(f)):
                 bus = json.loads(line)[0]
                 try: validate_bus(bus, check_real_time=False)
-                except:
+                except Exception:
                     print('Error for bus:'); json.dump(bus, sys.stdout, indent=2); print('\n')
                     raise
 
