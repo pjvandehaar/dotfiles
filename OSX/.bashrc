@@ -6,8 +6,7 @@ fi
 
 ptrtry() { type -t "${1%% *}" >/dev/null && echo "$1" || echo "$2"; }
 
-local dotfiles_path="$(cd "$(dirname "$(dirname "$($(ptrtry greadlink readlink) -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
-local v
+local dotfiles_path; dotfiles_path="$(cd "$(dirname "$(dirname "$($(ptrtry greadlink readlink) -f "${BASH_SOURCE[0]}")")")" && echo "$PWD")"
 
 export PATH
 PATH="$dotfiles_path/OSX/bin:$PATH"
@@ -36,19 +35,19 @@ alias la="exa --ignore-glob='.DS_Store|*~|*#*' -F  -a --sort=Name"
 # OS-specific features
 # ====================
 wakeat() {
-    local songdir="$(find '/Users/peter/Music/iTunes/iTunes Media' -iregex '.*mp3' -execdir pwd  \; | uniq | gsort -R | head -n1)"; echo "$songdir"
-    sleeptilc $1; osascript -e "set Volume 3"
+    local songdir; songdir="$(find '/Users/peter/Music/iTunes/iTunes Media' -iregex '.*mp3' -execdir pwd  \; | uniq | gsort -R | head -n1)"; echo "$songdir"
+    sleeptilc "$1"; osascript -e "set Volume 3"
     find "$songdir" -iregex '.*mp3' -exec afplay -d {} \;
 }
 sleeptilc() { # Accepts "0459" or "04:59:59"
-    local offset=$(($(gdate -d "$1" +%s) - $(gdate +%s)))
+    local offset; offset=$(($(gdate -d "$1" +%s) - $(gdate +%s)))
     if [[ $offset -lt 0 ]]; then offset=$((24*3600 + offset)); fi
     echo "offset: $offset seconds"; caffeinate -s sleep $offset
 }
 ql() { for file in "$@"; do qlmanage -p "$file" &> /dev/null; done } # note: be careful not to open too many! # TODO: confirm every tenth
 plist_cat() { cp "$1" /tmp/new.plist; plutil -convert xml1 /tmp/new.plist; cat /tmp/new.plist; }
 alias macdown='open -a macdown'
-clip() { [ -t 0 ] && pbpaste || pbcopy; }
+clip() { if [ -t 0 ]; then pbpaste; else pbcopy; fi; }
 notify() { /usr/bin/osascript -e "display notification \"$*\" with title \"FINISHED\""; }
 snowwhite() {
     mount | grep -q ~/mount/SW && echo unmounting... && umount ~/mount/SW

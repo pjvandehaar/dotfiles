@@ -19,7 +19,7 @@ elif which gtimeout >/dev/null; then
     _PP_timeout=gtimeout
 else
     _PP_timeout=timeout
-    timeout() { shift; $*; }
+    timeout() { shift; "$@"; }
 fi
 
 PROMPT_COMMAND=_PP_prompt
@@ -37,7 +37,7 @@ _PP_prompt() {
     fi
 
     local _git='' # This variable stores the result of all this.
-    local _git_branch="$($_PP_timeout 0.1 \git rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
+    local _git_branch; _git_branch="$($_PP_timeout 0.1 command git rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
     if [[ $_rs == 124 ]]; then
         _git="${_PP_RED} looking for .git timedout ${_PP_NONE}"
     elif [[ "$_git_branch" != true ]]; then
@@ -47,7 +47,7 @@ _PP_prompt() {
     else
 
         # Check that the repo has a HEAD
-        $_PP_timeout 0.2 \git show-ref --head --quiet; local _rs=$?
+        $_PP_timeout 0.2 command git show-ref --head --quiet; local _rs=$?
         if [[ $_rs == 124 ]]; then
             _git="${_PP_RED} looking up HEAD timedout ${_PP_NONE}"
         elif [[ $_rs == 1 ]]; then
@@ -57,7 +57,7 @@ _PP_prompt() {
         else
 
             # Check that the repo has a commit
-            $_PP_timeout 0.2 \git rev-parse --short -q HEAD &>/dev/null; local _rs=$?
+            $_PP_timeout 0.2 command git rev-parse --short -q HEAD &>/dev/null; local _rs=$?
             if [[ $_rs == 124 ]]; then
                 _git="${_PP_RED} checking for commits timedout ${_PP_NONE}"
             elif [[ $_rs == 1 ]]; then
@@ -67,7 +67,7 @@ _PP_prompt() {
             else
 
                 # Get the current branch
-                local _git_head_ref="$($_PP_timeout 0.2 \git symbolic-ref -q HEAD)"; local _rs=$?
+                local _git_head_ref; _git_head_ref="$($_PP_timeout 0.2 command git symbolic-ref -q HEAD)"; local _rs=$?
                 if [[ $_rs == 124 ]]; then
                     _git="${_PP_RED} checking the branch timedout ${_PP_NONE}"
                 elif [[ $_rs -ge 1 ]]; then
@@ -79,20 +79,20 @@ _PP_prompt() {
                     if [[ -n $_git_head_ref ]]; then
                         _git_branch="$(printf %q "${_git_head_ref#refs/heads/}")"
                     else
-                        _git_branch="$(\git rev-parse --short -q HEAD)"
+                        _git_branch="$(command git rev-parse --short -q HEAD)"
                     fi
 
                     local _git_state=''
 
                     # check if we're in the middle of merging/rebasing/cherry-picking
-                    local _git_dir="$($_PP_timeout 0.1 \git rev-parse --git-dir 2>/dev/null)"; local _rs=$?
+                    local _git_dir; _git_dir="$($_PP_timeout 0.1 command git rev-parse --git-dir 2>/dev/null)"; local _rs=$?
                     if [[ $_rs == 124 ]]; then
                         _git_state+=' gitdir_timedout'
                     else
                         if [[ -f "${_git_dir}/MERGE_HEAD" ]]; then
                             _git_state+=' MERGING '
                         fi
-                        if [[ -d "${_git_dir}/rebase-apply" || -d "${git_dir}/rebase-merge" ]]; then
+                        if [[ -d "${_git_dir}/rebase-apply" || -d "${_git_dir}/rebase-merge" ]]; then
                             _git_state+=' REBASING '
                         fi
                         if [[ -f "${_git_dir}/CHERRY_PICK_HEAD" ]]; then
@@ -100,13 +100,13 @@ _PP_prompt() {
                         fi
 
                         # check whether there are unpushed commits.
-                        local _git_remote="$(git config --get branch.${_git_branch}.remote 2>/dev/null)"
+                        local _git_remote; _git_remote="$(git config --get "branch.${_git_branch}.remote" 2>/dev/null)"
                         if [[ -n "$_git_remote" ]]; then
-                            local _remote_branch="$(git config --get "branch.${_git_branch}.merge")"
+                            local _remote_branch; _remote_branch="$(git config --get "branch.${_git_branch}.merge")"
                             echo "$_remote_branch" | grep -q '^refs/heads/' || echo "ohnoes:${_remote_branch}"
                             _remote_branch="${_remote_branch#refs/heads/}"
-                            local _remote_branch_ref="refs/remotes/${_git_remote}/${_remote_branch}"
-                            local _num_unpushed_comms="$(git rev-list --no-merges --count "${_remote_branch_ref}..HEAD" 2>/dev/null)"
+                            local _remote_branch_ref; _remote_branch_ref="refs/remotes/${_git_remote}/${_remote_branch}"
+                            local _num_unpushed_comms; _num_unpushed_comms="$(git rev-list --no-merges --count "${_remote_branch_ref}..HEAD" 2>/dev/null)"
                             if [[ -n $_num_unpushed_comms ]] && [[ _num_unpushed_comms -gt 0 ]]; then
                                 _git_state+=' PUSH! '
                             fi
@@ -155,11 +155,11 @@ _PP_prompt() {
         local -i _max_len=$(( ${COLUMNS:-80} / 3 ))
         local _ending=" "
     else
-        local -i _max_len=$(( $COLUMNS - ${#PS1} - ${#_venv} - 5 ))
+        local -i _max_len=$(( COLUMNS - ${#PS1} - ${#_venv} - 5 ))
         local _ending="\n$ "
     fi
 
-    local _pwd="${PWD/#$HOME/$_tilde}"
+    local _pwd; _pwd="${PWD/#$HOME/$_tilde}"
     (( ${#_pwd} > _max_len )) && _pwd=" … ${_pwd:${#_pwd}-${_max_len}}"
     _pwd=$(echo "$_pwd" | sed -e 's_\\_\\\\_g' -e 's_\$_\\\$_g')
     [[ -w "$PWD" ]] || _pwd="(ro) ${_pwd}" # read-only

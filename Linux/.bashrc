@@ -4,8 +4,7 @@ if type -t ptrcut >/dev/null; then
     echo "BTW, .bashrc has already been sourced once."
 fi
 
-local dotfiles_path="$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo $PWD)"
-local v
+local dotfiles_path; dotfiles_path="$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo "$PWD")"
 
 export PATH
 PATH="$dotfiles_path/Linux/bin:$PATH"
@@ -21,9 +20,6 @@ export MANPATH
 MANPATH="$MANPATH:$(env -u MANPATH man -w)" # gets defaults from /etc/manpath.config (see `man -dw`).  This seems gross, but `man man` breaks without this.
 MANPATH="$(perl -e'@p=split(":",$ENV{"MANPATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
 
-# This breaks my `git stage -p`:
-#v="$HOME/perl5/lib/perl5"; [[ -d "$v" ]] && ! echo "$PERL5LIB" | grep -qE "(^|:)$v(:|$)" && export PERL5LIB="$v:$PERL5LIB"
-
 
 # OS-specific impl
 # ================
@@ -37,17 +33,17 @@ if [[ $TERM != dumb ]]; then
     #          `less -F`: quit immediately if output fits on one screen.
     l() {
         ls --color -lhFBAtr "$@" |
-        egrep --color=never -v '(~|#|\.DS_Store)$' |
+        grep -E --color=never -v '(~|#|\.DS_Store)$' |
         less -SRXF
     }
     ll() {
         ls --color -lhFB "$@" |
-        egrep --color=never -v '(~|#|\.DS_Store)$' |
+        grep -E --color=never -v '(~|#|\.DS_Store)$' |
         less -SRXF
     }
     la() {
         # `ls -Cw $COLUMNS` outputs cols filling terminal's width even when piping stdout
-        ls --color -FACw $COLUMNS "$@" |
+        ls --color -FACw "$COLUMNS" "$@" |
         less -SRXF
     }
 
@@ -65,7 +61,7 @@ if [[ $TERM != dumb ]]; then
 else
     alias l="ls -lhFABtr --color"
     alias ll="ls -lhBF --color"
-    alias la="ls -FACw $COLUMNS --color"
+    alias la="ls -FACw \$COLUMNS --color"
 fi
 
 

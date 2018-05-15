@@ -1,5 +1,7 @@
 __fdsjlkrex() { # don't pollute global namespace
 
+local v
+
 ## comment b/c cluster slow.
 # v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
 # v="/usr/share/bash-completion/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
@@ -14,7 +16,7 @@ if exists brew; then
      v="$(brew --prefix)/share/bash-completion/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion@2
 fi
 
-export EDITOR="$(exists_else emacs vim)"
+EDITOR="$(exists_else emacs vim)"; export EDITOR
 
 shopt -s checkwinsize # update LINES/COLUMNS afer each command
 shopt -s autocd
@@ -40,7 +42,7 @@ $(v=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=75 53f37 98ca 21e1f6 815d 2eab1
 unalias path glq gh h cdl mcd 2>/dev/null
 
 path() { echo "$PATH" | tr : "\n"; }
-alias e=$EDITOR
+alias e="\$EDITOR"
 alias gs='git status'
 alias gg='git grep'
 alias gl='git lol'
@@ -59,7 +61,7 @@ glq() {
     perl -pale 's{(/)(?=.*&%<>)}{%}g' |
     perl -pale 's{(\\)(?=.*&%<>)}{/}g' |
     perl -pale 's{(%)(?=.*&%<>)}{\\}g' |
-    perl -pale 's{(_)(?=.*&%<>)}{'$(echo -e '\u23ba')'}g' |
+    perl -pale 's{(_)(?=.*&%<>)}{'"$(echo -e '\u23ba')"'}g' |
     perl -pale 's{&%<>}{}' |
     "$(exists_else tac gtac)" |
     tail -n $((LINES-2)) # fork/merge wastes lines, so we need tail
@@ -75,12 +77,12 @@ fi
 gh() {
     for remote in $(git remote); do
         echo "## $remote"
-        \git remote get-url $remote |
+        \git remote get-url "$remote" |
         perl -nale 'if (m{^git\@github\.com:(.*?)\.git$}i) { print "https://github.com/$1" } elsif (m{^https://github.com/(.*?).git$}) { print "https://github.com/$1" } else { print "nope" }' |
         perl -nale 'print "$_\n$_/issues\n$_/issues/new"'
     done
 }
-h() { [[ -n "${1:-}" ]] && head -n $((LINES-2)) "$1" || head -n $((LINES-2)); }
+h() { if [[ -n "${1:-}" ]]; then head -n $((LINES-2)) "$1"; else head -n $((LINES-2)); fi; }
 alias ptrdiff='diff -dyb -W$COLUMNS'
 
 cdl() { cd "$1" && l; }
@@ -95,7 +97,8 @@ ds() {
 }
 ptrsu() { sudo su --preserve-environment; }
 ptrwrite() { cp -p "$1" "$1.ptrwrite.tmp"; cat > "$1.ptrwrite.tmp"; mv "$1.ptrwrite.tmp" "$1"; }
-ptr_ipynb() { cat $1 | jq -r '.cells | .[] | select(.cell_type=="code") | .source | join("")'; }
+ptr_ipynb() { cat "$1" | jq -r '.cells | .[] | select(.cell_type=="code") | .source | join("")'; }
+alias ptrflake8='flake8 --show-source --ignore=E501,E302,E251,E701,E226,E305,E225,E261,E231,E301,E306,E402,E704,E265,E201,E202,E303,E124,E241,E127,E266,E221,E126,E129,F811,E222,E401,E702,E203,E116'
 
 ptrcut() { awk "{print \$$1}"; }
 ptrsum() { perl -nale '$s += $_; END{print $s}'; }
@@ -112,12 +115,12 @@ ptrstat() {
 }
 ptrcount() { perl -nle '$h{$_}++; END{foreach my $k (sort {$h{$b}<=>$h{$a}} keys(%h)){print "$h{$k}\t$k"}}'; }
 ptrview() {
-    ([ -t 0 ] && cat "$1" || cat) |
+    if [ -t 0 ]; then cat "$1"; else cat; fi |
     (head -n 1000; echo '~FIN~') |
     tabview - --delimiter $'\t'
 }
 spaced_less() {
-    ([ -t 0 ] && cat "$1" || cat) |
+    if [ -t 0 ]; then cat "$1"; else cat; fi |
     perl -ple 's{$}{\n}' |
     less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
 }
