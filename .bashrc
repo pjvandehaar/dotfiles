@@ -1,38 +1,50 @@
 __fdsjlkrex() { # don't pollute global namespace
 
 local v
-
-## comment b/c cluster slow.
-# v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
-# v="/usr/share/bash-completion/bash_completion"; [[ -e "$v" ]] && . "$v" # causes problems?
-
 exists() { type -t "$1" >/dev/null; }
 exists_else() { exists "$1" && echo "$1" || echo "$2"; }
+
+
+# bash config
+# ===========
 
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion.rb>
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion@2.rb>
 if exists brew; then
      v="$(brew --prefix)/etc/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion
-     v="$(brew --prefix)/share/bash-completion/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion@2
+     if [[ $BASH_VERSINFO -ge 4 ]]; then
+         v="$(brew --prefix)/share/bash-completion/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion@2
+     fi
 fi
 
 EDITOR="$(exists_else emacs vim)"; export EDITOR
 
 shopt -s checkwinsize # update LINES/COLUMNS afer each command
-shopt -s autocd
+if [[ $BASH_VERSINFO -ge 4 ]]; then
+    shopt -s autocd
+fi
 
 v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"
-
-export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 
 export HISTFILESIZE=10000000
 export HISTSIZE=100000
 export HISTIGNORE="ls:l"
 export HISTTIMEFORMAT="%Y/%m/%d %T "
 
+
+# program config
+# ==============
+
+export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+
 export MOSH_TITLE_NOPREFIX=1
 
 $(v=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=75 53f37 98ca 21e1f6 815d 2eab1b 6974ba 701b20e);printf %s "${v[@]}")
+
+export PIPENV_VENV_IN_PROJECT=1
+alias px="pipenv run"
+
+[[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)" # ?? from Ubuntu .bashrc
 
 
 # shortcuts
@@ -134,9 +146,7 @@ alias ipython="echo Use ipython2 or ipython3! #"
 alias python="echo Use python2 or python3! #"
 
 alias grep='grep --color=auto'
-alias egrep='egrep --color=auto'
-
-[[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)" # ?? from Ubuntu .bashrc
+alias egrep='grep -E --color=auto'
 
 man() {
     # from http://boredzo.org/blog/archives/2016-08-15/colorized-man-pages-understood-and-customized

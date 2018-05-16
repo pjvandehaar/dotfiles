@@ -20,6 +20,11 @@ export MANPATH
 MANPATH="$MANPATH:$(env -u MANPATH man -w)" # gets defaults from /etc/manpath.config (see `man -dw`).  This seems gross, but `man man` breaks without this.
 MANPATH="$(perl -e'@p=split(":",$ENV{"MANPATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
 
+## these become really slow when NFS slows down and I don't know a workaround
+# local v
+# v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v"
+# v="/usr/share/bash-completion/bash_completion"; [[ -e "$v" ]] && . "$v"
+
 
 # OS-specific impl
 # ================

@@ -3,10 +3,11 @@
 
 # requirements: pip3 install beautifulsoup4 lxml
 
-# NOTE: shift-to-preview requires Safari as default browser.
+# NOTE: shift-to-preview stopped working for a while but then fixed itself when I installed HighSierra (for any browser).  Don't mess with quicklook.
 
 # TODO: look into daum's eng-kor dictionary: <http://dic.daum.net/search.do?q=cat&dic=eng>
 #    - make a list of the kinds of terms I look up, and inspect results from both.
+#    - daum lets you click words in the definition to look them up (which doesn't always work great)
 
 
 '''
