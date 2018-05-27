@@ -4,9 +4,8 @@ if type -t ptrcut >/dev/null; then
     echo "BTW, .bashrc has already been sourced once."
 fi
 
-ptrtry() { type -t "${1%% *}" >/dev/null && echo "$1" || echo "$2"; }
-
-local dotfiles_path; dotfiles_path="$(cd "$(dirname "$(dirname "$($(ptrtry greadlink readlink) -f "${BASH_SOURCE[0]}")")")" && echo "$PWD")"
+_readlinkf() { perl -MCwd -le 'print Cwd::abs_path shift' "$1"; }
+local dotfiles_path; dotfiles_path="$(cd "$(dirname "$(_readlinkf "${BASH_SOURCE[0]}")")/../.." && echo "$PWD")"
 
 export PATH
 PATH="$dotfiles_path/OSX/bin:$PATH"
