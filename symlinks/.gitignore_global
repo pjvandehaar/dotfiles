@@ -4,3 +4,4 @@
 *.o
 *.swp
 .venv
+__pycache__
