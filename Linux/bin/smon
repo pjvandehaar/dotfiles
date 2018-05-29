@@ -4,6 +4,11 @@
 from subprocess import check_output
 from collections import Counter
 
+o = check_output(['/usr/bin/getent','passwd']).decode('ascii').rstrip('\n').split('\n')
+o = [line.split(':') for line in o]
+users = {line[0]: line[4] for line in o}
+
+
 states = 'PD R CG'.split()
 o = check_output('squeue --array --Format=username:15,statecompact:3,numcpus:5,minmemory:10'.split()).decode('ascii').rstrip('\n').split('\n')
 assert o[0] == '{:15}{:3}{:5}{:10}'.format('USER','ST','CPUS','MIN_MEMORY'), o[0]
@@ -27,14 +32,15 @@ for username in ppl.keys():
         ppl[username]['mem'][state] = int(ppl[username]['mem'][state])
 
 print('')
-print('-------pending-------'+' '*18+'-------running-------   ------completing-----   ---------other-------')
-print('mem(GB)  #cpus  #jobs'+' '*18+'mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #jobs')
+print('-------pending-------'+' '*13+'-------running-------   ------completing-----   ---------other-------')
+print('mem(GB)  #cpus  #jobs'+' '*13+'mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #jobs')
 for username in sorted(ppl.keys(), key=lambda u: -ppl[u]['cpus']['R']):
-    print('{:6}{:7}{:7}   {:13}  {:7}{:7}{:7}   {:7}{:7}{:7}    {:7}{:7}{:7}'.format(
+    print('{:6}{:7}{:7}   {:10}{:7}{:7}{:7}   {:7}{:7}{:7}    {:7}{:7}{:7}    {}'.format(
         *[ppl[username][metric][state] or '' for state in states[:1] for metric in ['mem','cpus','jobs']],
-        f'{username}'[:13],
+        f'{username}'[:10],
         *[ppl[username][metric][state] or '' for state in states[1:] for metric in ['mem','cpus','jobs']],
         *[ppl[username][metric][state] or '' for state in ['other']  for metric in ['mem','cpus','jobs']],
+        f'{username}  ({users[username]})',
     ))
 print('\n')
 
