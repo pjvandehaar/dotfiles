@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+# -*- mode: python -*-
+
+# COMPARISONS:
+#  - ActivityMonitor.app: does hierarchy and sorting but not clade_usage
+#  - htop/atop: does hierarchy, but not sorting or clade_usage
+#  - iotop/iostat/dstat
+
+# TODO: show per-process diskio info (is this possible on mac?)
+# TODO: show per-process info about swap/paging
+# TODO: show per-process state?
+
+# TODO: show some overall stats, like:
+#        `grep MHz /proc/cpuinfo`, RAM/cache/swap/paging,
+#        `df`, disk reads/second, disk read latency,
+#        kbps_in, kbps_out, %tcp_retransmission
+
+
+import psutil, signal, time, sys
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+def use_ipdb():
+    def excepthook(*args, **kwargs):
+        from IPython.core import ultratb
+        sys.excepthook = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1)
+        return sys.excepthook(*args, **kwargs)
+    sys.excepthook = excepthook
+
+
+# Note: `proc` is a psutil.Process()
+#       `p` is a dictionary representing a process
+def get_pid_tree():
+    ppidmap = psutil._ppid_map() # {pid -> ppid}
+    p_with_pid = {}
+    for pid in set(ppidmap.keys()):
+        p_with_pid[pid] = {'pid':pid, 'children':[]}
+        try:
+            proc = psutil.Process(pid)
+            with proc.oneshot():
+                p_with_pid[pid]['proc'] = proc
+                p_with_pid[pid]['user'] = proc.username()
+                p_with_pid[pid]['exe'] = proc.exe()[:500] if proc.pid != 0 else '<init>'
+                p_with_pid[pid]['cpu_s1'] = (lambda x:x.system + x.user)(proc.cpu_times())
+                p_with_pid[pid]['mem_rss'] = proc.memory_info().rss
+                p_with_pid[pid]['num_fds'] = proc.num_fds()
+                p_with_pid[pid]['num_con'] = len(proc.connections())
+        except (psutil.NoSuchProcess, psutil.AccessDenied): pass
+    for pid,ppid in ppidmap.items():
+        if pid != ppid: p_with_pid[ppid]['children'].append(p_with_pid[pid])
+    time.sleep(1)
+    for p in p_with_pid.values():
+        if 'cpu_s1' in p:
+            try: x = p['proc'].cpu_times() ; cpu_s2 = x.system + x.user
+            except psutil.NoSuchProcess: return
+            assert cpu_s2 >= p['cpu_s1']
+            p['cpu'] = cpu_s2 - p['cpu_s1']
+    accum_proc_info(p_with_pid[0])
+    for p in p_with_pid.values(): p.pop('proc', None) # if a process has died, `repr(proc)` raises an Exception
+    return p_with_pid[0]
+
+def accum_proc_info(p):
+    for child in p['children']: accum_proc_info(child)
+    p['family'] = {}
+    for k in 'cpu mem_rss num_fds num_con'.split():
+        p['family'][k] = (p.get(k,0) + sum(child['family'].get(k,0) for child in p['children']))
+
+
+def repr_fd(x):
+    if 'num_fds' not in x: return ' '*4+'?'
+    ret = f"{x['num_fds']:5.0f}"
+    if ret.strip() == '0': return ' '*4+'.'
+    return ret
+def repr_con(x):
+    if 'num_con' not in x: return ' '*4+'?'
+    ret = f"{x['num_con']:5.0f}"
+    if ret.strip() == '0': return ' '*4+'.'
+    return ret
+def repr_cpu(x):
+    if 'cpu' not in x: return ' '*3+'? '
+    ret = f'{x["cpu"]*100:5.1f}'
+    if ret.strip() == '0.0': return ' '*3+'. '
+    if ret.strip()[:-1] == '0.': return ' '*3+'.'+ret[-1]
+    return ret
+def repr_mem(x):
+    if 'mem_rss' not in x: return ' '*5+'?'
+    ret = f'{x["mem_rss"]/1e6:6.0f}'
+    if ret.strip() == '0': return ' '*5+'.'
+    return ret
+
+def repr_p(p, tree_prefix_first='', tree_prefix_rest=''):
+    f = p['family']
+    ret = (f"{p['pid']:5} {p.get('user','?')[:9]:9}" +
+           repr_fd(f) + repr_con(f) + '  ' + repr_cpu(f) + repr_mem(f) +
+           ' ' + tree_prefix_first + f"{p.get('exe','?').split('/')[-1][:30]}\n")
+    if p['children'] and (p.get('mem_rss',0) > 30e6 or p.get('cpu',0) >= 0.01):
+        ret = (
+            f"{p['pid']:5} {p.get('user','?')[:9]:9}" +
+            repr_fd(p) + repr_con(p) + '  ' + repr_cpu(p) + repr_mem(p) +
+            ' ' + tree_prefix_rest + '├──•\n') + ret
+
+    p['children'].sort(key=lambda child: -child['family']['mem_rss'])
+    for i, child in enumerate(p['children']):
+        if i+1 < len(p['children']):
+            ret = repr_p(child,
+                         tree_prefix_first = tree_prefix_rest + '├─╴',
+                         tree_prefix_rest  = tree_prefix_rest + '│  ') + ret
+        else:
+            ret = repr_p(child,
+                         tree_prefix_first = tree_prefix_rest + '┌─╴',
+                         tree_prefix_rest  = tree_prefix_rest + '   ') + ret
+    return ret
+
+
+def inspect_pid(pid):
+    p = psutil.Process(pid)
+
+    for f in p.open_files(): print(f.path)
+    print()
+
+    for k,v in p.environ().items(): print(f'- {k:30} = {v}')
+    print()
+
+    def repr_addr(a):
+        if a == (): return ' '*15+'-'+' '*6
+        try:return f'{"["+a.ip+"]":>15}:{a.port:<6}' if ':' in a.ip else f'{a.ip:>15}:{a.port:<6}'
+        except: return repr(a)
+    for c in p.connections():
+        try:print(f'{c.status:12}  {repr_addr(c.laddr)}  {repr_addr(c.raddr)}  {repr(c.type)}  {repr(c.family)}')
+        except: print(c)
+    print()
+
+    print(); print(p); print()
+    print(p.cmdline()); print()
+    print(f'#threads: {p.num_threads()}')
+
+
+if __name__ == '__main__':
+    use_ipdb()
+
+    if sys.argv[1:]:
+        inspect_pid(int(sys.argv[1]))
+
+    else:
+        root = get_pid_tree()
+        print(repr_p(root).rstrip('\n'))
+        print('  PID USER       #FD #CON   %CPU    MB')
