@@ -4,7 +4,8 @@ if type -t ptrcut >/dev/null; then
     echo "BTW, .bashrc has already been sourced once."
 fi
 
-local dotfiles_path; dotfiles_path="$(cd "$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")" && echo "$PWD")"
+_readlinkf() { perl -MCwd -le 'print Cwd::abs_path shift' "$1"; }
+local dotfiles_path; dotfiles_path="$(cd "$(dirname "$(_readlinkf "${BASH_SOURCE[0]}")")/../.." && echo "$PWD")"
 
 export PATH
 PATH="$dotfiles_path/Linux/bin:$PATH"
