@@ -201,17 +201,18 @@ if __name__ == '__main__':
         users = {}
         xs = []
         for proc in psutil.process_iter(attrs='username cpu_times memory_info num_fds connections'.split()):
-            u = users.setdefault(proc.info['username'],{
+            i = proc.info
+            u = users.setdefault(i['username'],{
                 'cpu':0, 'mem_rss':0, 'num_fds':0, 'num_con':0,
             })
-            u['mem_rss'] += proc.info['memory_info'].rss or 0
-            u['num_fds'] += proc.info['num_fds'] or 0
-            u['num_con'] += len(proc.info['connections'] or [])
-            if proc.info['cpu_times'] is not None:
+            u['mem_rss'] += i['memory_info'].rss if i['memory_info'] else 0
+            u['num_fds'] += i['num_fds'] or 0
+            u['num_con'] += len(i['connections'] or [])
+            if i['cpu_times'] is not None:
                 xs.append({
-                    'username': proc.info['username'],
+                    'username': i['username'],
                     'proc': proc,
-                    'cpu_s1': proc.info['cpu_times'].system + proc.info['cpu_times'].user,
+                    'cpu_s1': i['cpu_times'].system + i['cpu_times'].user,
                     'cpu_s1_t': time.time(),
                 })
         time.sleep(1)
