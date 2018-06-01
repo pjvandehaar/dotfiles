@@ -36,8 +36,9 @@ _PP_prompt() {
         _runtime="${_PP_PIN} ${_runtime} "
     fi
 
+    local _gitexe="$(which git)" # avoid problems with aliases/functions
     local _git='' # This variable stores the result of all this.
-    local _git_branch; _git_branch="$($_PP_timeout 0.1 command git rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
+    local _git_branch; _git_branch="$($_PP_timeout 0.1 "$_gitexe" rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
     if [[ $_rs == 124 ]]; then
         _git="${_PP_RED} looking for .git timedout ${_PP_NONE}"
     elif [[ "$_git_branch" != true ]]; then
@@ -47,7 +48,7 @@ _PP_prompt() {
     else
 
         # Check that the repo has a HEAD
-        $_PP_timeout 0.2 command git show-ref --head --quiet; local _rs=$?
+        $_PP_timeout 0.2 "$_gitexe" show-ref --head --quiet; local _rs=$?
         if [[ $_rs == 124 ]]; then
             _git="${_PP_RED} looking up HEAD timedout ${_PP_NONE}"
         elif [[ $_rs == 1 ]]; then
@@ -57,7 +58,7 @@ _PP_prompt() {
         else
 
             # Check that the repo has a commit
-            $_PP_timeout 0.2 command git rev-parse --short -q HEAD &>/dev/null; local _rs=$?
+            $_PP_timeout 0.2 "$_gitexe" rev-parse --short -q HEAD &>/dev/null; local _rs=$?
             if [[ $_rs == 124 ]]; then
                 _git="${_PP_RED} checking for commits timedout ${_PP_NONE}"
             elif [[ $_rs == 1 ]]; then
@@ -67,7 +68,7 @@ _PP_prompt() {
             else
 
                 # Get the current branch
-                local _git_head_ref; _git_head_ref="$($_PP_timeout 0.2 command git symbolic-ref -q HEAD)"; local _rs=$?
+                local _git_head_ref; _git_head_ref="$($_PP_timeout 0.2 "$_gitexe" symbolic-ref -q HEAD)"; local _rs=$?
                 if [[ $_rs == 124 ]]; then
                     _git="${_PP_RED} checking the branch timedout ${_PP_NONE}"
                 elif [[ $_rs -ge 1 ]]; then
@@ -79,13 +80,13 @@ _PP_prompt() {
                     if [[ -n $_git_head_ref ]]; then
                         _git_branch="$(printf %q "${_git_head_ref#refs/heads/}")"
                     else
-                        _git_branch="$(command git rev-parse --short -q HEAD)"
+                        _git_branch="$("$_gitexe" rev-parse --short -q HEAD)"
                     fi
 
                     local _git_state=''
 
                     # check if we're in the middle of merging/rebasing/cherry-picking
-                    local _git_dir; _git_dir="$($_PP_timeout 0.1 command git rev-parse --git-dir 2>/dev/null)"; local _rs=$?
+                    local _git_dir; _git_dir="$($_PP_timeout 0.1 "$_gitexe" rev-parse --git-dir 2>/dev/null)"; local _rs=$?
                     if [[ $_rs == 124 ]]; then
                         _git_state+=' gitdir_timedout'
                     else
