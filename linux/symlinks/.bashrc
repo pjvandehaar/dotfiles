@@ -8,7 +8,7 @@ _readlinkf() { perl -MCwd -le 'print Cwd::abs_path shift' "$1"; }
 local dotfiles_path; dotfiles_path="$(cd "$(dirname "$(_readlinkf "${BASH_SOURCE[0]}")")/../.." && echo "$PWD")"
 
 export PATH
-PATH="$dotfiles_path/Linux/bin:$PATH"
+PATH="$dotfiles_path/linux/bin:$PATH"
 PATH="$dotfiles_path/bin:$PATH"
 PATH="$HOME/bin:$PATH"
 PATH="$HOME/.linuxbrew/bin:$PATH"
