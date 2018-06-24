@@ -130,16 +130,24 @@ def repr_mem(x):
     if ret.strip() == '0': return ' '*5+'.'
     return ret
 def repr_name(x):
+    if x.get('cmdline',''):
+        if x['cmdline']==['SCREEN']: return 'screen'
+        if x['cmdline']==['/usr/local/bin/bash','-l']: return 'bash'
+        if x['cmdline'][0].endswith('iTerm2'): return 'iTerm2'
+        if len(x['cmdline'][0]) > 30: return x['cmdline'][0].split('/')[-1] + ' '  + ' '.join(x['cmdline'][1:])
+        return ' '.join(x['cmdline'])
     if x.get('exe',''): return x['exe'].split('/')[-1]
     if x.get('name','')=='sshd': return 'sshd' # to reduce clutter
-    if x.get('cmdline','')==['SCREEN']: return 'screen'
-    if x.get('cmdline',''): return ' '.join(x['cmdline'])
     if x.get('name',''): return x['name']
     return '?'
 
+# def p_sort_key(p):
+#     return (round(-p['family']['mem_rss']/1e6, 0),
+#             round(-p['family']['cpu']*100, 1),
+#             p['pid'])
 def p_sort_key(p):
-    return (round(-p['family']['mem_rss']/1e6, 0),
-            round(-p['family']['cpu']*100, 1),
+    return (-p['family']['num_con'],
+            -p['family']['num_fds'],
             p['pid'])
 
 def repr_p(p, tree_prefix_first='', tree_prefix_rest=''):

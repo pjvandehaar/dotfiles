@@ -68,17 +68,17 @@ _PP_prompt() {
             else
 
                 # Get the current branch
-                local _git_head_ref; _git_head_ref="$($_PP_timeout 0.2 "$_gitexe" symbolic-ref -q HEAD)"; local _rs=$?
+                local _git_head_ref; _git_head_ref="$($_PP_timeout 0.2 "$_gitexe" symbolic-ref -q --short HEAD)"; local _rs=$?
                 if [[ $_rs == 124 ]]; then
                     _git="${_PP_RED} checking the branch timedout ${_PP_NONE}"
-                elif [[ $_rs -ge 1 ]]; then
+                elif [[ $_rs -ge 2 ]]; then # $_rs=1 happens if we checkout a tag.
                     _git=" AH why was the return status $_rs ??"
                 else
 
                     # If HEAD is on a branch, strip junk.  If not, get HEAD's commit's hash.
                     local _git_branch
                     if [[ -n $_git_head_ref ]]; then
-                        _git_branch="$(printf %q "${_git_head_ref#refs/heads/}")"
+                        _git_branch="$(printf %q "$_git_head_ref")"
                     else
                         _git_branch="$("$_gitexe" rev-parse --short -q HEAD)"
                     fi
