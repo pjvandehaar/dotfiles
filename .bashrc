@@ -2,7 +2,16 @@ __fdsjlkrex() { # don't pollute global namespace
 
 local v
 exists() { type -t "$1" >/dev/null; }
-exists_else() { exists "$1" && echo "$1" || echo "$2"; }
+# exists_else() { exists "$1" && echo "$1" || echo "$2"; }
+exists_else() {
+    for cmd in "$@"; do
+        if type -t "$cmd" >/dev/null; then
+            echo "$cmd"; return;
+        fi
+    done
+    echo "$cmd"
+}
+
 
 
 # bash config
@@ -17,7 +26,7 @@ if exists brew; then
      fi
 fi
 
-EDITOR="$(exists_else emacs vim)"; export EDITOR
+EDITOR="$(exists_else emacs mg nvim vim vi nano)"; export EDITOR
 
 shopt -s checkwinsize # update LINES/COLUMNS afer each command
 if [[ $BASH_VERSINFO -ge 4 ]]; then
