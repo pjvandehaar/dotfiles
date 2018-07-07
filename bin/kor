@@ -9,6 +9,8 @@
 #    - make a list of the kinds of terms I look up, and inspect results from both.
 #    - daum lets you click words in the definition to look them up (which doesn't always work great)
 
+# TODO: look into electron-based Hain launcher <https://github.com/appetizermonster/hain-plugin-naverdictionary>
+
 
 '''
 TIMING:
@@ -102,7 +104,7 @@ def parse_suggestions(sugg_response):
             )
 
 def parse_definitions(dnfs_response, handle_errors=True):
-    soup = BeautifulSoup(dnfs_response, 'lxml') # 'lxml' takes 40ms, 'html.parser' take 60ms
+    soup = BeautifulSoup(dnfs_response, 'lxml') # 'lxml' takes 40ms, 'html.parser' take 60ms. 'lxml' is more correct.
     logging.debug('soupified')
     # Hopefully these are exactly the <div>s that we want.
     for section in soup.select('div#content div.entry_wrap .section_card'):

@@ -8,4 +8,4 @@ set main-view-date-format = "%Y %b %d"
 set main-view-date-local = true
 
 #set main-options = HEAD %(repo:head) %(repo:remote) master
-set main-options = --all
+#set main-options = --all
