@@ -2,7 +2,6 @@ __fdsjlkrex() { # don't pollute global namespace
 
 local v
 exists() { type -t "$1" >/dev/null; }
-# exists_else() { exists "$1" && echo "$1" || echo "$2"; }
 exists_else() {
     for cmd in "$@"; do
         if type -t "$cmd" >/dev/null; then
@@ -85,7 +84,7 @@ glq() {
     perl -pale 's{(%)(?=.*&%<>)}{\\}g' |
     perl -pale 's{(_)(?=.*&%<>)}{'"$(echo -e '\u23ba')"'}g' |
     perl -pale 's{&%<>}{}' |
-    "$(exists_else tac gtac)" |
+    perl -e 'print reverse <>' | # can also use `tac` on GNU or `tail -r` on BSD
     tail -n $((LINES-2)) # fork/merge wastes lines, so we need tail
 }
 if exists __git_complete; then
