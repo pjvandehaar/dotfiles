@@ -12,9 +12,11 @@
 # TODO: show per-process state?
 
 # TODO: show some overall stats, like:
-#        `grep MHz /proc/cpuinfo`, RAM/cache/swap/paging,
+#        RAM/cache/swap/paging,
 #        `df`, disk reads/second, disk read latency,
 #        kbps_in, kbps_out, %tcp_retransmission
+
+# TODO: automatically sort by whichever of mem/cpu is more constrained?
 
 
 import psutil, signal, time, sys, itertools, getpass, shutil, re
@@ -125,9 +127,9 @@ def repr_cpu(x):
     if ret.strip()[:-1] == '0.': return ' '*4+'.'+ret[-1]
     return ret
 def repr_mem(x):
-    if 'mem_rss' not in x: return ' '*5+'?'
-    ret = f'{x["mem_rss"]/1e6:6.0f}'
-    if ret.strip() == '0': return ' '*5+'.'
+    if 'mem_rss' not in x: return ' '*6+'?'
+    ret = f'{x["mem_rss"]/2**20:7.0f}'
+    if ret.strip() == '0': return ' '*6+'.'
     return ret
 def repr_name(x):
     if x.get('cmdline',''):
@@ -223,19 +225,19 @@ if __name__ == '__main__':
             users[x['username']]['cpu'] += (c.system+c.user - x['cpu_s1']) / (time.time()-x['cpu_s1_t'])
         system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
         print(' '*12 + f'{repr_cpu(system_avail)}  {repr_mem(system_avail)}')
-        print(' '*12+'  %CPU      MB   #FD  #CON')
+        print(' '*12+'  %CPU       MB   #FD  #CON')
         for u, d in sorted(users.items(), key=lambda a: a[1]['mem_rss'], reverse=True):
             print(f"{u[:12]:12}{repr_cpu(d)}  {repr_mem(d)}{d['num_fds'] or '.':>6}{d['num_con'] or '.':>6}")
 
     else:
         if '--fd' in sys.argv[1:]:    p_sort_key = lambda p: (-p['family']['num_fds'], -p['family']['num_con'], p['pid'])
         elif '--con' in sys.argv[1:]: p_sort_key = lambda p: (-p['family']['num_con'], -p['family']['num_fds'], p['pid'])
-        elif '--cpu' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/1e6, 0), p['pid'])
-        else:                         p_sort_key = lambda p: (round(-p['family']['mem_rss']/1e6, 0), round(-p['family']['cpu']*100, 1), p['pid'])
+        elif '--cpu' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/2**20, 0), p['pid'])
+        else:                         p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
         user_filter = ([arg for arg in sys.argv[1:] if not arg.startswith('--')] or [None])[0]
 
         root = get_pid_tree(user_filter)
         print(repr_p(root, p_sort_key=p_sort_key).rstrip('\n'))
-        print('   PID USER       #FD #CON    %CPU    MB')
+        print('   PID USER       #FD #CON    %CPU     MB')
         system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
         print(f'                            {repr_cpu(system_avail)}{repr_mem(system_avail)}')
