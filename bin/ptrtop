@@ -74,7 +74,7 @@ def get_pid_tree(user_filter=None):
                 p['name'] = proc.name()
                 # TODO: learn to predict when each of these will fail by logging [exe?, cmdline?, ..., user=='root', user==$USER]
                 try:p['exe'] = proc.exe()
-                except AccessDenied:pass
+                except (AccessDenied, FileNotFoundError):pass
                 try:p['cmdline'] = proc.cmdline()
                 except AccessDenied:pass
                 try:
@@ -141,16 +141,7 @@ def repr_name(x):
     if x.get('name',''): return x['name']
     return '?'
 
-# def p_sort_key(p):
-#     return (round(-p['family']['mem_rss']/1e6, 0),
-#             round(-p['family']['cpu']*100, 1),
-#             p['pid'])
-def p_sort_key(p):
-    return (-p['family']['num_con'],
-            -p['family']['num_fds'],
-            p['pid'])
-
-def repr_p(p, tree_prefix_first='', tree_prefix_rest=''):
+def repr_p(p, tree_prefix_first='', tree_prefix_rest='', p_sort_key=(lambda p: p['pid'])):
     f = p['family']
     line = (f"{p['pid']:6} {p.get('user','?')[:9]:9}" +
             repr_fd(f) + repr_con(f) + '  ' + repr_cpu(f) + repr_mem(f) +
@@ -168,11 +159,13 @@ def repr_p(p, tree_prefix_first='', tree_prefix_rest=''):
         if i+1 < len(p['children']):
             ret = repr_p(child,
                          tree_prefix_first = tree_prefix_rest + '├─╴',
-                         tree_prefix_rest  = tree_prefix_rest + '│  ') + ret
+                         tree_prefix_rest  = tree_prefix_rest + '│  ',
+                         p_sort_key = p_sort_key) + ret
         else:
             ret = repr_p(child,
                          tree_prefix_first = tree_prefix_rest + '┌─╴',
-                         tree_prefix_rest  = tree_prefix_rest + '   ') + ret
+                         tree_prefix_rest  = tree_prefix_rest + '   ',
+                         p_sort_key = p_sort_key) + ret
     return ret
 
 
@@ -228,11 +221,21 @@ if __name__ == '__main__':
             try:c = x['proc'].cpu_times()
             except psutil.NoSuchProcess: pass
             users[x['username']]['cpu'] += (c.system+c.user - x['cpu_s1']) / (time.time()-x['cpu_s1_t'])
+        system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
+        print(' '*12 + f'{repr_cpu(system_avail)}  {repr_mem(system_avail)}')
+        print(' '*12+'  %CPU      MB   #FD  #CON')
         for u, d in sorted(users.items(), key=lambda a: a[1]['mem_rss'], reverse=True):
             print(f"{u[:12]:12}{repr_cpu(d)}  {repr_mem(d)}{d['num_fds'] or '.':>6}{d['num_con'] or '.':>6}")
 
     else:
-        user_filter = sys.argv[1] if sys.argv[1:] else None
+        if '--fd' in sys.argv[1:]:    p_sort_key = lambda p: (-p['family']['num_fds'], -p['family']['num_con'], p['pid'])
+        elif '--con' in sys.argv[1:]: p_sort_key = lambda p: (-p['family']['num_con'], -p['family']['num_fds'], p['pid'])
+        elif '--cpu' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/1e6, 0), p['pid'])
+        else:                         p_sort_key = lambda p: (round(-p['family']['mem_rss']/1e6, 0), round(-p['family']['cpu']*100, 1), p['pid'])
+        user_filter = ([arg for arg in sys.argv[1:] if not arg.startswith('--')] or [None])[0]
+
         root = get_pid_tree(user_filter)
-        print(repr_p(root).rstrip('\n'))
+        print(repr_p(root, p_sort_key=p_sort_key).rstrip('\n'))
         print('   PID USER       #FD #CON    %CPU    MB')
+        system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
+        print(f'                            {repr_cpu(system_avail)}{repr_mem(system_avail)}')
