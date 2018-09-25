@@ -7,7 +7,7 @@
 #  - iotop/iostat/dstat
 
 
-# TODO: show per-process diskio (is this possible on mac?)
+# TODO: show per-process diskio (only possible on linux for my own processes, I think)
 # TODO: show per-process swap/paging
 # TODO: show per-process state?
 
@@ -19,8 +19,9 @@
 # TODO: automatically sort by whichever of mem/cpu is more constrained?
 
 
-import psutil, signal, time, sys, itertools, getpass, shutil, re
+import psutil, signal, time, sys, itertools, getpass, shutil, re, functools, subprocess
 from psutil import AccessDenied
+
 
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
@@ -32,6 +33,25 @@ def use_ipdb():
         sys.excepthook = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1)
         return sys.excepthook(*args, **kwargs)
     sys.excepthook = excepthook
+
+@functools.lru_cache()
+def username_by_uid():
+    lines = subprocess.check_output(['/usr/bin/getent','passwd']).decode('ascii').split('\n')
+    username_by_uid = {}
+    for line in filter(None, lines):
+        parts = line.split(':')
+        username_by_uid[parts[2]] = parts[0]
+    return username_by_uid
+
+def decode_username(username):
+    assert isinstance(username, str)
+    if not username.isdigit():
+        return username
+    try:
+        return username_by_uid()[username]
+    except KeyError:
+        return '?' + username
+
 
 
 # Note: `proc` is a psutil.Process()
@@ -58,7 +78,7 @@ def get_pid_tree(user_filter=None):
                     if not is_good:
                         try:
                             s['p']['proc'] = psutil.Process(s['p']['pid'])
-                            is_good = s['p']['proc'].username() == user_filter
+                            is_good = decode_username(s['p']['proc'].username()) == user_filter
                         except psutil.NoSuchProcess: pass
                     if is_good:
                         stack[-2]['good'].append(s['p'])
@@ -72,7 +92,7 @@ def get_pid_tree(user_filter=None):
             proc = p['proc'] if 'proc' in p else psutil.Process(pid)
             with proc.oneshot():
                 p['proc'] = proc
-                p['user'] = proc.username()
+                p['user'] = decode_username(proc.username())
                 p['name'] = proc.name()
                 # TODO: learn to predict when each of these will fail by logging [exe?, cmdline?, ..., user=='root', user==$USER]
                 try:p['exe'] = proc.exe()
@@ -174,24 +194,47 @@ def repr_p(p, tree_prefix_first='', tree_prefix_rest='', p_sort_key=(lambda p: p
 def inspect_pid(pid):
     p = psutil.Process(pid)
 
-    for f in p.open_files(): print(f.path)
+    try:
+        for m in p.memory_maps(): print(m.path)
+    except psutil.AccessDenied:
+        print('[cannot access memmaps]')
     print()
 
-    for k,v in p.environ().items(): print(f'- {k:30} = {v}')
+    try:
+        for f in p.open_files(): print(f.path)
+    except psutil.AccessDenied:
+        print('[cannot access open files]')
+    print()
+
+    try:
+        for k,v in p.environ().items(): print(f'- {k:30} = {v}')
+    except psutil.AccessDenied:
+        print('[cannot access environ]')
     print()
 
     def repr_addr(a):
         if a == (): return ' '*15+'-'+' '*6
         try:return f'{"["+a.ip+"]":>15}:{a.port:<6}' if ':' in a.ip else f'{a.ip:>15}:{a.port:<6}'
         except: return repr(a)
-    for c in p.connections():
-        try:print(f'{c.status:12}  {repr_addr(c.laddr)}  {repr_addr(c.raddr)}  {repr(c.type)}  {repr(c.family)}')
-        except: print(c)
+    try:
+        for c in p.connections():
+            try:print(f'{c.status:12}  {repr_addr(c.laddr)}  {repr_addr(c.raddr)}  {repr(c.type)}  {repr(c.family)}')
+            except: print(c)
+    except psutil.AccessDenied:
+        print('[cannot access connections]')
     print()
 
-    print(); print(p); print()
+    try:
+        print(p.io_counters())
+    except psutil.AccessDenied:
+        print('[cannot access bytes read/written]')
+    print()
+
+    print(p); print()
     print(p.cmdline()); print()
-    print(f'#threads: {p.num_threads()}')
+    print(f'#threads: {p.num_threads()}'); print()
+    print(f'ctx switches: {p.num_ctx_switches()}'); print()
+
 
 
 if __name__ == '__main__':
@@ -205,7 +248,8 @@ if __name__ == '__main__':
         xs = []
         for proc in psutil.process_iter(attrs='username cpu_times memory_info num_fds connections'.split()):
             i = proc.info
-            u = users.setdefault(i['username'],{
+            username = decode_username(i['username'])
+            u = users.setdefault(username,{
                 'cpu':0, 'mem_rss':0, 'num_fds':0, 'num_con':0,
             })
             u['mem_rss'] += i['memory_info'].rss if i['memory_info'] else 0
@@ -213,7 +257,7 @@ if __name__ == '__main__':
             u['num_con'] += len(i['connections'] or [])
             if i['cpu_times'] is not None:
                 xs.append({
-                    'username': i['username'],
+                    'username': username,
                     'proc': proc,
                     'cpu_s1': i['cpu_times'].system + i['cpu_times'].user,
                     'cpu_s1_t': time.time(),
