@@ -65,6 +65,7 @@ csgsites() {
 }
 
 alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
+alias julia6="/Applications/Julia-0.6.app/Contents/Resources/julia/bin/julia"
 
 
 # source common
