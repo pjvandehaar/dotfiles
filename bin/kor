@@ -51,7 +51,10 @@ from bs4 import BeautifulSoup
 logging.debug('imported urllib.request and bs4')
 
 
-DEFINITION_URL_TEMPLATE = 'http://m.endic.naver.com/search.nhn?searchOption=all&query={}'
+#DEFINITION_URL_TEMPLATE = 'http://m.endic.naver.com/search.nhn?searchOption=all&query={}'
+#DEFINITION_URL_TEMPLATE = 'https://endic.naver.com/search.nhn?searchOption=all&query={}'
+#DEFINITION_URL_TEMPLATE = 'https://endic.naver.com/search.nhn?sLn=kr&searchOption=all&amp;query={}'
+DEFINITION_URL_TEMPLATE = 'https://endic.naver.com/search.nhn?sLn=en&isOnlyViewEE=N&query={}'
 SUGGESTION_URL_TEMPLATE = 'http://ac.endic.naver.com/ac?q={}&q_enc=utf-8&st=1100&r_format=json&r_enc=utf-8&r_lt=1000&r_unicode=0&r_escape=1'
 
 
@@ -63,9 +66,9 @@ def get_display_items(query, handle_errors=True):
         SUGGESTION_URL_TEMPLATE.format(query)
     ])
     sugg = list(parse_suggestions(sugg_response))
-    logging.debug('finished suggestions')
+    logging.debug(f'finished suggestions - length was {len(sugg_response)}')
     dfns = list(parse_definitions(dfns_response, handle_errors=handle_errors))
-    logging.debug('finished definitions')
+    logging.debug(f'finished definitions - length was {len(dfns_response)}')
     if len(sugg) + len(dfns) == 0:
         return [DisplayItem('no results found')]
     default_action_url = DEFINITION_URL_TEMPLATE.format(query)
@@ -107,7 +110,10 @@ def parse_definitions(dnfs_response, handle_errors=True):
     soup = BeautifulSoup(dnfs_response, 'lxml') # 'lxml' takes 40ms, 'html.parser' take 60ms. 'lxml' is more correct.
     logging.debug('soupified')
     # Hopefully these are exactly the <div>s that we want.
-    for section in soup.select('div#content div.entry_wrap .section_card'):
+    sections = soup.select('div#content div.entry_wrap .section_card')
+    if not handle_errors and len(sections) == 0:
+        raise Exception('no sections')
+    for section in sections:
         for div in section.select('div.entry_search_word , div.entry_search_body'):
             try:
                 yield from extract_display_items(div, handle_errors=handle_errors)
