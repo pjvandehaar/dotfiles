@@ -18,6 +18,8 @@
 
 # TODO: automatically sort by whichever of mem/cpu is more constrained?
 
+# TODO: above the headers, show an "available" row, and a "%used" row (and label them on the left)
+
 
 import psutil, signal, time, sys, itertools, getpass, shutil, re, functools, subprocess
 from psutil import AccessDenied
@@ -36,6 +38,7 @@ def use_ipdb():
 
 @functools.lru_cache()
 def username_by_uid():
+    # This handles cases where `psutil.Process(pid).username()` returns `uid` (integer) instead of the username (str)
     lines = subprocess.check_output(['/usr/bin/getent','passwd']).decode('ascii').split('\n')
     username_by_uid = {}
     for line in filter(None, lines):
@@ -268,9 +271,12 @@ if __name__ == '__main__':
             except psutil.NoSuchProcess: pass
             users[x['username']]['cpu'] += (c.system+c.user - x['cpu_s1']) / (time.time()-x['cpu_s1_t'])
         system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
-        print(' '*12 + f'{repr_cpu(system_avail)}  {repr_mem(system_avail)}')
+        total_used = {'cpu': sum(d['cpu'] for d in users.values()), 'mem_rss': sum(d['mem_rss'] for d in users.values())}
+        print('[available] ' + f'{repr_cpu(system_avail)}  {repr_mem(system_avail)}')
+        print('[%used]     ' + f' ({total_used["cpu"]/system_avail["cpu"]*100:.0f}%)    ({total_used["mem_rss"]/system_avail["mem_rss"]*100:.0f}%)')
         print(' '*12+'  %CPU       MB   #FD  #CON')
         for u, d in sorted(users.items(), key=lambda a: a[1]['mem_rss'], reverse=True):
+            if repr_cpu(d).strip()=='.' and repr_mem(d).strip()=='.' and d['num_fds']==0 and d['num_con']==0: continue # skip idlers
             print(f"{u[:12]:12}{repr_cpu(d)}  {repr_mem(d)}{d['num_fds'] or '.':>6}{d['num_con'] or '.':>6}")
 
     else:
