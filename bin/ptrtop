@@ -16,10 +16,6 @@
 #        `df`, disk reads/second, disk read latency,
 #        kbps_in, kbps_out, %tcp_retransmission
 
-# TODO: automatically sort by whichever of mem/cpu is more constrained?
-
-# TODO: above the headers, show an "available" row, and a "%used" row (and label them on the left)
-
 
 import psutil, signal, time, sys, itertools, getpass, shutil, re, functools, subprocess
 from psutil import AccessDenied
@@ -283,11 +279,17 @@ if __name__ == '__main__':
         if '--fd' in sys.argv[1:]:    p_sort_key = lambda p: (-p['family']['num_fds'], -p['family']['num_con'], p['pid'])
         elif '--con' in sys.argv[1:]: p_sort_key = lambda p: (-p['family']['num_con'], -p['family']['num_fds'], p['pid'])
         elif '--cpu' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/2**20, 0), p['pid'])
-        else:                         p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
+        elif '--mem' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
+        else:                         p_sort_key = None
         user_filter = ([arg for arg in sys.argv[1:] if not arg.startswith('--')] or [None])[0]
 
         root = get_pid_tree(user_filter)
+        system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
+        if p_sort_key is None:
+            cpu_usage = root['family']['cpu'] / system_avail['cpu']
+            mem_usage = root['family']['mem_rss'] / system_avail['mem_rss']
+            if cpu_usage > mem_usage and cpu_usage > 0.3:  p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/2**20, 0), p['pid'])
+            else:                                          p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
         print(repr_p(root, p_sort_key=p_sort_key).rstrip('\n'))
         print('   PID USER       #FD #CON    %CPU     MB')
-        system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
         print(f'                            {repr_cpu(system_avail)}{repr_mem(system_avail)}')
