@@ -180,7 +180,7 @@ command_not_found_handle() {
     fi
     echo "command was: [$*]"
 }
-
+ptrtop() { COLUMNS="$COLUMNS" command ptrtop "$@"; }
 
 }
 __fdsjlkrex
