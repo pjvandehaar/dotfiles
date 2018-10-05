@@ -66,6 +66,10 @@ csgsites() {
 
 alias percol="percol --match-method=regex --prompt-bottom --result-bottom-up"
 alias julia6="/Applications/Julia-0.6.app/Contents/Resources/julia/bin/julia"
+julia6-notebook() {
+    pushd ~/Dropbox/classes/eecs598/nb6
+    /Applications/Julia-0.6.app/Contents/Resources/julia/bin/julia -e 'using IJulia; notebook(dir=pwd(), detached=true)'
+}
 
 
 # source common
