@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# requirements: pip3 install beautifulsoup4 lxml
+# requirements: pip3 install beautifulsoup4 lxml boltons
 
 # NOTE: shift-to-preview stopped working for a while but then fixed itself when I installed HighSierra (for any browser).  Don't mess with quicklook.
+
+# NOTE: to debug problems, use `kor --ipdb <term>`, and type `interact` in ipdb shell.
+
 
 # TODO: look into daum's eng-kor dictionary: <http://dic.daum.net/search.do?q=cat&dic=eng>
 #    - make a list of the kinds of terms I look up, and inspect results from both.
 #    - daum lets you click words in the definition to look them up (which doesn't always work great)
 
 # TODO: look into electron-based Hain launcher <https://github.com/appetizermonster/hain-plugin-naverdictionary>
+
 
 
 '''
@@ -45,20 +49,19 @@ import argparse
 import threading
 import json
 import xml.etree.ElementTree
+from boltons import iterutils
 logging.debug('imported most')
 import urllib.request
 from bs4 import BeautifulSoup
+import bs4
 logging.debug('imported urllib.request and bs4')
 
 
-#DEFINITION_URL_TEMPLATE = 'http://m.endic.naver.com/search.nhn?searchOption=all&query={}'
-#DEFINITION_URL_TEMPLATE = 'https://endic.naver.com/search.nhn?searchOption=all&query={}'
-#DEFINITION_URL_TEMPLATE = 'https://endic.naver.com/search.nhn?sLn=kr&searchOption=all&amp;query={}'
 DEFINITION_URL_TEMPLATE = 'https://endic.naver.com/search.nhn?sLn=en&isOnlyViewEE=N&query={}'
 SUGGESTION_URL_TEMPLATE = 'http://ac.endic.naver.com/ac?q={}&q_enc=utf-8&st=1100&r_format=json&r_enc=utf-8&r_lt=1000&r_unicode=0&r_escape=1'
 
 
-def get_display_items(query, handle_errors=True):
+def get_display_items(query):
     query = unicodedata.normalize('NFC', query) # b/c Alfred sends Korean through as Jamo instead of Hangul
     query = urllib.parse.quote(query)
     dfns_response, sugg_response = fetch_urls([
@@ -67,7 +70,7 @@ def get_display_items(query, handle_errors=True):
     ])
     sugg = list(parse_suggestions(sugg_response))
     logging.debug(f'finished suggestions - length was {len(sugg_response)}')
-    dfns = list(parse_definitions(dfns_response, handle_errors=handle_errors))
+    dfns = list(parse_definitions(dfns_response))
     logging.debug(f'finished definitions - length was {len(dfns_response)}')
     if len(sugg) + len(dfns) == 0:
         return [DisplayItem('no results found')]
@@ -76,22 +79,21 @@ def get_display_items(query, handle_errors=True):
     return dfns + sugg + [DisplayItem(default_action_url, action_url=default_action_url)]
 
 def fetch_urls(urls):
+    # single-threaded debugging version:
+    # handler = urllib.request.HTTPHandler(debuglevel=1)
+    # opener = urllib.request.build_opener(handler)
+    # urllib.request.install_opener(opener)
+    # return [urllib.request.urlopen(url).read() for url in urls]
     rv = [None] * len(urls)
     def fetch_url_by_idx(idx):
         logging.debug(f'requesting {urls[idx]}')
         rv[idx] = urllib.request.urlopen(urls[idx]).read()
         logging.debug(f'received {urls[idx]}')
     threads = [threading.Thread(target=fetch_url_by_idx, args=(i,)) for i in range(len(urls))]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join()
+    for thread in threads: thread.start()
+    for thread in threads: thread.join()
+    for text in rv: assert text is not None, [type(text) for text in rv]
     return rv
-# def fetch_urls(urls):
-#     handler = urllib.request.HTTPHandler(debuglevel=1)
-#     opener = urllib.request.build_opener(handler)
-#     urllib.request.install_opener(opener)
-#     return [urllib.request.urlopen(url).read() for url in urls]
 
 
 def parse_suggestions(sugg_response):
@@ -106,95 +108,91 @@ def parse_suggestions(sugg_response):
                 autocomplete=possible_query
             )
 
-def parse_definitions(dnfs_response, handle_errors=True):
+def parse_definitions(dnfs_response):
     soup = BeautifulSoup(dnfs_response, 'lxml') # 'lxml' takes 40ms, 'html.parser' take 60ms. 'lxml' is more correct.
     logging.debug('soupified')
-    # Hopefully these are exactly the <div>s that we want.
-    sections = soup.select('div#content div.entry_wrap .section_card')
-    if not handle_errors and len(sections) == 0:
-        raise Exception('no sections')
+    sections = soup.select('div#content > div.word_num')
+    if not sections: raise Exception()
     for section in sections:
-        for div in section.select('div.entry_search_word , div.entry_search_body'):
-            try:
-                yield from extract_display_items(div, handle_errors=handle_errors)
-            except Exception as exc:
-                if not handle_errors: raise
-                yield DisplayItem(f'EXCEPTION: {repr(exc)} {repr(traceback.format_exc())}')
-                yield DisplayItem('DIV = ' + re.sub(r'\s+', ' ', repr(div)))
 
-def extract_display_items(div, handle_errors=True):
-    definition_texts = []
-    example_texts = []
+        dl = section.select('> dl.list_e2')
+        if dl:
+            assert len(dl) == 1
+            dl = dl[0]
+            children = [child for child in dl.children if hasattr(child, 'name') and child.name in ('dt','dd')]
+            num_dts = sum(child.name == 'dt' for child in children)
+            assert num_dts == len(children) / 2
+            for i, child in enumerate(children):
+                assert (child.name == 'dt') == (i % 2 == 0)
+                # must alternate <dt> <dd> <dt> <dd> ...
 
-    title = div.select('div.h_word')
-    if len(title) != 1:
-        raise Exception('no title for {}'.format(repr(title)))
-    title_text = unjunk_text(title[0])
+            for dt, dd in iterutils.chunked(children, 2):
+                dt_text = unjunk_text(dt.select_one('span'))
 
-    single_dfn = div.select('p.desc_lst')
-    if len(single_dfn) > 1:
-        raise Exception('multiple single definitions!')
-    if len(single_dfn) == 1:
-        definition_texts.append(unjunk_text(single_dfn[0]))
+                dd_displayitems = []
+                if len(dd.select('> div.align_right')) == 1:
+                    div = dd.select_one('> div.align_right')
+                    gchildren = [gchild for gchild in div.children if gchild.name]
+                    assert all(gchild.name == 'p' for gchild in gchildren)
+                    while gchildren:
+                        gchild = gchildren.pop(0); text = unjunk_text(gchild)
+                        if 'bg' in gchild.attrs.get('class',[]) and gchildren and 'pad_left' in gchildren[0].attrs.get('class',[]):
+                            dd_displayitems.append(DisplayItem('  + ' + text, subtext=unjunk_text(gchildren[0])))
+                            gchildren.pop(0)
+                        elif re.match(r'View \d+ more meanings :', text):
+                            dd_displayitems.append(DisplayItem('  + {more}: ' + text.split(':',1)[1]))
+                        elif 'category' in gchild.attrs.get('class',[]) and not gchildren and len(text) < 10: # last one
+                            pass
+                        else:
+                            if text not in ['',':']: dd_displayitems.append(DisplayItem('  + ' + text))
+                else:
+                    dd_displayitems.append(DisplayItem('  + ?'))
 
-    dfns = div.select('ul.desc_lst li')
-    for dfn in dfns:
-        p_descs = dfn.select('p.desc')
-        if len(p_descs) == 0:
-            # it's a "web collection"
-            dfn_node = dfn
-        elif len(p_descs) == 1:
-            dfn_node = p_descs[0]
-        else:
-            raise Exception('there are {} `p.desc`s in {}'.format(len(p_descs), repr(dfn)))
-        definition_texts.append(unjunk_text(dfn_node))
+                if len(dd_displayitems) >= 1 and dd_displayitems[0]._subtext is None:
+                    yield DisplayItem(dt_text, subtext=dd_displayitems[0]._maintext)
+                    yield from dd_displayitems[1:]
+                elif len(dd_displayitems) > 1:
+                    yield DisplayItem(dt_text)
+                    yield from dd_displayitems
+                else:
+                    yield DisplayItem(dt_text)
 
-    examples = div.select('div.example_wrap')
-    for example in examples:
-        try:
-            kor = example.select('p.example_mean')
-            if len(kor) == 0: kor1 = '<n/a>'
-            elif len(kor) == 1: kor1 = unjunk_text(kor[0])
-            else: raise Exception(kor)
+            continue # done with this section
 
-            eng = example.select('p.example_stc')
-            if len(eng) == 0: eng1 = '<n/a>'
-            elif len(eng) == 1: eng1 = unjunk_text(eng[0])
-            else: raise Exception(eng)
-            example_texts.append((kor1, eng1))
-        except Exception:
-            yield DisplayItem('example = [[[\n' + example.prettify() + '\n]]] caused error [[[\n' + traceback.format_exc() + ']]]')
-            if not handle_errors: raise
+        ul = section.select('> ul.list_a')
+        if ul:
+            assert len(ul) == 1
+            ul = ul[0]
+            for li in ul.select('> li'):
+                divs = li.select('> div')
+                assert len(divs) == 2
+                yield DisplayItem(unjunk_text(divs[0]), subtext='= ' + unjunk_text(divs[1]))
+            continue # done with this section
 
-    # make some output!
-    if len(example_texts) <= 1 and sum(len(dfn_text) for dfn_text in definition_texts) <= 40:
-        # we'll concatenate some definitions together to qualify for a one-liner.
-        definition_texts = [' / '.join(dfn_text for dfn_text in definition_texts)]
+        dl = section.select('> dl.list_e3')
+        if dl:
+            assert len(dl) == 1
+            dl = dl[0]
+            children = [child for child in dl.children if child.name in ['dt','dd']]
+            for child in children:
+                yield DisplayItem(unjunk_text(child))
+            continue
 
-    if len(definition_texts) == 1 and len(definition_texts[0]) > 40 and not example_texts:
-        yield DisplayItem(title_text, '= ' + definition_texts[0])
-
-    elif len(definition_texts) == 1 and len(example_texts) <= 1:
-        d_text = definition_texts[0]
-        e_text = ' = '.join(example_texts[0]) if len(example_texts) > 0 else ''
-        yield DisplayItem(f'{title_text} = {d_text}', e_text)
-
-    else:
-        # print a title line followed by everything else.
-        yield DisplayItem(f'== {title_text} ==')
-        for definition_text in definition_texts:
-            yield DisplayItem('    ' + definition_text)
-        for example_text in example_texts:
-            yield DisplayItem('    ' + example_text[0], '    ' + example_text[1])
+        if 'display:none;' in section.attrs.get('style',''): continue
+        if 'kin_schbox' in section.attrs.get('class',[]): continue
+        if 'word_vlive' in section.attrs.get('class',[]): continue
+        if 'word_opendict' in section.attrs.get('class',[]): continue
+        raise Exception(section) # apparently we don't know what this section is
 
 def unjunk_text(node):
     ret = ''
+    bad_classes = ['ico_guide_ref', 'blind', 'btn_play', 'source', 'tips2'] # 'fnt_k09'?
     for child in node.children:
-        if isinstance(child, str): ret += child
-        elif 'class' in child and 'ly_cont_clt' in child['class']: continue
-        elif child.name in ['a','button']: continue
+        if isinstance(child, bs4.element.Comment): continue
+        elif isinstance(child, str): ret += child
+        elif any(c in child.attrs.get('class',[]) for c in bad_classes): continue
         elif child.name == 'sup': ret += f'[{child.text}]'
-        else: ret += child.text
+        else: ret += unjunk_text(child) # child.text
     return re.sub(r'\s+', ' ', ret).strip()
 
 
@@ -208,8 +206,8 @@ def print_display_items(display_items, fmt):
 
 class DisplayItem:
     "defines a line/row to be displayed in plaintext/xml(alfred)/json/whatever"
-    def __init__(self, maintext, subtext=None, action_url=None, autocomplete=None):
-        self._maintext, self._subtext, self._action_url, self._autocomplete = maintext, subtext, action_url, autocomplete
+    def __init__(self, maintext, subtext=None, action_url=None, autocomplete=None, copytext=None):
+        self._maintext, self._subtext, self._action_url, self._autocomplete, self._copytext = maintext, subtext, action_url, autocomplete, copytext
     def set_default_action_url(self, url):
         if self._action_url is None:
             self._action_url = url
@@ -228,7 +226,7 @@ class DisplayItem:
                 E('title', text=self._maintext),
                 E('subtitle', text=self._subtext),
                 E('arg', text=self._action_url),
-                E('text', attr={'type':'copy'}, text=self._maintext),
+                E('text', attr={'type':'copy'}, text=self._copytext or self._maintext),
             ])).decode('utf-8')
     @staticmethod
     def E(tag, attr={}, children=[], text=None):
@@ -291,17 +289,19 @@ if __name__ == u'__main__':
         exit(1)
 
     if args.test:
-        queries = ['강', '조언', '뭘 해야 할까요', '그리기에', '집중할', 'cat', 'I am a potato', '추카']
+        queries = ['강', '조언', '뭘 해야 할까요', '그리기에', '집중할', 'cat', 'I am a potato', '추카', '중략', 'wall', 'us', 'US']
         for query in queries:
             print('TESTING QUERY:', query)
-            display_items = get_display_items(query, handle_errors=False)
+            display_items = get_display_items(query)
             print_display_items(display_items, args.fmt)
             print('')
 
+
     elif args.ipdb:
         use_ipdb()
-        display_items = get_display_items(args.query, handle_errors=False)
+        display_items = get_display_items(args.query)
         print_display_items(display_items, args.fmt)
+
 
     else:
         try:
@@ -310,6 +310,6 @@ if __name__ == u'__main__':
         except Exception:
             err_filepath = '/tmp/alfred-k.err'
             with open(err_filepath, 'w') as f: f.write(traceback.format_exc())
-            print_display_items([DisplayItem(f'ERROR logged to {err_filepath}', subtext='cmd-c to copy')], args.fmt)
+            print_display_items([DisplayItem(f'ERROR logged to {err_filepath}', subtext='cmd-c to copy', copytext=traceback.format_exc())], args.fmt)
 
     logging.debug('exiting')
