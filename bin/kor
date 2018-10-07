@@ -165,8 +165,11 @@ def parse_definitions(dnfs_response):
             ul = ul[0]
             for li in ul.select('> li'):
                 divs = li.select('> div')
-                assert len(divs) == 2
-                yield DisplayItem(unjunk_text(divs[0]), subtext='= ' + unjunk_text(divs[1]))
+                if len(divs) == 3:
+                    assert unjunk_text(divs[1]) == '' and unjunk_text(divs[2]) == ''
+                elif len(divs) == 2:
+                    yield DisplayItem(unjunk_text(divs[0]), subtext='= ' + unjunk_text(divs[1]))
+                else: raise Exception()
             continue # done with this section
 
         dl = section.select('> dl.list_e3')
@@ -184,17 +187,19 @@ def parse_definitions(dnfs_response):
         if 'word_opendict' in section.attrs.get('class',[]): continue
         raise Exception(section) # apparently we don't know what this section is
 
-def unjunk_text(node):
+def unjunk_text(node, final_strip=True):
+    bad_classes = ['ico_guide_ref', 'blind', 'btn_play', 'source', 'tips2', 'btn_viewtrans', 'btn_trans', 'trans_machine'] # 'fnt_k09'?
+    bad_elements = ['button']
+    if isinstance(node, bs4.element.Comment): return ''
+    if isinstance(node, str): return str(node)
+    if node.name in bad_elements: return ''
+    if any(c in node.attrs.get('class',[]) for c in bad_classes): return ''
+    if node.attrs.get('style','').rstrip(';') == 'display:none': return ''
+    if node.name == 'sup': return '['+node.text+']'
     ret = ''
-    bad_classes = ['ico_guide_ref', 'blind', 'btn_play', 'source', 'tips2'] # 'fnt_k09'?
-    for child in node.children:
-        if isinstance(child, bs4.element.Comment): continue
-        elif isinstance(child, str): ret += child
-        elif any(c in child.attrs.get('class',[]) for c in bad_classes): continue
-        elif child.name == 'sup': ret += f'[{child.text}]'
-        else: ret += unjunk_text(child) # child.text
-    return re.sub(r'\s+', ' ', ret).strip()
-
+    for child in node.children: ret += unjunk_text(child, final_strip=False) # + ' '
+    ret = re.sub(r'\s+', ' ', ret)
+    return ret.strip() if final_strip else ret
 
 
 def print_display_items(display_items, fmt):
