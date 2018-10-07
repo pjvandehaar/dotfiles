@@ -127,7 +127,7 @@ def parse_definitions(dnfs_response):
                 # must alternate <dt> <dd> <dt> <dd> ...
 
             for dt, dd in iterutils.chunked(children, 2):
-                dt_text = unjunk_text(dt.select_one('span'))
+                dt_text = dejunk(dt.select_one('span'))
 
                 dd_displayitems = []
                 if len(dd.select('> div.align_right')) == 1:
@@ -135,9 +135,9 @@ def parse_definitions(dnfs_response):
                     gchildren = [gchild for gchild in div.children if gchild.name]
                     assert all(gchild.name == 'p' for gchild in gchildren)
                     while gchildren:
-                        gchild = gchildren.pop(0); text = unjunk_text(gchild)
+                        gchild = gchildren.pop(0); text = dejunk(gchild)
                         if 'bg' in gchild.attrs.get('class',[]) and gchildren and 'pad_left' in gchildren[0].attrs.get('class',[]):
-                            dd_displayitems.append(DisplayItem('  + ' + text, subtext=unjunk_text(gchildren[0])))
+                            dd_displayitems.append(DisplayItem('  + ' + text, subtext=dejunk(gchildren[0])))
                             gchildren.pop(0)
                         elif re.match(r'View \d+ more meanings :', text):
                             dd_displayitems.append(DisplayItem('  + {more}: ' + text.split(':',1)[1]))
@@ -166,9 +166,9 @@ def parse_definitions(dnfs_response):
             for li in ul.select('> li'):
                 divs = li.select('> div')
                 if len(divs) == 3:
-                    assert unjunk_text(divs[1]) == '' and unjunk_text(divs[2]) == ''
+                    assert dejunk(divs[1]) == '' and dejunk(divs[2]) == ''
                 elif len(divs) == 2:
-                    yield DisplayItem(unjunk_text(divs[0]), subtext='= ' + unjunk_text(divs[1]))
+                    yield DisplayItem(dejunk(divs[0]), subtext='= ' + dejunk(divs[1]))
                 else: raise Exception()
             continue # done with this section
 
@@ -178,7 +178,7 @@ def parse_definitions(dnfs_response):
             dl = dl[0]
             children = [child for child in dl.children if child.name in ['dt','dd']]
             for child in children:
-                yield DisplayItem(unjunk_text(child))
+                yield DisplayItem(dejunk(child))
             continue
 
         if 'display:none;' in section.attrs.get('style',''): continue
@@ -187,7 +187,8 @@ def parse_definitions(dnfs_response):
         if 'word_opendict' in section.attrs.get('class',[]): continue
         raise Exception(section) # apparently we don't know what this section is
 
-def unjunk_text(node, final_strip=True):
+def dejunk(node, final_strip=True):
+    "Convert BeautifulSoup HTML -> str by removing all the junk"
     bad_classes = ['ico_guide_ref', 'blind', 'btn_play', 'source', 'tips2', 'btn_viewtrans', 'btn_trans', 'trans_machine'] # 'fnt_k09'?
     bad_elements = ['button']
     if isinstance(node, bs4.element.Comment): return ''
@@ -197,7 +198,7 @@ def unjunk_text(node, final_strip=True):
     if node.attrs.get('style','').rstrip(';') == 'display:none': return ''
     if node.name == 'sup': return '['+node.text+']'
     ret = ''
-    for child in node.children: ret += unjunk_text(child, final_strip=False) # + ' '
+    for child in node.children: ret += dejunk(child, final_strip=False) # + ' '
     ret = re.sub(r'\s+', ' ', ret)
     return ret.strip() if final_strip else ret
 
