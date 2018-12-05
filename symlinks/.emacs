@@ -50,6 +50,8 @@
 (column-number-mode) ;; show column in mode-line
 (show-paren-mode) ;; match parens
 
+(delete-selection-mode) ;; C-d deletes current selection without copying into kill-ring
+
 (which-function-mode) ;; show current mode in mode-line
 ;; I don't know why this is here. `which-func-modes` changed in emacs 24.3, so maybe I don't need it anymore.
 (eval-after-load "which-func"

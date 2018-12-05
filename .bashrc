@@ -151,11 +151,14 @@ spaced_less() {
 # =========
 
 alias pip="echo Use pip2 or pip3 or pythonX -m pip or conda! #"
-alias ipython="echo Use ipython2 or ipython3! #"
 alias python="echo Use python2 or python3! #"
+alias ipython="echo Use ipython2 or ipython3! #"
+alias ipython3="ipython3 --no-confirm-exit"
 
 alias grep='grep --color=auto'
 alias egrep='grep -E --color=auto'
+
+alias df="df --blocksize=G"
 
 man() {
     # from http://boredzo.org/blog/archives/2016-08-15/colorized-man-pages-understood-and-customized

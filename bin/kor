@@ -12,6 +12,8 @@
 #    - make a list of the kinds of terms I look up, and inspect results from both.
 #    - daum lets you click words in the definition to look them up (which doesn't always work great)
 
+# TODO: look into "The Korean Learner's Dictionary": <https://krdict.korean.go.kr/eng/dicSearch/search?nation=eng&nationCode=6&ParaWordNo=&mainSearchWord=%EC%9D%98%EC%9E%90>
+
 # TODO: look into electron-based Hain launcher <https://github.com/appetizermonster/hain-plugin-naverdictionary>
 
 
