@@ -159,7 +159,7 @@ alias ipython3="ipython3 --no-confirm-exit"
 alias grep='grep --color=auto'
 alias egrep='grep -E --color=auto'
 
-alias df="df --blocksize=G"
+alias df="BLOCKSIZE=G df" # works on mac and linux
 
 man() {
     # from http://boredzo.org/blog/archives/2016-08-15/colorized-man-pages-understood-and-customized
