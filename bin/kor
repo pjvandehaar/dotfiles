@@ -43,6 +43,7 @@ logging.basicConfig(
 )
 logging.debug('logging ready')
 
+import itertools
 import traceback
 import unicodedata
 import re
@@ -117,11 +118,10 @@ def parse_definitions(dnfs_response):
     if not sections: raise Exception()
     for section in sections:
 
-        dl = section.select('> dl.list_e2')
-        if dl:
-            assert len(dl) == 1
-            dl = dl[0]
-            children = [child for child in dl.children if hasattr(child, 'name') and child.name in ('dt','dd')]
+        dls = section.select('> dl.list_e2')
+        if dls:
+            children = itertools.chain.from_iterable(dl.children or [] for dl in dls)
+            children = [child for child in children if hasattr(child, 'name') and child.name in ('dt','dd')]
             num_dts = sum(child.name == 'dt' for child in children)
             assert num_dts == len(children) / 2
             for i, child in enumerate(children):
@@ -163,7 +163,7 @@ def parse_definitions(dnfs_response):
 
         ul = section.select('> ul.list_a')
         if ul:
-            assert len(ul) == 1
+            assert len(ul) == 1, (len(ul), ul)
             ul = ul[0]
             for li in ul.select('> li'):
                 divs = li.select('> div')
@@ -174,11 +174,10 @@ def parse_definitions(dnfs_response):
                 else: raise Exception()
             continue # done with this section
 
-        dl = section.select('> dl.list_e3')
-        if dl:
-            assert len(dl) == 1
-            dl = dl[0]
-            children = [child for child in dl.children if child.name in ['dt','dd']]
+        dls = section.select('> dl.list_e3')
+        if dls:
+            children = itertools.chain.from_iterable(dl.chilren or [] for dl in dls)
+            children = [child for child in children if child.name in ['dt','dd']]
             for child in children:
                 yield DisplayItem(dejunk(child))
             continue
