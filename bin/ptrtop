@@ -225,7 +225,7 @@ def inspect_pid(pid):
 
     try:
         print(p.io_counters())
-    except psutil.AccessDenied:
+    except (psutil.AccessDenied, AttributeError):
         print('[cannot access bytes read/written]')
     print()
 
