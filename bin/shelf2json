@@ -2,5 +2,27 @@
 
 import shelve, json, sys
 
-with shelve.open(sys.argv[1]) as shelf:
-    print(json.dumps(list(shelf.items())))
+def jsonify(obj, indent=None):
+    return json.dumps(obj, default=_jsonify_default, indent=indent)
+def _jsonify_default(obj):
+    try:
+        import pandas as pd
+    except ImportError:
+        pass
+    else:
+        if isinstance(obj, pd.DataFrame):
+            return {'type=pandas.DataFrame': obj.to_json()}
+    return 'unserializable object of type {obj.__class__.__name__}'.format(**locals())
+
+def indent_text(text, num_spaces=4):
+    return '\n'.join(' '*num_spaces + line for line in text.split('\n'))
+
+if sys.argv[1] == '--keys':
+    with shelve.open(sys.argv[2]) as shelf:
+        for key in shelf:
+            print(jsonify(key))
+else:
+    with shelve.open(sys.argv[1]) as shelf:
+        for key, val in shelf.items():
+            print(jsonify(key), '->')
+            print(indent_text(jsonify(val, indent=1)))
