@@ -261,6 +261,7 @@ class TerminalLineWrapper:
             if width < 0: return i
         return len(s)
     def width_of_char(self, c):
+        # TODO: try `wcwidth.wcswidth(c)`.
         import unicodedata
         ## A: ambiguous (1 in iterm)
         ## F: full width (2)
