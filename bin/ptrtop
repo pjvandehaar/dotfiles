@@ -77,7 +77,7 @@ def get_pid_tree(user_filter=None):
                     if not is_good:
                         try:
                             s['p']['proc'] = psutil.Process(s['p']['pid'])
-                            is_good = decode_username(s['p']['proc'].username()) == user_filter
+                            is_good = decode_username(s['p']['proc'].username()) in user_filter
                         except psutil.NoSuchProcess: pass
                     if is_good:
                         stack[-2]['good'].append(s['p'])
@@ -141,13 +141,13 @@ def repr_con(x):
     return ret
 def repr_cpu(x):
     if 'cpu' not in x: return ' '*4+'? '
-    ret = f'{x["cpu"]*100:6.1f}'
+    ret = f'{x["cpu"]*100:6.1f}' # okay for 99 cpus
     if ret.strip() == '0.0': return ' '*4+'. '
     if ret.strip()[:-1] == '0.': return ' '*4+'.'+ret[-1]
     return ret
 def repr_mem(x):
     if 'mem_rss' not in x: return ' '*6+'?'
-    ret = f'{x["mem_rss"]/2**20:7.0f}'
+    ret = f'{x["mem_rss"]/2**20:7.0f}' # okay for 9999GB
     if ret.strip() == '0': return ' '*6+'.'
     return ret
 def repr_name(x):
@@ -194,19 +194,25 @@ def inspect_pid(pid):
     p = psutil.Process(pid)
 
     try:
-        for m in p.memory_maps(): print(m.path)
+        for i, mmap in enumerate(p.memory_maps()):
+            if i == 0: print('[memory maps]')
+            print(mmap.path)
     except psutil.AccessDenied:
-        print('[cannot access memmaps]')
+        print('[cannot access memory maps]')
     print()
 
     try:
-        for f in p.open_files(): print(f.path)
+        for i, f in enumerate(p.open_files()):
+            if i == 0: print('[open files]')
+            print(f.path)
     except psutil.AccessDenied:
         print('[cannot access open files]')
     print()
 
     try:
-        for k,v in p.environ().items(): print(f'- {k:30} = {v}')
+        for i, (k,v) in enumerate(p.environ().items()):
+            if i == 0: print('[environ]')
+            print(f'- {k:30} = {v}')
     except psutil.AccessDenied:
         print('[cannot access environ]')
     print()
@@ -216,7 +222,8 @@ def inspect_pid(pid):
         try:return f'{"["+a.ip+"]":>15}:{a.port:<6}' if ':' in a.ip else f'{a.ip:>15}:{a.port:<6}'
         except: return repr(a)
     try:
-        for c in p.connections():
+        for i, c in enumerate(p.connections()):
+            if i == 0: print('[connections]')
             try:print(f'{c.status:12}  {repr_addr(c.laddr)}  {repr_addr(c.raddr)}  {repr(c.type)}  {repr(c.family)}')
             except: print(c)
     except psutil.AccessDenied:
@@ -224,7 +231,9 @@ def inspect_pid(pid):
     print()
 
     try:
-        print(p.io_counters())
+        io_str = str(p.io_counters())
+        print('[io]')
+        print(io_str)
     except (psutil.AccessDenied, AttributeError):
         print('[cannot access bytes read/written]')
     print()
@@ -239,10 +248,19 @@ def inspect_pid(pid):
 if __name__ == '__main__':
     use_ipdb()
 
-    if sys.argv[1:] and sys.argv[1].isdigit():
-        inspect_pid(int(sys.argv[1]))
+    if set(sys.argv[1:]).intersection(['-h', '--help']):
+        print(' ptrtop                  show tree of all processes')
+        print(" ptrtop USER...          show tree of USER's processes and their parents")
+        print('                         these may specify the sort order by using one of --fd --con --cpu --mem')
+        print(" ptrtop PID...           show info about individual processes")
+        print(' ptrtop --users          show resources used by each user')
+        print("Some information requires `sudo` for others' processes.")
 
-    elif sys.argv[1:] and sys.argv[1] == '--users':
+    elif sys.argv[1:] and all(arg.isdigit() for arg in sys.argv[1:]):
+        for arg in sys.argv[1:]:
+            inspect_pid(int(arg)); print()
+
+    elif sys.argv[1:] == ['--users']:
         users = {}
         xs = []
         for proc in psutil.process_iter(attrs='username cpu_times memory_info num_fds connections'.split()):
@@ -268,12 +286,15 @@ if __name__ == '__main__':
             users[x['username']]['cpu'] += (c.system+c.user - x['cpu_s1']) / (time.time()-x['cpu_s1_t'])
         system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
         total_used = {'cpu': sum(d['cpu'] for d in users.values()), 'mem_rss': sum(d['mem_rss'] for d in users.values())}
-        print('[available] ' + f'{repr_cpu(system_avail)}  {repr_mem(system_avail)}')
-        print('[%used]     ' + f' ({total_used["cpu"]/system_avail["cpu"]*100:.0f}%)    ({total_used["mem_rss"]/system_avail["mem_rss"]*100:.0f}%)')
-        print(' '*12+'  %CPU       MB   #FD  #CON')
+        def user_is_idle(d): return repr_cpu(d).strip()=='.' and repr_mem(d).strip()=='.' and d['num_fds']==0 and d['num_con']==0
+        username_len = max(max(len(u) for u,d in users.items() if not user_is_idle(d)), len('[available] '))
+        def repr_username(u): return f'{u[:username_len]:{username_len}}'
+        print(f'{repr_username("[available]")}{repr_cpu(system_avail)} {repr_mem(system_avail)}')
+        print(f'{repr_username("[used]")}{repr_cpu(total_used)} {repr_mem(total_used)}')
+        print(f'{repr_username(" ")}  %CPU      MB   #FD  #CON')
         for u, d in sorted(users.items(), key=lambda a: a[1]['mem_rss'], reverse=True):
-            if repr_cpu(d).strip()=='.' and repr_mem(d).strip()=='.' and d['num_fds']==0 and d['num_con']==0: continue # skip idlers
-            print(f"{u[:12]:12}{repr_cpu(d)}  {repr_mem(d)}{d['num_fds'] or '.':>6}{d['num_con'] or '.':>6}")
+            if user_is_idle(d): continue
+            print(f"{repr_username(u)}{repr_cpu(d)} {repr_mem(d)}{d['num_fds'] or '.':>6}{d['num_con'] or '.':>6}")
 
     else:
         if '--fd' in sys.argv[1:]:    p_sort_key = lambda p: (-p['family']['num_fds'], -p['family']['num_con'], p['pid'])
@@ -281,7 +302,7 @@ if __name__ == '__main__':
         elif '--cpu' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/2**20, 0), p['pid'])
         elif '--mem' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
         else:                         p_sort_key = None
-        user_filter = ([arg for arg in sys.argv[1:] if not arg.startswith('--')] or [None])[0]
+        user_filter = set(arg for arg in sys.argv[1:] if not arg.startswith('-'))
 
         root = get_pid_tree(user_filter)
         system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
