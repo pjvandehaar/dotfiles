@@ -148,6 +148,11 @@ ptrviewcomma() {
     (head -n 1000; echo '~FIN~') |
     tabview - --delimiter ,
 }
+ptrviewspace() {
+    if [ -t 0 ]; then cat "$1"; else cat; fi |
+    (head -n 1000; echo '~FIN~') |
+    tabview - --delimiter " "
+}
 spaced_less() {
     if [ -t 0 ]; then cat "$1"; else cat; fi |
     perl -ple 's{$}{\n}' |
