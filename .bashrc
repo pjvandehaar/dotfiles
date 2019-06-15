@@ -201,3 +201,5 @@ ptrtop() { COLUMNS="$COLUMNS" command ptrtop "$@"; }
 }
 __fdsjlkrex
 unset __fdsjlkrex
+
+if [[ -e "$HOME/.bash_custom" ]]; then source "$HOME/.bash_custom"; fi
