@@ -38,7 +38,7 @@ assert sys.version_info >= (3,6)
 import logging
 logging.basicConfig(
     level=logging.DEBUG,
-    filename='/tmp/alfred-nv.log', filemode='w', # overwrite
+    filename='/tmp/alfred-kor.log', filemode='w', # overwrite
     format='%(relativeCreated)d %(asctime)s %(message)s',
 )
 logging.debug('logging ready')
@@ -83,15 +83,23 @@ def get_display_items(query):
 
 def fetch_urls(urls):
     # single-threaded debugging version:
-    # handler = urllib.request.HTTPHandler(debuglevel=1)
-    # opener = urllib.request.build_opener(handler)
-    # urllib.request.install_opener(opener)
+    # urllib.request.install_opener(urllib.request.build_opener(urllib.request.HTTPHandler(debuglevel=1)))
     # return [urllib.request.urlopen(url).read() for url in urls]
     rv = [None] * len(urls)
     def fetch_url_by_idx(idx):
         logging.debug(f'requesting {urls[idx]}')
-        rv[idx] = urllib.request.urlopen(urls[idx]).read()
-        logging.debug(f'received {urls[idx]}')
+        for _ in range(3):
+            try:
+                resp = urllib.request.urlopen(urls[idx])
+            except Exception as exc:
+                logging.debug(f'urllib exception: {str(exc)}')
+            else:
+                logging.debug(f'received {urls[idx]} with code {resp.getcode()}')
+                text = resp.read()
+                if text is not None:
+                    rv[idx] = text
+                    return
+    # for idx in range(len(urls)): fetch_url_by_idx(idx) # raises exceptions to main thread rather than ignoring
     threads = [threading.Thread(target=fetch_url_by_idx, args=(i,)) for i in range(len(urls))]
     for thread in threads: thread.start()
     for thread in threads: thread.join()
@@ -135,7 +143,9 @@ def parse_definitions(dnfs_response):
                 if len(dd.select('> div.align_right')) == 1:
                     div = dd.select_one('> div.align_right')
                     gchildren = [gchild for gchild in div.children if gchild.name]
-                    assert all(gchild.name == 'p' for gchild in gchildren)
+                    if not all(gchild.name == 'p' for gchild in gchildren):
+                        yield DisplayItem('Error: ' + ' | '.join(dejunk(gchild) for gchild in gchildren))
+                        continue
                     while gchildren:
                         gchild = gchildren.pop(0); text = dejunk(gchild)
                         if 'bg' in gchild.attrs.get('class',[]) and gchildren and 'pad_left' in gchildren[0].attrs.get('class',[]):
@@ -316,7 +326,7 @@ if __name__ == u'__main__':
             display_items = get_display_items(args.query)
             print_display_items(display_items, args.fmt)
         except Exception:
-            err_filepath = '/tmp/alfred-k.err'
+            err_filepath = '/tmp/alfred-kor.err'
             with open(err_filepath, 'w') as f: f.write(traceback.format_exc())
             print_display_items([DisplayItem(f'ERROR logged to {err_filepath}', subtext='cmd-c to copy', copytext=traceback.format_exc())], args.fmt)
 

@@ -27,9 +27,10 @@ export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"
 # OS-specific impl
 # ================
 # note: use -@ to show file attributes
-alias  l="exa --ignore-glob='.DS_Store|*~|*#*' -F -la --sort=modified --git --time-style=long-iso"
-alias ll="exa --ignore-glob='.DS_Store|*~|*#*' -F -l  --sort=Name     --git --time-style=long-iso"
-alias la="exa --ignore-glob='.DS_Store|*~|*#*' -F  -a --sort=Name"
+# /bin/ls defaults to binary prefixes ("kibi') but exa needs `-b` to enable them
+alias  l="exa --ignore-glob='.DS_Store|*~|*#*' -F -la -b --sort=modified --git --time-style=long-iso"
+alias ll="exa --ignore-glob='.DS_Store|*~|*#*' -F -l  -b --sort=Name     --git --time-style=long-iso"
+alias la="exa --ignore-glob='.DS_Store|*~|*#*' -F  -a -b --sort=Name"
 
 
 # OS-specific features
