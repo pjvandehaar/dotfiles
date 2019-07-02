@@ -19,10 +19,11 @@ exists_else() {
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion.rb>
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion@2.rb>
 if exists brew; then
-     v="$(brew --prefix)/etc/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion
-     if [[ $BASH_VERSINFO -ge 4 ]]; then
-         v="$(brew --prefix)/share/bash-completion/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion@2
-     fi
+    v="$(brew --prefix)/etc/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion
+    ## This causes an syntax error when I type `./foo ` followed by <tab>
+    # if [[ $BASH_VERSINFO -ge 4 ]]; then
+    #     v="$(brew --prefix)/share/bash-completion/bash_completion" && [[ -e "$v" ]] && . "$v" # bash-completion@2
+    # fi
 fi
 
 EDITOR="$(exists_else emacs mg nvim vim vi nano)"; export EDITOR
