@@ -3,6 +3,8 @@
 	email = pjvandehaar@gmail.com
 [push]
 	default = current # this means `simple` in modern versions
+[fetch]
+	prune = true # delete `origin/branch1` locally if it's gone from the remote
 [core]
 	excludesfile = ~/.gitignore_global
 	abbrev = 5 # 5 char hashes
