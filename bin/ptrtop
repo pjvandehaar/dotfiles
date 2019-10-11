@@ -194,6 +194,14 @@ def inspect_pid(pid):
     p = psutil.Process(pid)
 
     try:
+        for i, (k,v) in enumerate(p.environ().items()):
+            if i == 0: print('[environ]')
+            print(f'- {k:30} = {v}')
+    except psutil.AccessDenied:
+        print('[cannot access environ]')
+    print()
+
+    try:
         for i, mmap in enumerate(p.memory_maps()):
             if i == 0: print('[memory maps]')
             print(mmap.path)
@@ -207,14 +215,6 @@ def inspect_pid(pid):
             print(f.path)
     except psutil.AccessDenied:
         print('[cannot access open files]')
-    print()
-
-    try:
-        for i, (k,v) in enumerate(p.environ().items()):
-            if i == 0: print('[environ]')
-            print(f'- {k:30} = {v}')
-    except psutil.AccessDenied:
-        print('[cannot access environ]')
     print()
 
     def repr_addr(a):
