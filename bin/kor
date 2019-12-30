@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# requirements: pip3 install boltons
-
 # NOTE: shift-to-preview stopped working for a while but then fixed itself when I installed HighSierra (for any browser).  Don't mess with quicklook.
 
 # NOTE: to debug problems, use `kor --ipdb <term>`, and type `interact` in ipdb shell.
@@ -28,7 +26,6 @@ logging.basicConfig(
 )
 logging.debug('logging ready')
 
-import itertools
 import traceback
 import unicodedata
 import re
@@ -37,7 +34,6 @@ import argparse
 import threading
 import json
 import xml.etree.ElementTree
-from boltons import iterutils
 logging.debug('imported most')
 import urllib.request
 logging.debug('imported urllib.request')
@@ -62,13 +58,13 @@ def get_display_items(query):
     if len(sugg) + len(dfns) == 0:
         return [DisplayItem('no results found')]
     default_action_url = HTML_URL_TEMPLATE.format(query)
-    for item in dfns: item.set_default_action_url(default_action_url)
+    for item in dfns: item.action_url = item.action_url or default_action_url
     return [DisplayItem(' ', action_url=default_action_url)] + dfns + sugg
 
-def fetch_urls(urls):
-    # single-threaded debugging version:
-    # urllib.request.install_opener(urllib.request.build_opener(urllib.request.HTTPHandler(debuglevel=1)))
-    # return [urllib.request.urlopen(url).read() for url in urls]
+def fetch_urls(urls, single_threaded=False):
+    if single_threaded:
+        urllib.request.install_opener(urllib.request.build_opener(urllib.request.HTTPHandler(debuglevel=1)))
+        return [urllib.request.urlopen(url).read() for url in urls]
     rv = [None] * len(urls)
     def fetch_url_by_idx(idx):
         logging.debug(f'requesting {urls[idx]}')
@@ -83,7 +79,6 @@ def fetch_urls(urls):
                 if text is not None:
                     rv[idx] = text
                     return
-    # for idx in range(len(urls)): fetch_url_by_idx(idx) # raises exceptions to main thread rather than ignoring
     threads = [threading.Thread(target=fetch_url_by_idx, args=(i,)) for i in range(len(urls))]
     for thread in threads: thread.start()
     for thread in threads: thread.join()
@@ -104,7 +99,6 @@ def parse_suggestions(sugg_response):
             )
 
 def parse_definitions(dfns_response):
-
     def get_str(item, key): return item.get(key, '') or ''
 
     # TODO: consider using j['collectionRanking'] to sort sections
@@ -118,7 +112,7 @@ def parse_definitions(dfns_response):
         if not url.startswith('http'): url = 'https://en.dict.naver.com/' + url
         hanja = ' '.join(x['originLanguage'] for x in item.get('expAliasGeneralAlwaysList', []))
 
-        meanings = [m for meancollector in item['meansCollector'] for m in meancollector['means']]
+        meanings = [m for mc in item['meansCollector'] for m in mc['means']]
         if len(meanings) == 1 or sum(len(m['value']) for m in meanings) < 80:
             # TODO: show is_slang here too
             yield DisplayItem(f'{title}  [{hanja}]' if hanja else title,
@@ -127,18 +121,16 @@ def parse_definitions(dfns_response):
                               autocomplete=title)
         else:
             yield DisplayItem(title, hanja, action_url=url, autocomplete=title)
-            for meaning in item.get('meansCollector',[]):
-                for m in meaning.get('means', []):
-                    logging.debug(m)
-                    is_slang = '비격식' in get_str(m, 'languageGroup')
-                    yield DisplayItem(' '*4 +
-                                      ('(slang)' if is_slang else '') +
-                                      dejunk_html(m.get('value', '[none]')),
-                                      action_url=url, autocomplete=title)
+            for m in meanings:
+                is_slang = '비격식' in get_str(m, 'languageGroup')
+                yield DisplayItem(' '*4 +
+                                  ('(slang)' if is_slang else '') +
+                                  dejunk_html(get_str(m, 'value')),
+                                  action_url=url, autocomplete=title)
 
     meaning_items = results.get('MEANING').get('items',[])
     if meaning_items:
-        titles = [item['expEntry'] for item in meaning_items]
+        titles = [dejunk_html(item['expEntry']) for item in meaning_items]
         yield DisplayItem(' ; '.join(titles))
 
     for item in results.get('EXAMPLE',{}).get('items',[]):
@@ -156,9 +148,9 @@ def parse_definitions(dfns_response):
         yield DisplayItem(f'eg, {example2} =', example1, autocomplete=title)
 
 
-
 def dejunk_html(html):
     "Convert HTML -> str by removing all the junk"
+    # TODO: handle HTML Entities like "&quot;"
     return re.sub(r'<[^>]+>', '', html)
 
 
@@ -172,35 +164,29 @@ def print_display_items(display_items, fmt):
 class DisplayItem:
     "defines a line/row to be displayed in plaintext/xml(alfred)/json/whatever"
     def __init__(self, maintext, subtext=None, action_url=None, autocomplete=None, copytext=None):
-        self._maintext, self._subtext, self._action_url, self._autocomplete, self._copytext = (
+        self.maintext, self.subtext, self.action_url, self.autocomplete, self.copytext = (
             maintext, subtext, action_url, autocomplete, copytext
         )
-    def set_default_action_url(self, url):
-        if self._action_url is None:
-            self._action_url = url
     def to_plaintext(self):
-        return f'{self._maintext:25} {self._subtext.strip()}' if self._subtext else self._maintext
+        return f'{self.maintext:25} {self.subtext.strip()}' if self.subtext else self.maintext
     def to_dict(self):
-        d = {'maintext': self._maintext}
-        if self._subtext is not None: d['subtext'] = self._subtext
-        if self._action_url is not None: d['action_url'] = self._action_url
-        if self._autocomplete is not None: d['autocomplete'] = self._autocomplete
-        return d
+        attrs = ['maintext', 'subtext', 'action_url', 'autocomplete', 'copytext']
+        attrs = [attr for attr in attrs if self.__getattribute__(attr) is not None]
+        return {attr:self.__getattribute__(attr) for attr in attrs}
     def to_xml(self):
-        E = self.make_element
+        def E(tag, attr=None, children=(), text=None):
+            elem = xml.etree.ElementTree.Element(tag, attrib=attr or {})
+            if text: elem.text = "" + text
+            for child in children: elem.append(child)
+            return elem
         return xml.etree.ElementTree.tostring(
-            E('item', {'autocomplete': self._autocomplete or self._maintext, 'valid':'yes'}, children=[
-                E('title', text=self._maintext),
-                E('subtitle', text=self._subtext),
-                E('arg', text=self._action_url),
-                E('text', attr={'type':'copy'}, text=self._copytext or self._maintext),
+            E('item', {'autocomplete': self.autocomplete or self.maintext, 'valid':'yes'}, children=[
+                E('title', text=self.maintext),
+                E('subtitle', text=self.subtext),
+                E('arg', text=self.action_url),
+                E('text', attr={'type':'copy'}, text=self.copytext or self.maintext),
             ])).decode('utf-8')
-    @staticmethod
-    def make_element(tag, attr={}, children=[], text=None):
-        elem = xml.etree.ElementTree.Element(tag, attrib=attr)
-        if text: elem.text = "" + text
-        for child in children: elem.append(child)
-        return elem
+
 
 class TerminalLineWrapper:
     def __init__(self):
