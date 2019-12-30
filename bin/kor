@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# requirements: pip3 install beautifulsoup4 lxml boltons
+# requirements: pip3 install boltons
 
 # NOTE: shift-to-preview stopped working for a while but then fixed itself when I installed HighSierra (for any browser).  Don't mess with quicklook.
 
@@ -16,21 +16,6 @@
 
 # TODO: look into electron-based Hain launcher <https://github.com/appetizermonster/hain-plugin-naverdictionary>
 
-
-
-'''
-TIMING:
-*    50ms: python startup
-*    50ms: import urllib.request
-*    50ms: import bs4
-|\
-*|  450ms: m.endic.naver.com
-|*  500ms: ac.endic.naver.com
-|/
-*    45ms: BeautifulSoup()
-*     5ms: parse/print
-(700ms)
-'''
 
 import sys
 assert sys.version_info >= (3,6)
@@ -55,17 +40,16 @@ import xml.etree.ElementTree
 from boltons import iterutils
 logging.debug('imported most')
 import urllib.request
-from bs4 import BeautifulSoup
-import bs4
-logging.debug('imported urllib.request and bs4')
+logging.debug('imported urllib.request')
 
 
-DEFINITION_URL_TEMPLATE = 'https://endic.naver.com/search.nhn?sLn=en&isOnlyViewEE=N&query={}'
-SUGGESTION_URL_TEMPLATE = 'http://ac.endic.naver.com/ac?q={}&q_enc=utf-8&st=1100&r_format=json&r_enc=utf-8&r_lt=1000&r_unicode=0&r_escape=1'
+HTML_URL_TEMPLATE = 'https://en.dict.naver.com/#/search?query={}'
+DEFINITION_URL_TEMPLATE = 'https://en.dict.naver.com/api3/enko/search?query={}&m=pc&range=all&shouldSearchVlive=true&lang=en'
+SUGGESTION_URL_TEMPLATE = 'https://ac.dict.naver.com/enkodict/ac?st=11001&r_lt=11001&q={}'
 
 
 def get_display_items(query):
-    query = unicodedata.normalize('NFC', query) # b/c Alfred sends Korean through as Jamo instead of Hangul
+    query = unicodedata.normalize('NFC', query) # b/c Alfred sends Jamo Korean instead of Hangul
     query = urllib.parse.quote(query)
     dfns_response, sugg_response = fetch_urls([
         DEFINITION_URL_TEMPLATE.format(query),
@@ -77,9 +61,9 @@ def get_display_items(query):
     logging.debug(f'finished definitions - length was {len(dfns_response)}')
     if len(sugg) + len(dfns) == 0:
         return [DisplayItem('no results found')]
-    default_action_url = DEFINITION_URL_TEMPLATE.format(query)
+    default_action_url = HTML_URL_TEMPLATE.format(query)
     for item in dfns: item.set_default_action_url(default_action_url)
-    return dfns + sugg + [DisplayItem(default_action_url, action_url=default_action_url)]
+    return [DisplayItem(' ', action_url=default_action_url)] + dfns + sugg
 
 def fetch_urls(urls):
     # single-threaded debugging version:
@@ -119,99 +103,63 @@ def parse_suggestions(sugg_response):
                 autocomplete=possible_query
             )
 
-def parse_definitions(dnfs_response):
-    soup = BeautifulSoup(dnfs_response, 'lxml') # 'lxml' takes 40ms, 'html.parser' take 60ms. 'lxml' is more correct.
-    logging.debug('soupified')
-    sections = soup.select('div#content > div.word_num')
-    if not sections: raise Exception()
-    for section in sections:
+def parse_definitions(dfns_response):
 
-        dls = section.select('> dl.list_e2')
-        if dls:
-            children = itertools.chain.from_iterable(dl.children or [] for dl in dls)
-            children = [child for child in children if hasattr(child, 'name') and child.name in ('dt','dd')]
-            num_dts = sum(child.name == 'dt' for child in children)
-            assert num_dts == len(children) / 2
-            for i, child in enumerate(children):
-                assert (child.name == 'dt') == (i % 2 == 0)
-                # must alternate <dt> <dd> <dt> <dd> ...
+    def get_str(item, key): return item.get(key, '') or ''
 
-            for dt, dd in iterutils.chunked(children, 2):
-                dt_text = dejunk(dt.select_one('span'))
+    # TODO: consider using j['collectionRanking'] to sort sections
+    j = json.loads(dfns_response)
+    results = (j.get('searchResultMap',{}).get('searchResultListMap',{}))
+    for item in results.get('WORD',{}).get('items',[]):
+        if item['languageCode'] == 'ENEN': continue # don't translate Eng -> Eng
 
-                dd_displayitems = []
-                if len(dd.select('> div.align_right')) == 1:
-                    div = dd.select_one('> div.align_right')
-                    gchildren = [gchild for gchild in div.children if gchild.name]
-                    if not all(gchild.name == 'p' for gchild in gchildren):
-                        yield DisplayItem('Error: ' + ' | '.join(dejunk(gchild) for gchild in gchildren))
-                        continue
-                    while gchildren:
-                        gchild = gchildren.pop(0); text = dejunk(gchild)
-                        if 'bg' in gchild.attrs.get('class',[]) and gchildren and 'pad_left' in gchildren[0].attrs.get('class',[]):
-                            dd_displayitems.append(DisplayItem('  + ' + text, subtext=dejunk(gchildren[0])))
-                            gchildren.pop(0)
-                        elif re.match(r'View \d+ more meanings :', text):
-                            dd_displayitems.append(DisplayItem('  + {more}: ' + text.split(':',1)[1]))
-                        elif 'category' in gchild.attrs.get('class',[]) and not gchildren and len(text) < 10: # last one
-                            pass
-                        else:
-                            if text not in ['',':']: dd_displayitems.append(DisplayItem('  + ' + text))
-                else:
-                    dd_displayitems.append(DisplayItem('  + ?'))
+        title = dejunk_html(item['expEntry'])
+        url = item['destinationLink']
+        if not url.startswith('http'): url = 'https://en.dict.naver.com/' + url
+        hanja = ' '.join(x['originLanguage'] for x in item.get('expAliasGeneralAlwaysList', []))
 
-                if len(dd_displayitems) >= 1 and dd_displayitems[0]._subtext is None:
-                    yield DisplayItem(dt_text, subtext=dd_displayitems[0]._maintext)
-                    yield from dd_displayitems[1:]
-                elif len(dd_displayitems) > 1:
-                    yield DisplayItem(dt_text)
-                    yield from dd_displayitems
-                else:
-                    yield DisplayItem(dt_text)
+        meanings = [m for meancollector in item['meansCollector'] for m in meancollector['means']]
+        if len(meanings) == 1 or sum(len(m['value']) for m in meanings) < 80:
+            # TODO: show is_slang here too
+            yield DisplayItem(f'{title}  [{hanja}]' if hanja else title,
+                              ' ; '.join(dejunk_html(m['value']) for m in meanings),
+                              action_url=url,
+                              autocomplete=title)
+        else:
+            yield DisplayItem(title, hanja, action_url=url, autocomplete=title)
+            for meaning in item.get('meansCollector',[]):
+                for m in meaning.get('means', []):
+                    logging.debug(m)
+                    is_slang = '비격식' in get_str(m, 'languageGroup')
+                    yield DisplayItem(' '*4 +
+                                      ('(slang)' if is_slang else '') +
+                                      dejunk_html(m.get('value', '[none]')),
+                                      action_url=url, autocomplete=title)
 
-            continue # done with this section
+    meaning_items = results.get('MEANING').get('items',[])
+    if meaning_items:
+        titles = [item['expEntry'] for item in meaning_items]
+        yield DisplayItem(' ; '.join(titles))
 
-        ul = section.select('> ul.list_a')
-        if ul:
-            assert len(ul) == 1, (len(ul), ul)
-            ul = ul[0]
-            for li in ul.select('> li'):
-                divs = li.select('> div')
-                if len(divs) == 3:
-                    assert dejunk(divs[1]) == '' and dejunk(divs[2]) == ''
-                elif len(divs) == 2:
-                    yield DisplayItem(dejunk(divs[0]), subtext='= ' + dejunk(divs[1]))
-                else: raise Exception()
-            continue # done with this section
+    for item in results.get('EXAMPLE',{}).get('items',[]):
+        example1 = get_str(item, 'expExample1').replace('<strong>','[').replace('</strong>',']')
+        example2 = get_str(item, 'expExample2').replace('<strong>','[').replace('</strong>',']')
+        if not example1 or not example2: continue
+        # example2 tends to be Korean, so make it bigger
+        yield DisplayItem(f'eg: {example2} =', example1, autocomplete=title)
 
-        dls = section.select('> dl.list_e3')
-        if dls:
-            children = itertools.chain.from_iterable(dl.chilren or [] for dl in dls)
-            children = [child for child in children if child.name in ['dt','dd']]
-            for child in children:
-                yield DisplayItem(dejunk(child))
-            continue
+    for item in results.get('VLIVE',{}).get('items',[]):
+        example1 = get_str(item, 'expExample1').replace('<strong>','[').replace('</strong>',']')
+        example2 = get_str(item, 'expExample2').replace('<strong>','[').replace('</strong>',']')
+        if not example1 or not example2: continue
+        # example2 tends to be Korean, so make it bigger
+        yield DisplayItem(f'eg, {example2} =', example1, autocomplete=title)
 
-        if 'display:none;' in section.attrs.get('style',''): continue
-        if 'kin_schbox' in section.attrs.get('class',[]): continue
-        if 'word_vlive' in section.attrs.get('class',[]): continue
-        if 'word_opendict' in section.attrs.get('class',[]): continue
-        raise Exception(section) # apparently we don't know what this section is
 
-def dejunk(node, final_strip=True):
-    "Convert BeautifulSoup HTML -> str by removing all the junk"
-    bad_classes = ['ico_guide_ref', 'blind', 'btn_play', 'source', 'tips2', 'btn_viewtrans', 'btn_trans', 'trans_machine'] # 'fnt_k09'?
-    bad_elements = ['button']
-    if isinstance(node, bs4.element.Comment): return ''
-    if isinstance(node, str): return str(node)
-    if node.name in bad_elements: return ''
-    if any(c in node.attrs.get('class',[]) for c in bad_classes): return ''
-    if node.attrs.get('style','').rstrip(';') == 'display:none': return ''
-    if node.name == 'sup': return '['+node.text+']'
-    ret = ''
-    for child in node.children: ret += dejunk(child, final_strip=False) # + ' '
-    ret = re.sub(r'\s+', ' ', ret)
-    return ret.strip() if final_strip else ret
+
+def dejunk_html(html):
+    "Convert HTML -> str by removing all the junk"
+    return re.sub(r'<[^>]+>', '', html)
 
 
 def print_display_items(display_items, fmt):
@@ -224,7 +172,9 @@ def print_display_items(display_items, fmt):
 class DisplayItem:
     "defines a line/row to be displayed in plaintext/xml(alfred)/json/whatever"
     def __init__(self, maintext, subtext=None, action_url=None, autocomplete=None, copytext=None):
-        self._maintext, self._subtext, self._action_url, self._autocomplete, self._copytext = maintext, subtext, action_url, autocomplete, copytext
+        self._maintext, self._subtext, self._action_url, self._autocomplete, self._copytext = (
+            maintext, subtext, action_url, autocomplete, copytext
+        )
     def set_default_action_url(self, url):
         if self._action_url is None:
             self._action_url = url
@@ -237,7 +187,7 @@ class DisplayItem:
         if self._autocomplete is not None: d['autocomplete'] = self._autocomplete
         return d
     def to_xml(self):
-        E = self.E
+        E = self.make_element
         return xml.etree.ElementTree.tostring(
             E('item', {'autocomplete': self._autocomplete or self._maintext, 'valid':'yes'}, children=[
                 E('title', text=self._maintext),
@@ -246,7 +196,7 @@ class DisplayItem:
                 E('text', attr={'type':'copy'}, text=self._copytext or self._maintext),
             ])).decode('utf-8')
     @staticmethod
-    def E(tag, attr={}, children=[], text=None):
+    def make_element(tag, attr={}, children=[], text=None):
         elem = xml.etree.ElementTree.Element(tag, attrib=attr)
         if text: elem.text = "" + text
         for child in children: elem.append(child)
@@ -298,9 +248,14 @@ if __name__ == u'__main__':
     parser.add_argument('--fmt', default='wrap', choices=['plaintext', 'wrap', 'xml', 'json'])
     parser.add_argument('--test', action='store_true')
     parser.add_argument('--ipdb', action='store_true')
+    parser.add_argument('--print-exceptions', action='store_true')
+    parser.add_argument('--log-to-stderr', action='store_true')
     parser.add_argument('query', nargs='?', default=None)
     args = parser.parse_args()
     logging.debug('args parsed')
+
+    if args.log_to_stderr:
+        logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
 
     if args.test == bool(args.query):
         parser.print_help()
@@ -320,6 +275,13 @@ if __name__ == u'__main__':
         display_items = get_display_items(args.query)
         print_display_items(display_items, args.fmt)
 
+
+    elif args.print_exceptions:
+        try:
+            display_items = get_display_items(args.query)
+            print_display_items(display_items, args.fmt)
+        except Exception:
+            print(traceback.format_exc())
 
     else:
         try:
