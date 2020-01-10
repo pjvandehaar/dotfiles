@@ -151,6 +151,7 @@ def parse_definitions(dfns_response):
 def dejunk_html(html):
     "Convert HTML -> str by removing all the junk"
     # TODO: handle HTML Entities like "&quot;"
+    if html is None: return ''
     return re.sub(r'<[^>]+>', '', html)
 
 
