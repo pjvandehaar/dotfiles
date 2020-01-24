@@ -101,7 +101,7 @@ gh() {
     done
 }
 h() { if [[ -n "${1:-}" ]]; then head -n $((LINES-2)) "$1"; else head -n $((LINES-2)); fi; }
-alias ptrdiff='diff -dyb -W$COLUMNS'
+if exists icdiff; then alias ptrdiff=icdiff; else alias ptrdiff='diff -dyb -W$COLUMNS'; fi
 
 cdl() { cd "$1" && l; }
 mcd() { mkdir -p "$1" && cd "$1"; }
