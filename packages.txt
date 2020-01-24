@@ -1,0 +1,67 @@
+## brew: Mac and Linux (via `brew leaves`)
+bash-completion  # @2 has bugs, so stick with v1
+brotli
+emacs
+exa
+git
+hilite
+htop
+htslib
+icdiff
+jq
+mosh
+node
+python3
+r
+rename
+rustup-init
+samtools
+sshfs
+tig
+wget
+zstd
+
+## brew: Linux
+tmux
+
+## brew: Mac
+bash
+coreutils
+gnu-sed
+
+## brew-cask: Mac
+alfred
+dropbox
+google-chrome
+iterm2
+itsycal
+julia
+macdown
+nvalt
+omnidisksweeper
+osxfuse  # for sshfs
+rstudio
+skype
+spotify
+visual-studio-code
+vlc
+wireshark
+
+
+## pip3
+boltons
+ipython
+jupyter
+kpa
+numpy pandas
+psutil
+pytype pyre-check mypy
+q  # convenient logger for debugging
+requests
+tabview
+tqdm
+
+
+## cargo
+broot
+hexyl
