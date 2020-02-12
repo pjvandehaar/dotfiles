@@ -14,6 +14,8 @@
 
 # TODO: look into electron-based Hain launcher <https://github.com/appetizermonster/hain-plugin-naverdictionary>
 
+# TODO: look into Hammerspoon's "PopupTranslateSelection"
+
 
 import sys
 assert sys.version_info >= (3,6)
@@ -90,7 +92,7 @@ def parse_suggestions(sugg_response):
     for idx, item_list in enumerate(json.loads(sugg_response)['items']):
         for item_pair in item_list:
             possible_query, brief_definition = item_pair[0][0], item_pair[1][0]
-            url_to_pass = DEFINITION_URL_TEMPLATE.format(urllib.parse.quote(possible_query.encode('utf-8')))
+            url_to_pass = HTML_URL_TEMPLATE.format(urllib.parse.quote(possible_query.encode('utf-8')))
             yield DisplayItem(
                 '[sugg{}] '.format(idx) + possible_query,
                 brief_definition,

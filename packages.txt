@@ -50,6 +50,7 @@ wireshark
 
 ## pip3
 boltons
+bs4
 ipython
 jupyter
 kpa
