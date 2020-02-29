@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+
+import random, string
+
+chars = string.digits + string.ascii_letters
+
+password = ''.join(random.choices(chars, k=16))
+
+print(password)
