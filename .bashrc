@@ -120,7 +120,8 @@ alias ptrflake8='flake8 --show-source --ignore=E501,E302,E251,E701,E226,E305,E22
 
 ptrnybbleswap() { python3 -c $'import sys,signal as g;g.signal(g.SIGPIPE,g.SIG_DFL);x=sys.stdin.buffer.read(10000)\nwhile sys.stdout.buffer.write(bytes([oct//16+(oct%16)*16 for oct in x])):x=sys.stdin.buffer.read(10000)'; }
 ptrbitwiseinverse() { python3 -c $'import sys,signal as g;g.signal(g.SIGPIPE,g.SIG_DFL);x=sys.stdin.buffer.read(10000)\nwhile sys.stdout.buffer.write(bytes([oct^255 for oct in x])):x=sys.stdin.buffer.read(10000)'; }
-ptrcut() { awk "{print \$$1}"; }
+ptrcut() { if [[ $1 == "-"* ]]; then perl -nale 'print $F[$#F+1'"$1"']'; else perl -nale 'print $F[1+'"$1"']'; fi; }
+ptrextract() { if [[ $1 == *"("* ]]; then perl -nale 'm{'"$1"'}; print $1'; else perl -nale 'm{('"$1"')}; print $1'; fi; }
 ptrsum() { perl -nale '$s += $_; END{print $s}'; }
 ptrfilternum() { perl -nale 'print if m{^[-+]?[0-9]+(?:\.[0-9]+)?(?:[eE][-+]?[0-9]+)?$}'; }
 ptrminmax() { ptrfilternum | perl -nale '$min=$_ if $.==1 or $_<$min; $max=$_ if $.==1 or $_>$max; END{print "$min  \t$max"}'; }
