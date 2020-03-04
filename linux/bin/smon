@@ -37,10 +37,10 @@ print('mem(GB)  #cpus  #jobs'+' '*13+'mem(GB)  #cpus  #jobs   mem(GB)  #cpus  #j
 for username in sorted(ppl.keys(), key=lambda u: -ppl[u]['cpus']['R']):
     print('{:6}{:7}{:7}   {:10}{:7}{:7}{:7}   {:7}{:7}{:7}    {:7}{:7}{:7}    {}'.format(
         *[ppl[username][metric][state] or '' for state in states[:1] for metric in ['mem','cpus','jobs']],
-        f'{username}'[:10],
+        username[:10],
         *[ppl[username][metric][state] or '' for state in states[1:] for metric in ['mem','cpus','jobs']],
         *[ppl[username][metric][state] or '' for state in ['other']  for metric in ['mem','cpus','jobs']],
-        f'{username}  ({users[username]})',
+        '{}  ({})'.format(username, users[username]),
     ))
 print('\n')
 
