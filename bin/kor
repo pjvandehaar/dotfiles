@@ -136,7 +136,7 @@ def parse_definitions(dfns_response):
                                   dejunk_html(get_str(m, 'value')),
                                   action_url=url, autocomplete=title)
 
-    meaning_items = results.get('MEANING').get('items',[])
+    meaning_items = results.get('MEANING',{}).get('items',[])
     if meaning_items:
         titles = [dejunk_html(item['expEntry']) for item in meaning_items]
         yield DisplayItem(' ; '.join(titles))
@@ -146,14 +146,14 @@ def parse_definitions(dfns_response):
         example2 = bracketize_strong(get_str(item, 'expExample2'))
         if not example1 or not example2: continue
         # example2 tends to be Korean, so make it bigger
-        yield DisplayItem(f'eg: {example2} =', example1, autocomplete=title)
+        yield DisplayItem(f'eg: {example2} =', example1)
 
     for item in results.get('VLIVE',{}).get('items',[]):
         example1 = bracketize_strong(get_str(item, 'expExample1'))
         example2 = bracketize_strong(get_str(item, 'expExample2'))
         if not example1 or not example2: continue
         # example2 tends to be Korean, so make it bigger
-        yield DisplayItem(f'eg, {example2} =', example1, autocomplete=title)
+        yield DisplayItem(f'eg, {example2} =', example1)
 
 
 
