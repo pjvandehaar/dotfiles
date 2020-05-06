@@ -11,6 +11,7 @@ export PATH
 PATH="$dotfiles_path/linux/bin:$PATH"
 PATH="$dotfiles_path/bin:$PATH"
 PATH="$HOME/bin:$PATH"
+PATH="$HOME/.local/bin:$PATH"
 PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 PATH="/home/linuxbrew/.linuxbrew/sbin:$PATH"
 PATH="$HOME/.linuxbrew/bin:$PATH"
