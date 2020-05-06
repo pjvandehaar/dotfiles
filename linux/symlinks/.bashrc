@@ -33,44 +33,16 @@ MANPATH="$(perl -e'@p=split(":",$ENV{"MANPATH"}); @p=grep(-e,@p); for($i=0;$i<$#
 # OS-specific impl
 # ================
 
-# aliases mask functions
-unalias l ll la 2>/dev/null
-
-if [[ $TERM != dumb ]]; then
-    # options: `less -R`: pass thru color codes.
-    #          `less -X`: leave last frame on terminal (breaks scrolling).
-    #          `less -F`: quit immediately if output fits on one screen.
-    l() {
-        ls --color -lhFBAtr "$@" |
-        grep -E --color=never -v '(~|#|\.DS_Store)$' |
-        less -SRXF
-    }
-    ll() {
-        ls --color -lhFB "$@" |
-        grep -E --color=never -v '(~|#|\.DS_Store)$' |
-        less -SRXF
-    }
-    la() {
-        # `ls -Cw $COLUMNS` outputs cols filling terminal's width even when piping stdout
-        ls --color -FACw "$COLUMNS" "$@" |
-        less -SRXF
-    }
-
-    # TODO:
-    # find a way to leave the final view of `less` on the screen, like `-XF` does, but still support mouse scrolling in tmux.
-    #     - option 1: add a special case for less in tmux.  but `#{pane_current_command} == bash` when piping, and I don't see another way to detect it.
-    #     - option 2: in l(), do `tmux bind-key WheelDownPane ...` and then change it back when closing. (but other tabs...)
-    #     - option 3: write some kind of wrapper around `less -SRXF` that either enables alternate mode or translates mousescroll to arrows.
-    # ll() {
-    #     local output="$(ls -lhFB --color "$@")"
-    #     if [[ "$(echo "$output" | wc -l)" -lt "$LINES" ]]; then echo "$output"; else echo "$output" | less -SR; fi
-    # }
-    # alias l="ll -Atr"
-
+unalias l 2>/dev/null  # aliases mask functions
+if type -t exa >/dev/null; then
+    alias l="exa -laF --git --time-style=long-iso --bytes --sort=modified --ignore-glob='.DS_Store|*~|*#*'"
 else
-    alias l="ls -lhFABtr --color"
-    alias ll="ls -lhBF --color"
-    alias la="ls -FACw \$COLUMNS --color"
+    l() {
+        # BLOCK_SIZE adds thousands-commas
+        BLOCK_SIZE="'1" TIME_STYLE=long-iso ls --color -lhFBAtr "$@" |
+        grep -E --color=never -v '(~|#|\.DS_Store)$' |
+        more
+    }
 fi
 
 
