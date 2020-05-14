@@ -11,3 +11,6 @@
 - `sudo iotop --only`
     - press `a` to see accumulated IO
 - `iostat`
+
+##syslog
+- `TZ=America/Detroit sudo journalctl --since 'yesterday' --no-hostname | grep -E -v 'UFW BLOCK|sshd' | less -S`
