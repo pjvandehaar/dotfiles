@@ -27,6 +27,11 @@ _PP_prompt() {
     local _err="$?"
     [[ "$_err" -eq 0 ]] && _err='' || _err="${_PP_RED} ${_err} "
 
+    # Log last command to ~/.full_history like <https://www.jefftk.com/p/you-should-be-logging-shell-history>
+    # TODO: strip the line number from $(history 1)
+    # TODO: this gets re-run (and re-appended) when I hit enter on a blank line, but shouldn't.
+    echo "$(date +%Y-%m-%d--%H-%M-%S) $(hostname) $PWD $(history 1)" >> ~/.full_history
+
     local _runtime=''
     if [[ "$_PP_runtime_seconds" -ge 5 ]]; then
         [[ "$_PP_runtime_seconds" -ge 86400 ]] && _runtime+="$((_PP_runtime_seconds / 86400))d"
