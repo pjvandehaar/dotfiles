@@ -4,6 +4,7 @@ brotli
 emacs
 exa
 git
+glances
 hilite
 htop
 htslib

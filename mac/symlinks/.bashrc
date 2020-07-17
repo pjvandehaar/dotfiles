@@ -77,6 +77,11 @@ csgsites() {
     mkdir -p ~/mount/CS
     sshfs pjvh@snowwhite.sph.umich.edu:/net/csgsites/csg/pjvh ~/mount/CS/ && cd ~/mount/CS/
 }
+petervh() {
+    mount | grep -q ~/mount/petervh && echo unmounting... && umount ~/mount/petervh
+    mkdir -p ~/mount/petervh
+    sshfs kpa@petervh.com:/home/kpa ~/mount/petervh && cd ~/mount/petervh
+}
 
 
 # source common
