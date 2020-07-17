@@ -1,4 +1,5 @@
 set diff-highlight = diff-highlight
+set line-graphics = utf-8  # It's not ideal but hopefully it works everywhere without dropping to "ascii"
 
 set main-view-id-display = true # width set by `~/.gitconfig::core.abbrev`
 color id red black
