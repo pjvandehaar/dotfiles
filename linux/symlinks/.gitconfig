@@ -39,3 +39,5 @@
 	textconv = samtools view -h
 [diff "bcf"]
 	textconv = htsfile -c
+[pull]
+	ff = only
