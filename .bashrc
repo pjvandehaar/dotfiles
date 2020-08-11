@@ -110,9 +110,10 @@ check_repos() { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd
 getPass() { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
 ds() {
     find -L "${1:-.}" -maxdepth 1 -print0 |
-    xargs -0 -L1 "$(exists_else gdu du)" -sh --apparent-size |
+    xargs -0 -L1 "$(exists_else gdu du)" -s -BM --apparent-size 2>/dev/null |
     "$(exists_else gsort sort)" -h |
-    perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}'
+    perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}' | # remove `./`
+    column -t
 }
 ptrsu() { sudo su --preserve-environment; }
 ptrwrite() { cp -p "$1" "$1.ptrwrite.tmp"; cat > "$1.ptrwrite.tmp"; mv "$1.ptrwrite.tmp" "$1"; }
