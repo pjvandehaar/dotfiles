@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import signal; signal.signal(signal.SIGPIPE, signal.SIG_DFL) # No error on closed stdout pipe
 import shelve, json, sys
 
 def jsonify(obj, indent=None):
