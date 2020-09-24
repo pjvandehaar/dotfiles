@@ -17,7 +17,7 @@
 #        kbps_in, kbps_out, %tcp_retransmission
 
 
-import psutil, signal, time, sys, itertools, getpass, shutil, re, functools, subprocess
+import psutil, signal, time, sys, itertools, shutil, functools, subprocess
 from psutil import AccessDenied
 
 
@@ -52,39 +52,35 @@ def decode_username(username):
         return '?' + username
 
 
-
 # Note: `proc` is a psutil.Process()
 #       `p` is a dictionary representing a process
 def get_pid_tree(user_filter=None):
+    p_with_pid = {}  # {pid: {...}}
+
     ppidmap = psutil._ppid_map() # {pid -> ppid}
-    p_with_pid = {}
     for pid in set(itertools.chain(ppidmap.keys(), ppidmap.values())):
         p_with_pid[pid] = {'pid':pid, 'children':[]}
     for pid,ppid in ppidmap.items():
         if pid != ppid: # on macOS, 0 is parent of 0
             p_with_pid[ppid]['children'].append(p_with_pid[pid])
+
     if user_filter:
-        stack = [dict(p=p_with_pid[0], good=[], unchecked=p_with_pid[0]['children'].copy())]
-        good_pids = {0}
-        while stack:
-            s = stack[-1]
-            if s['unchecked']:
-                child = s['unchecked'].pop()
-                stack.append(dict(p=child, good=[], unchecked=child['children']))
-            else:
-                if len(stack)>1:
-                    is_good = bool(s['good'])
-                    if not is_good:
-                        try:
-                            s['p']['proc'] = psutil.Process(s['p']['pid'])
-                            is_good = decode_username(s['p']['proc'].username()) in user_filter
-                        except psutil.NoSuchProcess: pass
-                    if is_good:
-                        stack[-2]['good'].append(s['p'])
-                        good_pids.add(s['p']['pid'])
-                s['p']['children'] = s['good']
-                stack = stack[:-1]
-        p_with_pid = {pid:p for pid,p in p_with_pid.items() if pid in good_pids}
+        # If a process doesn't belong to any user in `user_filter` and none of its descendants do either,
+        #  then prune it from the process tree and from p_with_pid.
+        for pid,p in p_with_pid.items():
+            try:
+                p['proc'] = psutil.Process(pid)
+                p['user'] = decode_username(p['proc'].username())
+            except psutil.NoSuchProcess: pass
+
+        def delete_if_bad(pid):
+            p = p_with_pid[pid]
+            for child in p['children']: delete_if_bad(child['pid'])
+            p['children'] = [child for child in p['children'] if child['pid'] in p_with_pid]
+            if p.get('user') not in user_filter and len(p['children']) == 0:
+                del p_with_pid[pid]
+        delete_if_bad(0)
+        if not p_with_pid: raise Exception("No processes left after filter")
 
     for pid, p in p_with_pid.items():
         try:
@@ -220,12 +216,12 @@ def inspect_pid(pid):
     def repr_addr(a):
         if a == (): return ' '*15+'-'+' '*6
         try:return f'{"["+a.ip+"]":>15}:{a.port:<6}' if ':' in a.ip else f'{a.ip:>15}:{a.port:<6}'
-        except: return repr(a)
+        except Exception: return repr(a)
     try:
         for i, c in enumerate(p.connections()):
             if i == 0: print('[connections]')
             try:print(f'{c.status:12}  {repr_addr(c.laddr)}  {repr_addr(c.raddr)}  {repr(c.type)}  {repr(c.family)}')
-            except: print(c)
+            except Exception: print(c)
     except psutil.AccessDenied:
         print('[cannot access connections]')
     print()
