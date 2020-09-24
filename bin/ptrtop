@@ -55,34 +55,34 @@ def decode_username(username):
 # Note: `proc` is a psutil.Process()
 #       `p` is a dictionary representing a process
 def get_pid_tree(user_filter=None):
-    p_with_pid = {}  # {pid: {...}}
+    p_for_pid = {}  # {pid: {...}}
 
     ppidmap = psutil._ppid_map() # {pid -> ppid}
     for pid in set(itertools.chain(ppidmap.keys(), ppidmap.values())):
-        p_with_pid[pid] = {'pid':pid, 'children':[]}
+        p_for_pid[pid] = {'pid':pid, 'children':[]}
     for pid,ppid in ppidmap.items():
         if pid != ppid: # on macOS, 0 is parent of 0
-            p_with_pid[ppid]['children'].append(p_with_pid[pid])
+            p_for_pid[ppid]['children'].append(p_for_pid[pid])
 
     if user_filter:
         # If a process doesn't belong to any user in `user_filter` and none of its descendants do either,
-        #  then prune it from the process tree and from p_with_pid.
-        for pid,p in p_with_pid.items():
+        #  then prune it from the process tree and from p_for_pid.
+        for pid,p in p_for_pid.items():
             try:
                 p['proc'] = psutil.Process(pid)
                 p['user'] = decode_username(p['proc'].username())
             except psutil.NoSuchProcess: pass
 
         def delete_if_bad(pid):
-            p = p_with_pid[pid]
+            p = p_for_pid[pid]
             for child in p['children']: delete_if_bad(child['pid'])
-            p['children'] = [child for child in p['children'] if child['pid'] in p_with_pid]
+            p['children'] = [child for child in p['children'] if child['pid'] in p_for_pid]
             if p.get('user') not in user_filter and len(p['children']) == 0:
-                del p_with_pid[pid]
+                del p_for_pid[pid]
         delete_if_bad(0)
-        if not p_with_pid: raise Exception("No processes left after filter")
+        if not p_for_pid: raise Exception("No processes left after filter")
 
-    for pid, p in p_with_pid.items():
+    for pid, p in p_for_pid.items():
         try:
             proc = p['proc'] if 'proc' in p else psutil.Process(pid)
             with proc.oneshot():
@@ -107,15 +107,15 @@ def get_pid_tree(user_filter=None):
 
     time.sleep(1)
 
-    for p in p_with_pid.values():
+    for p in p_for_pid.values():
         if 'cpu_s1' in p:
             try: x = p['proc'].cpu_times() ; cpu_s2 = x.system + x.user
             except psutil.NoSuchProcess: continue
             assert cpu_s2 >= p['cpu_s1']
             p['cpu'] = (cpu_s2 - p['cpu_s1']) / (time.time() - p['cpu_s1_t'])
-    accum_proc_info(p_with_pid[0])
-    for p in p_with_pid.values(): p.pop('proc', None) # if a process has died, `repr(proc)` raises an Exception? or, ipdb introspection does?
-    return p_with_pid[0]
+    accum_proc_info(p_for_pid[0])
+    for p in p_for_pid.values(): p.pop('proc', None) # if a process has died, `repr(proc)` raises an Exception? or, ipdb introspection does?
+    return p_for_pid[0]
 
 def accum_proc_info(p):
     for child in p['children']: accum_proc_info(child)
