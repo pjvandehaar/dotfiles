@@ -1,0 +1,10 @@
+#!/bin/bash
+
+api_key="$(cat ~/.telegram_bot.config | head -1)"
+chat_id="$(cat ~/.telegram_bot.config | tail -n+2 | head -1)"
+text="$1."
+
+curl -X POST \
+     -H 'Content-Type: application/json' \
+     -d "{\"chat_id\": \"$chat_id\", \"text\": \"$text\", \"disable_notification\": true}" \
+     "https://api.telegram.org/bot$api_key/sendMessage"
