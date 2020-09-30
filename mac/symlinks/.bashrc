@@ -32,13 +32,13 @@ if type -t exa >/dev/null; then
     # note: use -@ to show file attributes
     alias l="exa -laF --git --time-style=long-iso --bytes --sort=modified --ignore-glob='.DS_Store|*~|*#*'"
 elif type -t gls >/dev/null; then
-    l() {
+    function l {
         # BLOCK_SIZE adds thousands-commas
         BLOCK_SIZE="'1" TIME_STYLE=long-iso gls --color -lhFBAtr "$@" |
         grep -E --color=never -v '(~|#|\.DS_Store)$'
     }
 else
-    l() {
+    function l {
         CLICOLOR_FORCE=1 ls -lAFhtr -G "$@" |
         grep -E --color=never -v '(~|#|\.DS_Store)$'
     }
