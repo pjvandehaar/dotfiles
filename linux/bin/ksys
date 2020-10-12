@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- mode: python -*-
 
-# TODO: add `restart` (which then checks if it failed, and shows logs if it did)
 # TODO: add `test`, which restarts, sends some example requests, and shows logs if failed
 # TODO: add `install-systemd` (which will need to choose a port)
 #       - we could use `9000 + hash(project_name)%1000` for now until we get a collision
@@ -29,12 +28,14 @@ def get_unit_name():
     return unit_name
 
 def stat(args):
+    # TODO: show only the last run, like https://serverfault.com/a/974304/257963
     unit_name = get_unit_name()
     cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
     print(cmd)
     subprocess.call(cmd)
 
 def restart(args):
+    # TODO: watch it for a second and say if it fails
     unit_name = get_unit_name()
     cmd = ["sudo", "systemctl", "restart", unit_name]
     print(cmd)
