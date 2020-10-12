@@ -13,8 +13,10 @@ if __name__ == '__main__':
     if p.returncode != 0: sys.exit(1)
 
 
-import sys, subprocess
+import sys, subprocess, os
 from pathlib import Path
+
+os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'
 
 def get_unit_name():
     path = Path().absolute()
@@ -30,7 +32,9 @@ def get_unit_name():
 def stat(args):
     # TODO: show only the last run, like https://serverfault.com/a/974304/257963
     unit_name = get_unit_name()
-    cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
+    last_run_id = subprocess.check_output(['systemctl','show','--value','-p','InvocationID',unit_name]).decode().strip()
+    cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-hostname']
+    #cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
     print(cmd)
     subprocess.call(cmd)
 
