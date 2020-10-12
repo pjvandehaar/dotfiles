@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+# -*- mode: python -*-
+
+# TODO: add `restart` (which then checks if it failed, and shows logs if it did)
+# TODO: add `test`, which restarts, sends some example requests, and shows logs if failed
+# TODO: add `install-systemd` (which will need to choose a port)
+#       - we could use `9000 + hash(project_name)%1000` for now until we get a collision
+# TODO: add `install-nginx` (which will need to know the port) and does `sudo certbot run`
+
+
+if __name__ == '__main__':
+    import subprocess, sys
+    p = subprocess.run(['flake8', '--show-source', '--ignore=E501,E302,E251,E701,E226,E305,E225,E261,E231,E301,E306,E402,E704,E265,E201,E202,E303,E124,E241,E127,E266,E221,E126,E129,F811,E222,E401,E702,E203,E116,E228,W504,W293,B007,W391,F841,F401', __file__])
+    if p.returncode != 0: sys.exit(1)
+
+
+import sys, subprocess
+from pathlib import Path
+
+def get_unit_name():
+    path = Path().absolute()
+    if path.parts[:2] != ('/', 'srv'):
+        raise Exception(f"Not in /srv/ : {path}")
+    if len(path.parts) < 3:
+        raise Exception("Cannot run directly in /srv/")
+    project_name = path.parts[2]
+    unit_name = f"kpa-{project_name}"
+    print(f"Using unit: {unit_name}")
+    return unit_name
+
+def stat(args):
+    unit_name = get_unit_name()
+    cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
+    print(cmd)
+    subprocess.call(cmd)
+
+def restart(args):
+    unit_name = get_unit_name()
+    cmd = ["sudo", "systemctl", "restart", unit_name]
+    print(cmd)
+    subprocess.call(cmd)
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    commands = parser.add_subparsers(dest='command')
+
+    stat_parser = commands.add_parser('stat')
+    stat_parser.set_defaults(func=stat)
+
+    restart_parser = commands.add_parser('restart')
+    restart_parser.set_defaults(func=restart)
+
+    args = parser.parse_args()
+    if args.command is None:
+        stat(None)
+    else:
+        args.func(args)
