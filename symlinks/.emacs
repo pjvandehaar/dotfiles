@@ -25,7 +25,7 @@
   (unless (require 'ess nil 'noerror)
     (message "failed to load ess"))
   (if (require 'expand-region nil 'noerror)
-    (global-set-key (kbd "C-\\") 'er/expand-region)
+    (global-set-key (kbd "C-]") 'er/expand-region)
     (message "failed to load expand-region"))
   ;; I'm not interested in this right now.  Maybe enable it later.
   ;; ;; when you move one-line-at-a-time (eg, C-n repeatedly) (or even a few lines at a time),  this will scroll the screen 5 lines ahead of you.
@@ -51,11 +51,6 @@
 (show-paren-mode) ;; match parens
 
 (delete-selection-mode) ;; C-d deletes current selection without copying into kill-ring
-
-(which-function-mode) ;; show current mode in mode-line
-;; I don't know why this is here. `which-func-modes` changed in emacs 24.3, so maybe I don't need it anymore.
-(eval-after-load "which-func"
-  '(setq which-func-modes '(java-mode c++-mode perl-mode)))
 
 ;; see `C-h v whitespace-style`
 (require 'whitespace)
