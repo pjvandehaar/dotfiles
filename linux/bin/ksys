@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- mode: python -*-
 
-# TODO: add `test`, which restarts, sends some example requests, and shows logs if failed
-# TODO: add `install-systemd` (which will need to choose a port)
-#       - we could use `9000 + hash(project_name)%1000` for now until we get a collision
-# TODO: add `install-nginx` (which will need to know the port) and does `sudo certbot run`
-
+# TODO: add `ksys test`, which restarts, sends some example requests, and shows logs if failed
+# TODO: Reconsider how .ksys should work.
+#       + I'd prefer if `name`, `port`, `$(pwd)`, `domain` weren't in the files themselves, and were instead templated in.
+#       + I'd prefer if the nginx conf had a filename that clearly identified it as nginx.  What about `%etc%nginx%sites-available%foo.example.com`?  Likewise systemd.
+#       + I don't want to have SSL info inside `.ksys/`, but I also don't like that the nginx conf in that folder is different from the real conf.
 
 if __name__ == '__main__':
     import subprocess, sys
@@ -13,7 +13,7 @@ if __name__ == '__main__':
     if p.returncode != 0: sys.exit(1)
 
 
-import sys, subprocess, os, random
+import sys, subprocess, os, random, re
 from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'
@@ -51,14 +51,17 @@ systemd_service_template = '''\
 [Unit]
 Description={name}
 After=network.target
+
 [Service]
 User=nobody
 Group=nogroup
 WorkingDirectory={dir}
 ExecStart={exec}
+# EXIT_STATUS = number (nonzero if error); EXIT_CODE = what happened; $SERVICE_RESULT = why died
 ExecStopPost=/srv/telegram-error-if-nonzero-arg1.sh $EXIT_STATUS {name}-execstoppost $EXIT_CODE $SERVICE_RESULT
 '''
 systemd_daemon_template = systemd_service_template + '''\
+
 [Install]
 WantedBy=multi-user.target
 '''
@@ -69,10 +72,12 @@ Nice=10
 systemd_timer_template = '''\
 [Unit]
 Description={name}
+
 [Timer]
 OnCalendar=*-*-* 00,12:00:00
 RandomizedDelaySec=3h
 Persistent=true
+
 [Install]
 WantedBy=timers.target
 '''
@@ -86,6 +91,7 @@ server {
   }
 }
 '''
+nginx_template = re.subn(r'(\s})', r'\1}', re.subn(r'({\s)', r'{\1', nginx_template)[0])[0]  # escape `{` and `}`
 
 def init(args):
     '''Make ./.ksys/ and put config in it.'''
@@ -102,12 +108,12 @@ def init(args):
         (ksys_path / f'{name}.timer').write_text(systemd_timer_template.format(name=name))
     elif args.nginx:
         port = 8000 + random.randrange(1000)
-        (ksys_path / f'{name}.service').write_text(systemd_scheduled_template.format(
+        (ksys_path / f'{name}.service').write_text(systemd_daemon_template.format(
             name=name,
             dir=directory,
             exec='{exec}' + f' --port={port}',
         ))
-        domain = f'{name}.petervh.com'
+        domain = f'{name[4:]}.petervh.com' if name.startswith('kpa-') else f'{name}.petervh.com'
         (ksys_path / f'{domain}.conf').write_text(nginx_template.format(domain=domain, port=port))
     else:
         (ksys_path / f'{name}.service').write_text(systemd_scheduled_template.format(
@@ -115,7 +121,8 @@ def init(args):
             dir=directory,
             exec='{exec}',
         ))
-    print(f'Now populate Exec= in .ksys/{name}.service')
+    print(f'Now populate Exec= in .ksys/{name}.service and run `ksys install`')
+
 
 def install(args):
     '''Copy config to /etc/'''
@@ -124,23 +131,35 @@ def install(args):
     for path in ksys_path.iterdir():
         if path.suffix == '.timer':
             dest_path = Path('/etc/systemd/system') / path.name
-            subprocess.check_output(['sudo', 'cp', '-f', str(path), str(dest_path)])
-            subprocess.check_output(['sudo', 'systemctl', 'enable', path.name])
+            subprocess.call(['sudo', 'cp', '-f', str(path), str(dest_path)])
+            subprocess.call(['sudo', 'systemctl', 'enable', path.name])
         elif path.suffix == '.service':
             dest_path = Path('/etc/systemd/system') / path.name
-            subprocess.check_output(['sudo', 'cp', '-f', str(path), str(dest_path)])
+            subprocess.call(['sudo', 'cp', '-f', str(path), str(dest_path)])
             if 'WantedBy' in path.read_text():
-                subprocess.check_output(['sudo', 'systemctl', 'enable', path.name])
+                subprocess.call(['sudo', 'systemctl', 'enable', path.name])
         elif path.suffix == '.conf':
             dest_path = Path('/etc/nginx/sites-available' / path.name)
-            subprocess.check_output(['sudo', 'cp', '-f', str(path), str(dest_path)])
-            subprocess.check_output(['sudo', 'ln', '-sf', str(dest_path), '/etc/nginx/sites-enabled'])
+            subprocess.call(['sudo', 'cp', '-f', str(path), str(dest_path)])
+            subprocess.call(['sudo', 'ln', '-sf', str(dest_path), '/etc/nginx/sites-enabled'])
+            subprocess.call(['sudo', 'nginx', '-t'])
+            subprocess.call(['sudo', 'systemctl', 'restart', 'nginx'])
+            print('Maybe now run `certbot`')
+        subprocess.call(['sudo', 'systemctl', 'daemon-reload'])
 
 def venv(args):
-    '''Make ./venv/'''
-    subprocess.check_output(['python3', '-m', 'venv', 'venv'])
-    if os.path.exists('requirements.txt'):
-        subprocess.check_output(['./venv/bin/pip3', 'install', '-r', 'requirements.txt'])
+    '''Make ./venv/ and append "venv" to .gitignore'''
+    subprocess.call(['python3', '-m', 'venv', 'venv'])
+    req_paths = [Path(p) for p in args.requirements_files] or [Path('requirements.txt')]
+    for req_path in req_paths:
+        subprocess.call(['./venv/bin/pip3', 'install', '-r', str(req_path)])
+    if Path('.git').is_dir():
+        gitignore_path = Path('.gitignore')
+        if not gitignore_path.is_file():
+            gitignore_path.write_text('venv\n')
+        elif 'venv' not in gitignore_path.read_text():
+            gitignore_path.write_text(gitignore_path.read_text().rstrip() + '\nvenv\n')
+
 
 
 if __name__ == '__main__':
@@ -164,7 +183,11 @@ if __name__ == '__main__':
     install_parser = commands.add_parser('install')
     install_parser.set_defaults(func=install)
 
+    install_parser = commands.add_parser('install')
+    install_parser.set_defaults(func=install)
+
     venv_parser = commands.add_parser('venv')
+    venv_parser.add_argument('requirements_files', type=str, nargs='*', help='requirements.txt files to install from')
     venv_parser.set_defaults(func=venv)
 
     args = parser.parse_args()
