@@ -13,12 +13,13 @@ if __name__ == '__main__':
     if p.returncode != 0: sys.exit(1)
 
 
-import sys, subprocess, os
+import sys, subprocess, os, random
 from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'
 
-def get_unit_name():
+def get_unit_name() -> str:
+    # TODO: look in parent dirs for `.ksys/`
     path = Path().absolute()
     if path.parts[:2] != ('/', 'srv'):
         raise Exception(f"Not in /srv/ : {path}")
@@ -30,11 +31,12 @@ def get_unit_name():
     return unit_name
 
 def stat(args):
-    # TODO: show only the last run, like https://serverfault.com/a/974304/257963
     unit_name = get_unit_name()
-    last_run_id = subprocess.check_output(['systemctl','show','--value','-p','InvocationID',unit_name]).decode().strip()
-    cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-hostname']
-    #cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
+    if args and args.all:
+        cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
+    else:
+        last_run_id = subprocess.check_output(['systemctl','show','--value','-p','InvocationID',unit_name]).decode().strip()
+        cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-hostname']
     print(cmd)
     subprocess.call(cmd)
 
@@ -45,17 +47,125 @@ def restart(args):
     print(cmd)
     subprocess.call(cmd)
 
+systemd_service_template = '''\
+[Unit]
+Description={name}
+After=network.target
+[Service]
+User=nobody
+Group=nogroup
+WorkingDirectory={dir}
+ExecStart={exec}
+ExecStopPost=/srv/telegram-error-if-nonzero-arg1.sh $EXIT_STATUS {name}-execstoppost $EXIT_CODE $SERVICE_RESULT
+'''
+systemd_daemon_template = systemd_service_template + '''\
+[Install]
+WantedBy=multi-user.target
+'''
+systemd_scheduled_template = systemd_service_template + '''\
+Type=oneshot
+Nice=10
+'''
+systemd_timer_template = '''\
+[Unit]
+Description={name}
+[Timer]
+OnCalendar=*-*-* 00,12:00:00
+RandomizedDelaySec=3h
+Persistent=true
+[Install]
+WantedBy=timers.target
+'''
+nginx_template = '''\
+server {
+  server_name {domain};
+  listen 80;
+  location / {
+    include proxy_params;
+    proxy_pass http://localhost:{port};
+  }
+}
+'''
+
+def init(args):
+    '''Make ./.ksys/ and put config in it.'''
+    ksys_path = Path('.ksys')
+    ksys_path.mkdir(exist_ok=True)
+    name = str(args.name) if args.name else get_unit_name()
+    directory = str(Path().absolute())
+    if args.timer:
+        (ksys_path / f'{name}.service').write_text(systemd_scheduled_template.format(
+            name=name,
+            dir=directory,
+            exec='{exec}',
+        ))
+        (ksys_path / f'{name}.timer').write_text(systemd_timer_template.format(name=name))
+    elif args.nginx:
+        port = 8000 + random.randrange(1000)
+        (ksys_path / f'{name}.service').write_text(systemd_scheduled_template.format(
+            name=name,
+            dir=directory,
+            exec='{exec}' + f' --port={port}',
+        ))
+        domain = f'{name}.petervh.com'
+        (ksys_path / f'{domain}.conf').write_text(nginx_template.format(domain=domain, port=port))
+    else:
+        (ksys_path / f'{name}.service').write_text(systemd_scheduled_template.format(
+            name=name,
+            dir=directory,
+            exec='{exec}',
+        ))
+    print(f'Now populate Exec= in .ksys/{name}.service')
+
+def install(args):
+    '''Copy config to /etc/'''
+    ksys_path = Path('.ksys')
+    if not ksys_path.is_dir(): raise Exception('No directory ./.ksys')
+    for path in ksys_path.iterdir():
+        if path.suffix == '.timer':
+            dest_path = Path('/etc/systemd/system') / path.name
+            subprocess.check_output(['sudo', 'cp', '-f', str(path), str(dest_path)])
+            subprocess.check_output(['sudo', 'systemctl', 'enable', path.name])
+        elif path.suffix == '.service':
+            dest_path = Path('/etc/systemd/system') / path.name
+            subprocess.check_output(['sudo', 'cp', '-f', str(path), str(dest_path)])
+            if 'WantedBy' in path.read_text():
+                subprocess.check_output(['sudo', 'systemctl', 'enable', path.name])
+        elif path.suffix == '.conf':
+            dest_path = Path('/etc/nginx/sites-available' / path.name)
+            subprocess.check_output(['sudo', 'cp', '-f', str(path), str(dest_path)])
+            subprocess.check_output(['sudo', 'ln', '-sf', str(dest_path), '/etc/nginx/sites-enabled'])
+
+def venv(args):
+    '''Make ./venv/'''
+    subprocess.check_output(['python3', '-m', 'venv', 'venv'])
+    if os.path.exists('requirements.txt'):
+        subprocess.check_output(['./venv/bin/pip3', 'install', '-r', 'requirements.txt'])
+
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest='command')
 
-    stat_parser = commands.add_parser('stat')
+    stat_parser = commands.add_parser('stat', aliases=['s'])
+    stat_parser.add_argument('-a', '--all', action='store_true', help='Show all logs rather than only the latest run')
     stat_parser.set_defaults(func=stat)
 
-    restart_parser = commands.add_parser('restart')
+    restart_parser = commands.add_parser('restart', aliases=['r'])
     restart_parser.set_defaults(func=restart)
+
+    init_parser = commands.add_parser('init')
+    init_parser.add_argument('--name', type=str, default=None, help='What name to use (defaults to kpa-{dirname})')
+    init_parser.add_argument('--timer', action='store_true', help='Initialize as a timer rather than a daemon')
+    init_parser.add_argument('--nginx', action='store_true', help='Initialize with nginx config')
+    init_parser.set_defaults(func=init)
+
+    install_parser = commands.add_parser('install')
+    install_parser.set_defaults(func=install)
+
+    venv_parser = commands.add_parser('venv')
+    venv_parser.set_defaults(func=venv)
 
     args = parser.parse_args()
     if args.command is None:
