@@ -1,3 +1,12 @@
+;; TODO: I want something like vim's `ciw` (change inside word, change inside quotes, change inside parens, etc).
+;;       Bind this to M-i
+;;       Things I want to select/delete inside are:
+;;          + directional wrappers: ({[< >]})
+;;          + directionless wrappers: '"` \s \b
+;;       Option 1: `M-i delim` selects to prev and next <delim>.
+;;       Option 2: `M-i` selects the smallest valid area (whichever of the 9 delimiters gives that). Maybe drop \s and \b
+;;                 If we currently have a selection, the selection must grow on both ends.  Else, it's okay to use that pointer as an endpoint.
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
