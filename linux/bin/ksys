@@ -9,8 +9,12 @@
 
 if __name__ == '__main__':
     import subprocess, sys
-    p = subprocess.run(['flake8', '--show-source', '--ignore=E501,E302,E251,E701,E226,E305,E225,E261,E231,E301,E306,E402,E704,E265,E201,E202,E303,E124,E241,E127,E266,E221,E126,E129,F811,E222,E401,E702,E203,E116,E228,W504,W293,B007,W391,F841,F401', __file__])
-    if p.returncode != 0: sys.exit(1)
+    p = subprocess.run(['/usr/bin/which', 'flake8'])
+    if p.returncode != 0:
+        print('note: flake8 not found, so not checking syntax')
+    else:
+        p = subprocess.run(['flake8', '--show-source', '--ignore=E501,E302,E251,E701,E226,E305,E225,E261,E231,E301,E306,E402,E704,E265,E201,E202,E303,E124,E241,E127,E266,E221,E126,E129,F811,E222,E401,E702,E203,E116,E228,W504,W293,B007,W391,F841,F401', __file__])
+        if p.returncode != 0: sys.exit(1)
 
 
 import sys, subprocess, os, random, re
