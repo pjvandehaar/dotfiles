@@ -9,7 +9,7 @@
 
 if __name__ == '__main__':
     import subprocess, sys
-    p = subprocess.run(['/usr/bin/which', 'flake8'])
+    p = subprocess.run(['/usr/bin/which', 'flake8'], capture_output=True)
     if p.returncode != 0:
         print('note: flake8 not found, so not checking syntax')
     else:
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest='command')
 
-    stat_parser = commands.add_parser('stat', aliases=['s'])
+    stat_parser = commands.add_parser('stat', aliases=['s', 'log', 'l'])
     stat_parser.add_argument('-a', '--all', action='store_true', help='Show all logs rather than only the latest run')
     stat_parser.set_defaults(func=stat)
 
