@@ -17,7 +17,7 @@ if __name__ == '__main__':
         if p.returncode != 0: sys.exit(1)
 
 
-import sys, subprocess, os, random, re
+import sys, subprocess, os, random, re, time
 from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'
@@ -34,8 +34,8 @@ def get_unit_name() -> str:
     print(f"Using unit: {unit_name}")
     return unit_name
 
-def stat(args):
-    unit_name = get_unit_name()
+def log(args):
+    unit_name = args.unit or get_unit_name()
     if args and args.all:
         cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
     else:
@@ -44,12 +44,23 @@ def stat(args):
     print(cmd)
     subprocess.call(cmd)
 
+def stat(args):
+    unit_name = (args and args.unit) or get_unit_name()
+    cmd = ["sudo", "systemctl", "status", "-n0", unit_name]
+    print(cmd)
+    subprocess.call(cmd)
+    print()
+    cmd = ["sudo", "journalctl", "-n20", "-u", unit_name, '--no-hostname']
+    print(cmd)
+    subprocess.call(cmd)
+
 def restart(args):
-    # TODO: watch it for a second and say if it fails
-    unit_name = get_unit_name()
+    unit_name = args.unit or get_unit_name()
     cmd = ["sudo", "systemctl", "restart", unit_name]
     print(cmd)
     subprocess.call(cmd)
+    time.sleep(2)
+    subprocess.call(['sudo', 'systemctl', 'is-failed', unit_name])
 
 systemd_service_template = '''\
 [Unit]
@@ -171,11 +182,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest='command')
 
-    stat_parser = commands.add_parser('stat', aliases=['s', 'log', 'l'])
-    stat_parser.add_argument('-a', '--all', action='store_true', help='Show all logs rather than only the latest run')
+    log_parser = commands.add_parser('log', aliases=['l'])
+    log_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
+    log_parser.add_argument('-a', '--all', action='store_true', help='Show all logs rather than only the latest run')
+    log_parser.set_defaults(func=log)
+
+    stat_parser = commands.add_parser('stat', aliases=['s'])
+    stat_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
     stat_parser.set_defaults(func=stat)
 
     restart_parser = commands.add_parser('restart', aliases=['r'])
+    restart_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
     restart_parser.set_defaults(func=restart)
 
     init_parser = commands.add_parser('init')
