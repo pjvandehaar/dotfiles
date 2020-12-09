@@ -2,12 +2,7 @@
 # -*- mode: python -*-
 
 # TODO: add `ksys test`, which restarts, sends some example requests, and shows logs if failed
-# TODO: Reconsider how .ksys should work.
-#       + I'd prefer if `name`, `port`, `$(pwd)`, `domain` weren't in the files themselves, and were instead templated in.
-#       + I'd prefer if the nginx conf had a filename that clearly identified it as nginx.  What about `%etc%nginx%sites-available%foo.example.com`?  Likewise systemd.
-#       + I don't want to have SSL info inside `.ksys/`, but I also don't like that the nginx conf in that folder is different from the real conf.
 
-# TODO: add OnError=
 
 if __name__ == '__main__':
     import subprocess, sys
@@ -81,14 +76,13 @@ systemd_service_template = '''\
 [Unit]
 Description={name}
 After=network.target
+OnFailure=kpa-failure-telegram@%i.service
 
 [Service]
 User=nobody
 Group=nogroup
 WorkingDirectory={dir}
 ExecStart={exec}
-# EXIT_STATUS = number (nonzero if error); EXIT_CODE = what happened; $SERVICE_RESULT = why died
-ExecStopPost=/srv/telegram-error-if-nonzero-arg1.sh $EXIT_STATUS {name}-execstoppost $EXIT_CODE $SERVICE_RESULT
 '''
 systemd_daemon_template = systemd_service_template + '''\
 
@@ -191,7 +185,6 @@ def conf_diff(args):
         else:
             print(f"----- {path} ----- {dest_path} [[doesn't exist]]")
         print()
-
 
 
 if __name__ == '__main__':
