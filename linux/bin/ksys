@@ -7,6 +7,8 @@
 #       + I'd prefer if the nginx conf had a filename that clearly identified it as nginx.  What about `%etc%nginx%sites-available%foo.example.com`?  Likewise systemd.
 #       + I don't want to have SSL info inside `.ksys/`, but I also don't like that the nginx conf in that folder is different from the real conf.
 
+# TODO: add OnError=
+
 if __name__ == '__main__':
     import subprocess, sys
     p = subprocess.run(['/usr/bin/which', 'flake8'], capture_output=True)
@@ -90,7 +92,7 @@ Description={name}
 
 [Timer]
 OnCalendar=*-*-* 00,12:00:00
-RandomizedDelaySec=3h
+RandomizedDelaySec=1m
 Persistent=true
 
 [Install]
@@ -98,7 +100,7 @@ WantedBy=timers.target
 '''
 nginx_template = '''\
 server {
-  server_name {domain};
+  server_name {hostname};
   listen 80;
   location / {
     include proxy_params;
@@ -106,61 +108,76 @@ server {
   }
 }
 '''
-nginx_template = re.subn(r'(\s})', r'\1}', re.subn(r'({\s)', r'{\1', nginx_template)[0])[0]  # escape `{` and `}`
+nginx_template = re.subn(r'(\s})', r'\1}', re.subn(r'({\s)', r'{\1', nginx_template)[0])[0]  # escape `{ ` and ` }`
 
-def init(args):
-    '''Make ./.ksys/ and put config in it.'''
+def conf_create(args):
+    '''Create ./.ksys/ and put config in it.'''
     ksys_path = Path('.ksys')
     ksys_path.mkdir(exist_ok=True)
     name = str(args.name) if args.name else get_unit_name()
     directory = str(Path().absolute())
     if args.timer:
-        (ksys_path / f'{name}.service').write_text(systemd_scheduled_template.format(
+        filename = f'/etc/systemd/system/{name}.service'.replace('/', '%')
+        (ksys_path / filename).write_text(systemd_scheduled_template.format(
             name=name,
             dir=directory,
             exec='{exec}',
         ))
-        (ksys_path / f'{name}.timer').write_text(systemd_timer_template.format(name=name))
-    elif args.nginx:
+        filename = f'/etc/systemd/system/{name}.timer'.replace('/', '%')
+        (ksys_path / filename).write_text(systemd_timer_template.format(name=name))
+    elif args.nginx_hostname:
         port = 8000 + random.randrange(1000)
-        (ksys_path / f'{name}.service').write_text(systemd_daemon_template.format(
+        filename = f'/etc/systemd/systemd/{name}.service}'.replace('/', '%')
+        (ksys_path / filename).write_text(systemd_daemon_template.format(
             name=name,
             dir=directory,
             exec='{exec}' + f' --port={port}',
         ))
-        domain = f'{name[4:]}.petervh.com' if name.startswith('kpa-') else f'{name}.petervh.com'
-        (ksys_path / f'{domain}.conf').write_text(nginx_template.format(domain=domain, port=port))
+        hostname = args.nginx_hostname if len(args.nginx_hostname)>1 else f'{name.removeprefix("kpa-")}.petervh.com'
+        filename = f'/etc/nginx/sites-available/{args.nginx_hostname}.conf'.replace('/', '%')
+        (ksys_path / filename).write_text(nginx_template.format(hostname=nginx_hostname, port=port))
     else:
-        (ksys_path / f'{name}.service').write_text(systemd_scheduled_template.format(
+        filename = f'/etc/systemd/systemd/{name}.service}'.replace('/', '%')
+        (ksys_path / filename).write_text(systemd_scheduled_template.format(
             name=name,
             dir=directory,
             exec='{exec}',
         ))
-    print(f'Now populate Exec= in .ksys/{name}.service and run `ksys install`')
+    print(f'Now populate Exec= in .ksys/*.service and run `ksys conf-install`')
 
-
-def install(args):
-    '''Copy config to /etc/'''
+def conf_install(args):
+    '''Copy config from .ksys/ to /etc/'''
     ksys_path = Path('.ksys')
     if not ksys_path.is_dir(): raise Exception('No directory ./.ksys')
     for path in ksys_path.iterdir():
+        dest_path = Path(path.name.replace('%', '/'))
         if path.suffix == '.timer':
-            dest_path = Path('/etc/systemd/system') / path.name
             subprocess.call(['sudo', 'cp', '-f', str(path), str(dest_path)])
-            subprocess.call(['sudo', 'systemctl', 'enable', path.name])
+            subprocess.call(['sudo', 'systemctl', 'enable', dest_path.name])
         elif path.suffix == '.service':
-            dest_path = Path('/etc/systemd/system') / path.name
             subprocess.call(['sudo', 'cp', '-f', str(path), str(dest_path)])
             if 'WantedBy' in path.read_text():
-                subprocess.call(['sudo', 'systemctl', 'enable', path.name])
+                subprocess.call(['sudo', 'systemctl', 'enable', dest_path.name])
         elif path.suffix == '.conf':
-            dest_path = Path('/etc/nginx/sites-available' / path.name)
             subprocess.call(['sudo', 'cp', '-f', str(path), str(dest_path)])
             subprocess.call(['sudo', 'ln', '-sf', str(dest_path), '/etc/nginx/sites-enabled'])
             subprocess.call(['sudo', 'nginx', '-t'])
             subprocess.call(['sudo', 'systemctl', 'restart', 'nginx'])
-            print('Maybe now run `certbot`')
+            print('You might need to run `certbot`')
         subprocess.call(['sudo', 'systemctl', 'daemon-reload'])
+
+def conf_diff(args):
+    '''Diff config in .ksys/ against /etc/'''
+    ksys_path = Path('.ksys')
+    if not ksys_path.is_dir(): raise Exception('No directory ./.ksys')
+    for path in ksys_path.iterdir():
+        dest_path = Path(path.name.replace('%', '/'))
+        if dest_path.exists():
+            print(f'----- {path} ----- {dest_path}')
+            subprocess.call(['ptrdiff', str(path), str(dest_path)])
+        else:
+            print(f"----- {path} ----- {dest_path} [[doesn't exist]]")
+        print()
 
 def venv(args):
     '''Make ./venv/ and append "venv" to .gitignore'''
@@ -195,17 +212,17 @@ if __name__ == '__main__':
     restart_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
     restart_parser.set_defaults(func=restart)
 
-    init_parser = commands.add_parser('init')
-    init_parser.add_argument('--name', type=str, default=None, help='What name to use (defaults to kpa-{dirname})')
-    init_parser.add_argument('--timer', action='store_true', help='Initialize as a timer rather than a daemon')
-    init_parser.add_argument('--nginx', action='store_true', help='Initialize with nginx config')
-    init_parser.set_defaults(func=init)
+    conf_create_parser = commands.add_parser('conf-create')
+    conf_create_parser.add_argument('--name', type=str, default=None, help='What name to use (defaults to kpa-{dirname})')
+    conf_create_parser.add_argument('--timer', action='store_true', help='Create a timer rather than a daemon')
+    conf_create_parser.add_argument('--nginx_hostname', type=str, default=None, help='Create nginx config for a daemon listening on this hostname (or `.` for default')
+    conf_create_parser.set_defaults(func=conf_create)
 
-    install_parser = commands.add_parser('install')
-    install_parser.set_defaults(func=install)
+    conf_install_parser = commands.add_parser('conf-install')
+    conf_install_parser.set_defaults(func=conf_install)
 
-    install_parser = commands.add_parser('install')
-    install_parser.set_defaults(func=install)
+    conf_diff_parser = commands.add_parser('conf-diff')
+    conf_diff_parser.set_defaults(func=conf_diff)
 
     venv_parser = commands.add_parser('venv')
     venv_parser.add_argument('requirements_files', type=str, nargs='*', help='requirements.txt files to install from')
