@@ -64,6 +64,19 @@ def restart(args):
     time.sleep(2)
     subprocess.call(['sudo', 'systemctl', 'is-failed', unit_name])
 
+def venv(args):
+    '''Make ./venv/ and append "venv" to .gitignore'''
+    subprocess.call(['python3', '-m', 'venv', 'venv'])
+    req_paths = [Path(p) for p in args.requirements_files] or [Path('requirements.txt')]
+    for req_path in req_paths:
+        subprocess.call(['./venv/bin/pip3', 'install', '-r', str(req_path)])
+    if Path('.git').is_dir():
+        gitignore_path = Path('.gitignore')
+        if not gitignore_path.is_file():
+            gitignore_path.write_text('venv\n')
+        elif 'venv' not in gitignore_path.read_text():
+            gitignore_path.write_text(gitignore_path.read_text().rstrip() + '\nvenv\n')
+
 systemd_service_template = '''\
 [Unit]
 Description={name}
@@ -179,19 +192,6 @@ def conf_diff(args):
             print(f"----- {path} ----- {dest_path} [[doesn't exist]]")
         print()
 
-def venv(args):
-    '''Make ./venv/ and append "venv" to .gitignore'''
-    subprocess.call(['python3', '-m', 'venv', 'venv'])
-    req_paths = [Path(p) for p in args.requirements_files] or [Path('requirements.txt')]
-    for req_path in req_paths:
-        subprocess.call(['./venv/bin/pip3', 'install', '-r', str(req_path)])
-    if Path('.git').is_dir():
-        gitignore_path = Path('.gitignore')
-        if not gitignore_path.is_file():
-            gitignore_path.write_text('venv\n')
-        elif 'venv' not in gitignore_path.read_text():
-            gitignore_path.write_text(gitignore_path.read_text().rstrip() + '\nvenv\n')
-
 
 
 if __name__ == '__main__':
@@ -212,6 +212,10 @@ if __name__ == '__main__':
     restart_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
     restart_parser.set_defaults(func=restart)
 
+    venv_parser = commands.add_parser('venv')
+    venv_parser.add_argument('requirements_files', type=str, nargs='*', help='requirements.txt files to install from')
+    venv_parser.set_defaults(func=venv)
+
     conf_create_parser = commands.add_parser('conf-create')
     conf_create_parser.add_argument('--name', type=str, default=None, help='What name to use (defaults to kpa-{dirname})')
     conf_create_parser.add_argument('--timer', action='store_true', help='Create a timer rather than a daemon')
@@ -223,10 +227,6 @@ if __name__ == '__main__':
 
     conf_diff_parser = commands.add_parser('conf-diff')
     conf_diff_parser.set_defaults(func=conf_diff)
-
-    venv_parser = commands.add_parser('venv')
-    venv_parser.add_argument('requirements_files', type=str, nargs='*', help='requirements.txt files to install from')
-    venv_parser.set_defaults(func=venv)
 
     args = parser.parse_args()
     if args.command is None:
