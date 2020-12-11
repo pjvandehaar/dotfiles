@@ -14,7 +14,7 @@ if __name__ == '__main__':
         if p.returncode != 0: sys.exit(1)
 
 
-import sys, subprocess, os, random, re, time
+import sys, subprocess, os, random, re, time, shutil
 from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'
@@ -122,7 +122,7 @@ def conf_create(args):
     ksys_path = Path('.ksys')
     ksys_path.mkdir(exist_ok=True)
     name = str(args.name) if args.name else get_unit_name()
-    directory = str(Path().absolute())
+    directory = str(Path().absolute()) + '/'  # aesthetic
     if args.timer:
         filename = f'/etc/systemd/system/{name}.service'.replace('/', '%')
         (ksys_path / filename).write_text(systemd_scheduled_template.format(
@@ -134,39 +134,38 @@ def conf_create(args):
         (ksys_path / filename).write_text(systemd_timer_template.format(name=name))
     elif args.nginx_hostname:
         port = 8000 + random.randrange(1000)
-        filename = f'/etc/systemd/systemd/{name}.service}'.replace('/', '%')
+        filename = f'/etc/systemd/system/{name}.service'.replace('/', '%')
         (ksys_path / filename).write_text(systemd_daemon_template.format(
             name=name,
             dir=directory,
             exec='{exec}' + f' --port={port}',
         ))
-        hostname = args.nginx_hostname if len(args.nginx_hostname)>1 else f'{name.removeprefix("kpa-")}.petervh.com'
-        filename = f'/etc/nginx/sites-available/{args.nginx_hostname}.conf'.replace('/', '%')
-        (ksys_path / filename).write_text(nginx_template.format(hostname=nginx_hostname, port=port))
+        hostname = args.nginx_hostname if len(args.nginx_hostname)>1 else (f'{name[4:]}.petervh.com' if name.startswith('kpa-') else f'{name}.petervh.com')
+        filename = f'/etc/nginx/sites-available/{hostname}'.replace('/', '%')
+        (ksys_path / filename).write_text(nginx_template.format(hostname=hostname, port=port))
     else:
-        filename = f'/etc/systemd/systemd/{name}.service}'.replace('/', '%')
-        (ksys_path / filename).write_text(systemd_scheduled_template.format(
+        filename = f'/etc/systemd/system/{name}.service'.replace('/', '%')
+        (ksys_path / filename).write_text(systemd_daemon_template.format(
             name=name,
             dir=directory,
             exec='{exec}',
         ))
-    print(f'Now populate Exec= in .ksys/*.service and run `ksys conf-install`')
+    print('Now populate Exec= in .ksys/*.service and run `ksys conf-diff` and `ksys conf-install`')
 
 def conf_install(args):
     '''Copy config from .ksys/ to /etc/'''
     ksys_path = Path('.ksys')
     if not ksys_path.is_dir(): raise Exception('No directory ./.ksys')
     for path in ksys_path.iterdir():
+        if path.name.endswith('~') or '#' in path.name: continue  # temp file
         dest_path = Path(path.name.replace('%', '/'))
-        if path.suffix == '.timer':
-            subprocess.call(['sudo', 'cp', '-f', str(path), str(dest_path)])
+        subprocess.call(['sudo', 'cp', '-f', str(path), str(dest_path)])
+        if path.name.startswith('%etc%systemd') and path.suffix == '.timer':
             subprocess.call(['sudo', 'systemctl', 'enable', dest_path.name])
-        elif path.suffix == '.service':
-            subprocess.call(['sudo', 'cp', '-f', str(path), str(dest_path)])
+        elif path.name.startswith('%etc%systemd') and path.suffix == '.service':
             if 'WantedBy' in path.read_text():
                 subprocess.call(['sudo', 'systemctl', 'enable', dest_path.name])
-        elif path.suffix == '.conf':
-            subprocess.call(['sudo', 'cp', '-f', str(path), str(dest_path)])
+        elif path.name.startswith('%etc%nginx'):
             subprocess.call(['sudo', 'ln', '-sf', str(dest_path), '/etc/nginx/sites-enabled'])
             subprocess.call(['sudo', 'nginx', '-t'])
             subprocess.call(['sudo', 'systemctl', 'restart', 'nginx'])
@@ -177,13 +176,15 @@ def conf_diff(args):
     '''Diff config in .ksys/ against /etc/'''
     ksys_path = Path('.ksys')
     if not ksys_path.is_dir(): raise Exception('No directory ./.ksys')
+    num_cols = shutil.get_terminal_size((80, 20)).columns
     for path in ksys_path.iterdir():
+        if path.name.endswith('~') or '#' in path.name: continue  # temp file
         dest_path = Path(path.name.replace('%', '/'))
         if dest_path.exists():
-            print(f'----- {path} ----- {dest_path}')
-            subprocess.call(['ptrdiff', str(path), str(dest_path)])
+            print(f'===== {path} ===== {dest_path}')
+            subprocess.call(['diff', '-dyb', f'--width={num_cols}', str(path), str(dest_path)])
         else:
-            print(f"----- {path} ----- {dest_path} [[doesn't exist]]")
+            print(f"===== {path} ===== {dest_path} [[doesn't exist]]")
         print()
 
 
@@ -212,7 +213,7 @@ if __name__ == '__main__':
     conf_create_parser = commands.add_parser('conf-create')
     conf_create_parser.add_argument('--name', type=str, default=None, help='What name to use (defaults to kpa-{dirname})')
     conf_create_parser.add_argument('--timer', action='store_true', help='Create a timer rather than a daemon')
-    conf_create_parser.add_argument('--nginx_hostname', type=str, default=None, help='Create nginx config for a daemon listening on this hostname (or `.` for default')
+    conf_create_parser.add_argument('--nginx-hostname', type=str, default=None, help='Create nginx config for a daemon listening on this hostname (or `.` for default')
     conf_create_parser.set_defaults(func=conf_create)
 
     conf_install_parser = commands.add_parser('conf-install')
