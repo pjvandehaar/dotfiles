@@ -37,6 +37,7 @@ def log(args):
         cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
     elif args and args.follow:
         cmd = ["sudo", "journalctl", "-u", unit_name, '--follow']
+        print('--- Ctrl-C quits ---')
     else:
         last_run_id = subprocess.check_output(['systemctl','show','--value','-p','InvocationID',unit_name]).decode().strip()
         cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-hostname']
