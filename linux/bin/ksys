@@ -35,11 +35,16 @@ def log(args):
     unit_name = args.unit or get_unit_name()
     if args and args.all:
         cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
+    elif args and args.tail:
+        cmd = ["sudo", "journalctl", "-u", unit_name, '--follow']
     else:
         last_run_id = subprocess.check_output(['systemctl','show','--value','-p','InvocationID',unit_name]).decode().strip()
         cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-hostname']
     print(cmd)
-    subprocess.call(cmd)
+    try:
+        subprocess.call(cmd)
+    except KeyboardInterrupt:
+        print()
 
 def stat(args):
     unit_name = (args and args.unit) or get_unit_name()
@@ -196,6 +201,7 @@ if __name__ == '__main__':
     log_parser = commands.add_parser('log', aliases=['l'])
     log_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
     log_parser.add_argument('-a', '--all', action='store_true', help='Show all logs rather than only the latest run')
+    log_parser.add_argument('-t', '--tail', action='store_true', help='Tail')
     log_parser.set_defaults(func=log)
 
     stat_parser = commands.add_parser('stat', aliases=['s'])
