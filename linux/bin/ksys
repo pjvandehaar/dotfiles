@@ -67,10 +67,18 @@ def restart(args):
 
 def venv(args):
     '''Make ./venv/ and append "venv" to .gitignore'''
+    if Path('venv').exists():
+        if args.force: shutil.rmtree('venv'); print('rm -rf venv')
+        else: raise Exception('`./venv/` already exists.  Use -f to overwrite.')
     subprocess.call(['python3', '-m', 'venv', 'venv'])
-    req_paths = [Path(p) for p in args.requirements_files] or [Path('requirements.txt')]
-    for req_path in req_paths:
-        subprocess.call(['./venv/bin/pip3', 'install', '-r', str(req_path)])
+
+    req_paths = [Path(p) for p in args.requirement]
+    if Path('requirements.txt').exists(): req_paths.append(Path('requirements.txt'))
+    for req_path in req_paths: subprocess.call(['./venv/bin/pip3', 'install', '-r', str(req_path)])
+
+    epkg_paths = [Path(p) for p in args.editable]
+    for epkg_path in epkg_paths: subprocess.call(['./venv/bin/pip3', 'install', '-e', str(epkg_path)])
+
     if Path('.git').is_dir():
         gitignore_path = Path('.gitignore')
         if not gitignore_path.is_file():
@@ -214,7 +222,9 @@ if __name__ == '__main__':
     restart_parser.set_defaults(func=restart)
 
     venv_parser = commands.add_parser('venv')
-    venv_parser.add_argument('requirements_files', type=str, nargs='*', help='requirements.txt files to install from')
+    venv_parser.add_argument('-f', '--force', action='store_true', help='Overwrite any existing `./venv/`')
+    venv_parser.add_argument('-r', '--requirement', type=str, default=[], action='append', help='an extra requirements.txt file to install from using `pip install -r` (./requirements.txt is always installed from if it exists)')
+    venv_parser.add_argument('-e', '--editable', type=str, default=[], action='append', help='an editable package to install using `pip install -e`')
     venv_parser.set_defaults(func=venv)
 
     conf_create_parser = commands.add_parser('conf-create')
