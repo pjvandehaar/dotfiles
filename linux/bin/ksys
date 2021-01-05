@@ -49,11 +49,11 @@ def log(args):
 
 def stat(args):
     unit_name = (args and args.unit) or get_unit_name()
-    cmd = ["sudo", "systemctl", "status", "-n0", unit_name]
+    cmd = ["sudo", "systemctl", "--no-pager", "status", "-n0", unit_name]
     print(cmd)
     subprocess.call(cmd)
     print()
-    cmd = ["sudo", "journalctl", "-n20", "-u", unit_name, '--no-hostname']
+    cmd = ["sudo", "journalctl", "--no-pager", "-n20", "-u", unit_name, '--no-hostname']
     print(cmd)
     subprocess.call(cmd)
 
