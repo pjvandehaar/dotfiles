@@ -14,7 +14,7 @@ if __name__ == '__main__':
         if p.returncode != 0: sys.exit(1)
 
 
-import sys, subprocess, os, random, re, time, shutil
+import sys, subprocess, os, random, re, time, shutil, json
 from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'
@@ -36,7 +36,7 @@ def log(args):
     if args and args.all:
         cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
     elif args and args.follow:
-        cmd = ["sudo", "journalctl", "-u", unit_name, '--follow']
+        cmd = ["sudo", "journalctl", "-u", unit_name, '--follow', '--no-hostname']
         print('--- Ctrl-C quits ---')
     else:
         last_run_id = subprocess.check_output(['systemctl','show','--value','-p','InvocationID',unit_name]).decode().strip()
@@ -58,15 +58,34 @@ def stat(args):
     subprocess.call(cmd)
 
 def restart(args):
+    '''Restart a service, and then show some logs to let you verify that it's working.'''
     unit_name = args.unit or get_unit_name()
+    try: cursor = json.loads(subprocess.check_output(['sudo', 'journalctl', '-u', unit_name, '--quiet', '--output-fields=__CURSOR', '-n1', '--output=json']))['__CURSOR']
+    except Exception: cursor = None
+    # Restart
     cmd = ["sudo", "systemctl", "restart", unit_name]
-    print(cmd)
-    subprocess.call(cmd)
-    time.sleep(2)
+    print(cmd); subprocess.call(cmd); print()
+
+    # Note: `systemctl restart` waits for a type=oneshot service to exit.
+    service_type = subprocess.check_output(['systemctl', 'show', '--value', '--property=Type', unit_name]).decode().strip()
+    if service_type == 'oneshot':
+        if cursor:
+            cmd = ['sudo', 'journalctl', '-u', unit_name, '--no-hostname', '--after-cursor', cursor]
+        else:
+            last_run_id = subprocess.check_output(['systemctl','show','--value','-property=InvocationID',unit_name]).decode().strip()
+            cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-hostname']
+    else:
+        cmd = ["sudo", "journalctl", '--follow', '-n1', '--no-hostname', "-u", unit_name]
+        print('--- Ctrl-C quits ---')
+    try: subprocess.call(cmd)
+    except KeyboardInterrupt: pass
+    print()
+
+    # Show the current state of the service
     subprocess.call(['sudo', 'systemctl', 'is-failed', unit_name])
 
 def venv(args):
-    '''Make ./venv/ and append "venv" to .gitignore'''
+    '''Make ./venv/ and gitignore it.'''
     if Path('venv').exists():
         if args.force: shutil.rmtree('venv'); print('rm -rf venv')
         else: raise Exception('`./venv/` already exists.  Use -f to overwrite.')
