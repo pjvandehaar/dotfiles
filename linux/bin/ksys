@@ -194,11 +194,13 @@ def conf_diff(args):
     for path in ksys_path.iterdir():
         if path.name.endswith('~') or '#' in path.name: continue  # temp file
         dest_path = Path(path.name.replace('%', '/'))
-        if dest_path.exists():
+        if not dest_path.exists():
+            print(f"===== {path} ===== {dest_path} [[doesn't exist]]")
+        elif dest_path.read_text() == path.read_text():
+            print(f'===== {path} ===== {dest_path} == [[identical]]')
+        else:
             print(f'===== {path} ===== {dest_path}')
             subprocess.call(['diff', '-dyb', f'--width={num_cols}', str(path), str(dest_path)])
-        else:
-            print(f"===== {path} ===== {dest_path} [[doesn't exist]]")
         print()
 
 
