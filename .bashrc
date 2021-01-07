@@ -61,6 +61,7 @@ unalias path glq gh h cdl mcd 2>/dev/null
 
 path() { echo "$PATH" | tr : "\n"; }
 alias e="\$EDITOR"
+ew() { "$EDITOR" "$(which "$1")"; }
 alias ta="tig --all"
 alias gs='git status'
 alias gg='git grep'

@@ -5,16 +5,15 @@
 
 
 if __name__ == '__main__':
-    import subprocess, sys
-    p = subprocess.run(['/usr/bin/which', 'flake8'], capture_output=True)
-    if p.returncode != 0:
-        print('note: flake8 not found, so not checking syntax')
-    else:
-        p = subprocess.run(['flake8', '--show-source', '--ignore=E501,E302,E251,E701,E226,E305,E225,E261,E231,E301,E306,E402,E704,E265,E201,E202,E303,E124,E241,E127,E266,E221,E126,E129,F811,E222,E401,E702,E203,E116,E228,W504,W293,B007,W391,F841,F401', __file__])
-        if p.returncode != 0: sys.exit(1)
+    # This is slow, so only run it soon after modifying this file, or otherwise randomly.
+    import time, random; from pathlib import Path
+    if (time.time() - Path(__file__).stat().st_mtime) < 30 or random.random() < 0.01:
+        try: import kpa.dev_utils
+        except ImportError: pass
+        else: kpa.dev_utils.run(__file__)
 
 
-import sys, subprocess, os, random, re, time, shutil, json
+import subprocess, os, random, re, shutil, json
 from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'
@@ -70,12 +69,12 @@ def restart(args):
     service_type = subprocess.check_output(['systemctl', 'show', '--value', '--property=Type', unit_name]).decode().strip()
     if service_type == 'oneshot':
         if cursor:
-            cmd = ['sudo', 'journalctl', '-u', unit_name, '--no-hostname', '--after-cursor', cursor]
+            cmd = ['sudo', 'journalctl', '-u', unit_name, '--no-pager', '--no-hostname', '--after-cursor', cursor]
         else:
             last_run_id = subprocess.check_output(['systemctl','show','--value','-property=InvocationID',unit_name]).decode().strip()
-            cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-hostname']
+            cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-pager', '--no-hostname']
     else:
-        cmd = ["sudo", "journalctl", '--follow', '-n1', '--no-hostname', "-u", unit_name]
+        cmd = ["sudo", "journalctl", '--follow', '--no-pager', '-n1', '--no-hostname', "-u", unit_name]
         print('--- Ctrl-C quits ---')
     try: subprocess.call(cmd)
     except KeyboardInterrupt: pass
