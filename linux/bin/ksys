@@ -18,6 +18,10 @@ from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'
 
+def print_and_run(argv):
+    print(argv)
+    subprocess.call(argv)
+
 def get_unit_name() -> str:
     # TODO: look in parent dirs for `.ksys/`
     path = Path().absolute()
@@ -40,21 +44,17 @@ def log(args):
     else:
         last_run_id = subprocess.check_output(['systemctl','show','--value','-p','InvocationID',unit_name]).decode().strip()
         cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-hostname']
-    print(cmd)
     try:
-        subprocess.call(cmd)
+        print_and_run(cmd)
     except KeyboardInterrupt:
         print()
 
 def stat(args):
     unit_name = (args and args.unit) or get_unit_name()
     cmd = ["sudo", "systemctl", "--no-pager", "status", "-n0", unit_name]
-    print(cmd)
-    subprocess.call(cmd)
-    print()
+    print_and_run(cmd); print()
     cmd = ["sudo", "journalctl", "--no-pager", "-n20", "-u", unit_name, '--no-hostname']
-    print(cmd)
-    subprocess.call(cmd)
+    print_and_run(cmd)
 
 def restart(args):
     '''Restart a service, and then show some logs to let you verify that it's working.'''
@@ -63,7 +63,7 @@ def restart(args):
     except Exception: cursor = None
     # Restart
     cmd = ["sudo", "systemctl", "restart", unit_name]
-    print(cmd); subprocess.call(cmd); print()
+    print_and_run(cmd); print()
 
     # Note: `systemctl restart` waits for a type=oneshot service to exit.
     service_type = subprocess.check_output(['systemctl', 'show', '--value', '--property=Type', unit_name]).decode().strip()
@@ -88,14 +88,14 @@ def venv(args):
     if Path('venv').exists():
         if args.force: shutil.rmtree('venv'); print('rm -rf venv')
         else: raise Exception('`./venv/` already exists.  Use -f to overwrite.')
-    subprocess.call(['python3', '-m', 'venv', 'venv'])
+    print_and_run([args.python, '-m', 'venv', 'venv'])
 
     req_paths = [Path(p) for p in args.requirement]
     if Path('requirements.txt').exists(): req_paths.append(Path('requirements.txt'))
-    for req_path in req_paths: subprocess.call(['./venv/bin/pip3', 'install', '-r', str(req_path)])
+    for req_path in req_paths: print_and_run(['./venv/bin/pip3', 'install', '-r', str(req_path)])
 
     epkg_paths = [Path(p) for p in args.editable]
-    for epkg_path in epkg_paths: subprocess.call(['./venv/bin/pip3', 'install', '-e', str(epkg_path)])
+    for epkg_path in epkg_paths: print_and_run(['./venv/bin/pip3', 'install', '-e', str(epkg_path)])
 
     if Path('.git').is_dir():
         gitignore_path = Path('.gitignore')
@@ -191,18 +191,18 @@ def conf_install(args):
     for path in ksys_path.iterdir():
         if path.name.endswith('~') or '#' in path.name: continue  # temp file
         dest_path = Path(path.name.replace('%', '/'))
-        subprocess.call(['sudo', 'cp', '-f', str(path), str(dest_path)])
+        print_and_run(['sudo', 'cp', '-f', str(path), str(dest_path)])
         if path.name.startswith('%etc%systemd') and path.suffix == '.timer':
-            subprocess.call(['sudo', 'systemctl', 'enable', dest_path.name])
+            print_and_run(['sudo', 'systemctl', 'enable', dest_path.name])
         elif path.name.startswith('%etc%systemd') and path.suffix == '.service':
             if 'WantedBy' in path.read_text():
-                subprocess.call(['sudo', 'systemctl', 'enable', dest_path.name])
+                print_and_run(['sudo', 'systemctl', 'enable', dest_path.name])
         elif path.name.startswith('%etc%nginx'):
-            subprocess.call(['sudo', 'ln', '-sf', str(dest_path), '/etc/nginx/sites-enabled'])
-            subprocess.call(['sudo', 'nginx', '-t'])
-            subprocess.call(['sudo', 'systemctl', 'restart', 'nginx'])
+            print_and_run(['sudo', 'ln', '-sf', str(dest_path), '/etc/nginx/sites-enabled'])
+            print_and_run(['sudo', 'nginx', '-t'])
+            print_and_run(['sudo', 'systemctl', 'restart', 'nginx'])
             print('You might need to run `certbot`')
-        subprocess.call(['sudo', 'systemctl', 'daemon-reload'])
+        print_and_run(['sudo', 'systemctl', 'daemon-reload'])
 
 def conf_diff(args):
     '''Diff config in .ksys/ against /etc/'''
@@ -245,6 +245,7 @@ if __name__ == '__main__':
     venv_parser.add_argument('-f', '--force', action='store_true', help='Overwrite any existing `./venv/`')
     venv_parser.add_argument('-r', '--requirement', type=str, default=[], action='append', help='an extra requirements.txt file to install from using `pip install -r` (./requirements.txt is always installed from if it exists)')
     venv_parser.add_argument('-e', '--editable', type=str, default=[], action='append', help='an editable package to install using `pip install -e`')
+    venv_parser.add_argument('-p', '--python', type=str, default='python3', help='the python executable to use')
     venv_parser.set_defaults(func=venv)
 
     conf_create_parser = commands.add_parser('conf-create')
