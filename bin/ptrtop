@@ -17,7 +17,7 @@
 #        kbps_in, kbps_out, %tcp_retransmission
 
 
-import psutil, signal, time, sys, itertools, shutil, functools, subprocess
+import psutil, signal, time, sys, itertools, shutil, functools, subprocess, re
 from psutil import AccessDenied
 
 
@@ -151,8 +151,9 @@ def repr_name(x):
         if x['cmdline']==['SCREEN']: return 'screen'
         if x['cmdline']==['/usr/local/bin/bash','-l']: return 'bash'
         if x['cmdline'][0].endswith('iTerm2'): return 'iTerm2'
-        if len(x['cmdline'][0]) > 30: return x['cmdline'][0].split('/')[-1] + ' '  + ' '.join(x['cmdline'][1:])
-        return ' '.join(x['cmdline'])
+        argv = [x['cmdline'][0] if len(x['cmdline'][0]) < 30 else x['cmdline'][0].split('/')[-1]] + x['cmdline'][1:]
+        argv = [repr(arg) if re.search(r'\s', arg) else arg for arg in argv]  # repr args that contain whitespace
+        return ' '.join(argv)
     if x.get('exe',''): return x['exe'].split('/')[-1]
     if x.get('name','')=='sshd': return 'sshd' # to reduce clutter
     if x.get('name',''): return x['name']
