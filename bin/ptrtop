@@ -16,6 +16,9 @@
 #        `df`, disk reads/second, disk read latency,
 #        kbps_in, kbps_out, %tcp_retransmission
 
+# TODO: consider running `sudo lsof -p $PID -oO` read/write/both and the current offset for opened files
+#       + then do Path(path).stat().st_size to those
+
 
 import psutil, signal, time, sys, itertools, shutil, functools, subprocess, re
 from psutil import AccessDenied
