@@ -23,16 +23,20 @@ def print_and_run(argv):
     subprocess.call(argv)
 
 def get_unit_name() -> str:
-    # TODO: look in parent dirs for `.ksys/`
+    # First, look in parent dirs for `.ksys/`.
     path = Path().absolute()
-    if path.parts[:2] != ('/', 'srv'):
-        raise Exception(f"Not in /srv/ : {path}")
-    if len(path.parts) < 3:
-        raise Exception("Cannot run directly in /srv/")
-    project_name = path.parts[2]
-    unit_name = f"kpa-{project_name}"
-    print(f"Using unit: {unit_name}")
-    return unit_name
+    while path:
+        if (ksys_path := (path / '.ksys')).is_dir():
+            for filepath in ksys_path.iterdir():
+                filename = filepath.name.split('%')[-1]
+                if filename.endswith('.service') or filename.endswith('.timer'):
+                    return '.'.join(filename.split('.')[:-1])
+        if path == path.parent: break
+        path = path.parent
+    # Next, see if we're in `/srv/*/`.
+    if path.parts[:2] != ('/', 'srv') or len(path.parts) < 3:
+        raise Exception(f"Not in /srv/*/ : {path}")
+    return f"kpa-{path.parts[2]}"
 
 def log(args):
     unit_name = args.unit or get_unit_name()
@@ -186,6 +190,7 @@ def conf_create(args):
 
 def conf_install(args):
     '''Copy config from .ksys/ to /etc/'''
+    # TODO: check parents for .ksys/
     ksys_path = Path('.ksys')
     if not ksys_path.is_dir(): raise Exception('No directory ./.ksys')
     for path in ksys_path.iterdir():
@@ -206,6 +211,7 @@ def conf_install(args):
 
 def conf_diff(args):
     '''Diff config in .ksys/ against /etc/'''
+    # TODO: check parents for .ksys/
     ksys_path = Path('.ksys')
     if not ksys_path.is_dir(): raise Exception('No directory ./.ksys')
     num_cols = shutil.get_terminal_size((80, 20)).columns
