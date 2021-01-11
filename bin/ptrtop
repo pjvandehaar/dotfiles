@@ -16,10 +16,19 @@
 #        `df`, disk reads/second, disk read latency,
 #        kbps_in, kbps_out, %tcp_retransmission
 
-# TODO: consider running `sudo lsof -p $PID -oO` read/write/both and the current offset for opened files
-#       + then do Path(path).stat().st_size to those
+# TODO: Consider showing R/S/D state in tree
 
 
+if __name__ == '__main__':
+    # This is slow, so only run it soon after modifying this file, or otherwise randomly.
+    import time, random; from pathlib import Path
+    if (time.time() - Path(__file__).stat().st_mtime) < 30 or random.random() < 0.01:
+        try: import kpa.dev_utils
+        except ImportError: pass
+        else: kpa.dev_utils.run(__file__)
+
+
+from typing import Dict, Optional, Callable, Tuple, Any
 import psutil, signal, time, sys, itertools, shutil, functools, subprocess, re
 from psutil import AccessDenied
 
@@ -198,7 +207,7 @@ def inspect_pid(pid):
         exit(1)
 
     try:
-        for i, (k,v) in enumerate(p.environ().items()):
+        for i, (k,v) in enumerate(sorted(p.environ().items())):
             if i == 0: print('[environ]')
             print(f'- {k:30} = {v}')
     except psutil.AccessDenied:
@@ -206,17 +215,25 @@ def inspect_pid(pid):
     print()
 
     try:
-        for i, mmap in enumerate(p.memory_maps()):
+        for i, mmap_path in enumerate(sorted(mmap.path for mmap in p.memory_maps())):
             if i == 0: print('[memory maps]')
-            print(mmap.path)
+            print(' ', mmap_path)
     except (psutil.AccessDenied, AttributeError):
         print('[cannot access memory maps]')
     print()
 
     try:
-        for i, f in enumerate(p.open_files()):
+        for i, f in enumerate(sorted(p.open_files(), key=lambda f:f.path)):
             if i == 0: print('[open files]')
-            print(f.path)
+            try:
+                if f.position > 1e6:
+                    size = Path(f.path).stat().st_size
+                    percent = f.position / size * 99
+                    print(f'{f.position:15,}({percent:02.0f}%) {f.mode}  {f.path}')
+                else:
+                    print(f'{f.position:15,}      {f.mode}  {f.path}')
+            except Exception:
+                print(' ', f.path)
     except psutil.AccessDenied:
         print('[cannot access open files]')
     print()
@@ -226,27 +243,31 @@ def inspect_pid(pid):
         try:return f'{"["+a.ip+"]":>15}:{a.port:<6}' if ':' in a.ip else f'{a.ip:>15}:{a.port:<6}'
         except Exception: return repr(a)
     try:
-        for i, c in enumerate(p.connections()):
+        conns = p.connections()
+        for i, c in enumerate(conns):
             if i == 0: print('[connections]')
-            try:print(f'{c.status:12}  {repr_addr(c.laddr)}  {repr_addr(c.raddr)}  {repr(c.type)}  {repr(c.family)}')
+            try:print(' ', f'{c.status:12}  {repr_addr(c.laddr)}  {repr_addr(c.raddr)}  {repr(c.type)}  {repr(c.family)}')
             except Exception: print(c)
+            if i+1 == len(conns): print()
     except psutil.AccessDenied:
-        print('[cannot access connections]')
-    print()
+        print('[cannot access connections]\n')
 
     try:
-        io_str = str(p.io_counters())
+        pio = p.io_counters()
         print('[io]')
-        print(io_str)
+        try:
+            for label, num in sorted(pio._asdict().items()):
+                print(f'  {label}: {num:,}')
+        except Exception:
+            print(' ', str(pio))
     except (psutil.AccessDenied, AttributeError):
         print('[cannot access bytes read/written]')
     print()
 
-    print(p); print()
-    print(p.cmdline()); print()
     print(f'#threads: {p.num_threads()}'); print()
     print(f'ctx switches: {p.num_ctx_switches()}'); print()
-
+    print(p); print()
+    print(p.cmdline()); print()
 
 
 if __name__ == '__main__':
@@ -260,12 +281,14 @@ if __name__ == '__main__':
         print(' ptrtop --users          show resources used by each user')
         print("Some information requires `sudo` for others' processes.")
 
+    # Print info about one PID
     elif sys.argv[1:] and all(arg.isdigit() for arg in sys.argv[1:]):
         for arg in sys.argv[1:]:
             inspect_pid(int(arg)); print()
 
+    # Summarize resource use by each user
     elif sys.argv[1:] == ['--users']:
-        users = {}
+        users: Dict[str, Dict[str, float]] = {}
         xs = []
         for proc in psutil.process_iter(attrs='username cpu_times memory_info num_fds connections'.split()):
             i = proc.info
@@ -292,20 +315,22 @@ if __name__ == '__main__':
         total_used = {'cpu': sum(d['cpu'] for d in users.values()), 'mem_rss': sum(d['mem_rss'] for d in users.values())}
         def user_is_idle(d): return repr_cpu(d).strip()=='.' and repr_mem(d).strip()=='.' and d['num_fds']==0 and d['num_con']==0
         username_len = max(max(len(u) for u,d in users.items() if not user_is_idle(d)), len('[available] '))
-        def repr_username(u): return f'{u[:username_len]:{username_len}}'
+        def repr_username(u:str): return f'{u[:username_len]:{username_len}}'
         print(f'{repr_username("[available]")}{repr_cpu(system_avail)} {repr_mem(system_avail)}')
         print(f'{repr_username("[used]")}{repr_cpu(total_used)} {repr_mem(total_used)}')
         print(f'{repr_username(" ")}  %CPU      MB   #FD  #CON')
-        for u, d in sorted(users.items(), key=lambda a: a[1]['mem_rss'], reverse=True):
+        for username, d in sorted(users.items(), key=lambda a: a[1]['mem_rss'], reverse=True):
+            d = users[username]
             if user_is_idle(d): continue
-            print(f"{repr_username(u)}{repr_cpu(d)} {repr_mem(d)}{d['num_fds'] or '.':>6}{d['num_con'] or '.':>6}")
+            print(f"{repr_username(username)}{repr_cpu(d)} {repr_mem(d)}{d['num_fds'] or '.':>6}{d['num_con'] or '.':>6}")
 
+    # Show the whole process tree, possibly filtered to some users
     else:
+        p_sort_key: Optional[Callable[[Any], Tuple[Any, Any, Any]]] = None
         if '--fd' in sys.argv[1:]:    p_sort_key = lambda p: (-p['family']['num_fds'], -p['family']['num_con'], p['pid'])
         elif '--con' in sys.argv[1:]: p_sort_key = lambda p: (-p['family']['num_con'], -p['family']['num_fds'], p['pid'])
         elif '--cpu' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/2**20, 0), p['pid'])
         elif '--mem' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
-        else:                         p_sort_key = None
         user_filter = set(arg for arg in sys.argv[1:] if not arg.startswith('-'))
 
         root = get_pid_tree(user_filter)
