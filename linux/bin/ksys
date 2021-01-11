@@ -93,6 +93,7 @@ def venv(args):
         if args.force: shutil.rmtree('venv'); print('rm -rf venv')
         else: raise Exception('`./venv/` already exists.  Use -f to overwrite.')
     print_and_run([args.python, '-m', 'venv', 'venv'])
+    print_and_run(['./venv/bin/pip3', 'install', 'wheel'])
 
     req_paths = [Path(p) for p in args.requirement]
     if Path('requirements.txt').exists(): req_paths.append(Path('requirements.txt'))
