@@ -78,9 +78,13 @@ def restart(args):
             last_run_id = subprocess.check_output(['systemctl','show','--value','-property=InvocationID',unit_name]).decode().strip()
             cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-pager', '--no-hostname']
     else:
-        cmd = ["sudo", "journalctl", '--follow', '--no-pager', '-n1', '--no-hostname', "-u", unit_name]
+        if cursor:
+            cmd = ['sudo', 'journalctl', '-u', unit_name, '--no-pager', '--no-hostname', '--follow', '--after-cursor', cursor]
+        else:
+            # This misses messages that are printed too quick after the restart
+            cmd = ["sudo", "journalctl", '-u', unit_name, '--no-pager', '--no-hostname', '--follow', '-n1']
         print('--- Ctrl-C quits ---')
-    try: subprocess.call(cmd)
+    try: print_and_run(cmd)
     except KeyboardInterrupt: pass
     print()
 
@@ -191,7 +195,6 @@ def conf_create(args):
 
 def conf_install(args):
     '''Copy config from .ksys/ to /etc/'''
-    # TODO: check parents for .ksys/
     ksys_path = Path('.ksys')
     if not ksys_path.is_dir(): raise Exception('No directory ./.ksys')
     for path in ksys_path.iterdir():
@@ -210,9 +213,17 @@ def conf_install(args):
             print('You might need to run `certbot`')
         print_and_run(['sudo', 'systemctl', 'daemon-reload'])
 
+def conf_import(args):
+    '''Copy config into .ksys/'''
+    ksys_path = Path('.ksys')
+    ksys_path.mkdir(exist_ok=True)
+    for path in args.paths:
+        dest_path = ksys_path / str(path).replace('/', '%')
+        print(f'Copying {path} -> {dest_path}')
+        shutil.copy(path, dest_path)
+
 def conf_diff(args):
     '''Diff config in .ksys/ against /etc/'''
-    # TODO: check parents for .ksys/
     ksys_path = Path('.ksys')
     if not ksys_path.is_dir(): raise Exception('No directory ./.ksys')
     num_cols = shutil.get_terminal_size((80, 20)).columns
@@ -263,6 +274,10 @@ if __name__ == '__main__':
 
     conf_install_parser = commands.add_parser('conf-install')
     conf_install_parser.set_defaults(func=conf_install)
+
+    conf_import_parser = commands.add_parser('conf-import')
+    conf_import_parser.add_argument('paths', type=str, nargs='+')
+    conf_import_parser.set_defaults(func=conf_import)
 
     conf_diff_parser = commands.add_parser('conf-diff')
     conf_diff_parser.set_defaults(func=conf_diff)
