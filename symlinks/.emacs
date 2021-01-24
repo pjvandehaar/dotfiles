@@ -32,8 +32,6 @@
   (add-to-list 'package-archives
                '("melpa-stable" . "https://stable.melpa.org/packages/") t)
   (package-initialize)
-  (unless (require 'ess nil 'noerror)
-    (message "failed to load ess"))
   (if (require 'expand-region nil 'noerror)
     (global-set-key (kbd "C-]") 'er/expand-region)
     (message "failed to load expand-region"))
@@ -47,6 +45,7 @@
 (add-to-list 'load-path "~/dotfiles/third-party/emacs")
 (require 'git)
 (require 'git-blame)
+(autoload 'nginx-mode "nginx-mode" nil t)
 
 ;; Disable electric-indent-mode (due to pasting problems mostly).  If you want auto-indent, use C-j.
 (when (fboundp 'electric-indent-mode) (electric-indent-mode -1))

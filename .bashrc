@@ -63,11 +63,16 @@ path() { echo "$PATH" | tr : "\n"; }
 alias e="\$EDITOR"
 ew() { "$EDITOR" "$(which "$1")"; }
 se() {
-    if [[ "$1" = /* ]]; then
-        emacs "/sudo::$1"
-    else
-        emacs "/sudo::$PWD/$1"
-    fi
+    args=()
+    for a in "$@"; do
+        if [[ "$a" = /* ]]; then
+             args+=("/sudo::$a")
+        else
+            args+=("/sudo::$PWD/$a")
+        fi
+    done
+    # for a in "${args[@]}"; do echo "arg=$a"; done
+    emacs "${args[@]}"
 }
 alias ta="tig --all"
 alias gs='git status'
