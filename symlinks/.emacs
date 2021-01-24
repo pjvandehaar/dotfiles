@@ -46,6 +46,7 @@
 (require 'git)
 (require 'git-blame)
 (autoload 'nginx-mode "nginx-mode" nil t)
+(setq nginx-indent-level 2)
 
 ;; Disable electric-indent-mode (due to pasting problems mostly).  If you want auto-indent, use C-j.
 (when (fboundp 'electric-indent-mode) (electric-indent-mode -1))
