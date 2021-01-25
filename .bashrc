@@ -31,11 +31,10 @@ fi
 
 v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"
 
-#superceded by ~/.full_history in prompt_prompt.sh
-# export HISTFILESIZE=10000000
-# export HISTSIZE=100000
-# export HISTIGNORE="ls:l"
-# export HISTTIMEFORMAT="%Y/%m/%d %T "
+# Only for ctrl-r because real history is ~/.full_history via prompt_prompt.sh
+export HISTFILESIZE=10000000
+export HISTSIZE=100000
+export HISTIGNORE="ls:l"
 
 
 # program config
