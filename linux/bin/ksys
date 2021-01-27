@@ -13,6 +13,7 @@ if __name__ == '__main__':
         else: kpa.dev_utils.run(__file__, make_cache=False)
 
 
+from typing import Optional
 import subprocess, os, random, re, shutil, json
 from pathlib import Path
 
@@ -22,18 +23,25 @@ def print_and_run(argv):
     print(argv)
     subprocess.call(argv)
 
-def get_unit_name() -> str:
-    # First, look in parent dirs for `.ksys/`.
+def get_dotksys_path() -> Optional[Path]:
     path = Path().absolute()
     while path:
-        if (ksys_path := (path / '.ksys')).is_dir():
-            for filepath in ksys_path.iterdir():
-                filename = filepath.name.split('%')[-1]
-                if filename.endswith('.service') or filename.endswith('.timer'):
-                    return '.'.join(filename.split('.')[:-1])
+        if (dotksys_path := (path / '.ksys')).is_dir():
+            return dotksys_path
         if path == path.parent: break
         path = path.parent
+    return None
+
+def get_unit_name() -> str:
+    # First, look in `.ksys/`.
+    if (dotksys_path := get_dotksys_path()):
+        assert len(list(dotksys_path.glob('*.service'))) == 1  # If >1, choose one?
+        for filepath in dotksys_path.iterdir():
+            filename = filepath.name.split('%')[-1]
+            if filename.endswith('.service'):
+                return '.'.join(filename.split('.')[:-1])
     # Next, see if we're in `/srv/*/`.
+    path = Path().absolute()
     if path.parts[:2] != ('/', 'srv') or len(path.parts) < 3:
         raise Exception(f"Not in /srv/*/ : {path}")
     return f"kpa-{path.parts[2]}"
@@ -160,33 +168,33 @@ nginx_template = re.subn(r'(\s})', r'\1}', re.subn(r'({\s)', r'{\1', nginx_templ
 
 def conf_create(args):
     '''Create ./.ksys/ and put config in it.'''
-    ksys_path = Path('.ksys')
-    ksys_path.mkdir(exist_ok=True)
+    dotksys_path = Path('.ksys')
+    dotksys_path.mkdir(exist_ok=True)
     name = str(args.name) if args.name else get_unit_name()
     directory = str(Path().absolute()) + '/'  # aesthetic
     if args.timer:
         filename = f'/etc/systemd/system/{name}.service'.replace('/', '%')
-        (ksys_path / filename).write_text(systemd_scheduled_template.format(
+        (dotksys_path / filename).write_text(systemd_scheduled_template.format(
             name=name,
             dir=directory,
             exec='{exec}',
         ))
         filename = f'/etc/systemd/system/{name}.timer'.replace('/', '%')
-        (ksys_path / filename).write_text(systemd_timer_template.format(name=name))
+        (dotksys_path / filename).write_text(systemd_timer_template.format(name=name))
     elif args.nginx_hostname:
         port = 8000 + random.randrange(1000)
         filename = f'/etc/systemd/system/{name}.service'.replace('/', '%')
-        (ksys_path / filename).write_text(systemd_daemon_template.format(
+        (dotksys_path / filename).write_text(systemd_daemon_template.format(
             name=name,
             dir=directory,
             exec='{exec}' + f' --port={port}',
         ))
         hostname = args.nginx_hostname if len(args.nginx_hostname)>1 else (f'{name[4:]}.petervh.com' if name.startswith('kpa-') else f'{name}.petervh.com')
         filename = f'/etc/nginx/sites-available/{hostname}'.replace('/', '%')
-        (ksys_path / filename).write_text(nginx_template.format(hostname=hostname, port=port))
+        (dotksys_path / filename).write_text(nginx_template.format(hostname=hostname, port=port))
     else:
         filename = f'/etc/systemd/system/{name}.service'.replace('/', '%')
-        (ksys_path / filename).write_text(systemd_daemon_template.format(
+        (dotksys_path / filename).write_text(systemd_daemon_template.format(
             name=name,
             dir=directory,
             exec='{exec}',
@@ -195,9 +203,8 @@ def conf_create(args):
 
 def conf_install(args):
     '''Copy config from .ksys/ to /etc/'''
-    ksys_path = Path('.ksys')
-    if not ksys_path.is_dir(): raise Exception('No directory ./.ksys')
-    for path in ksys_path.iterdir():
+    if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
+    for path in dotksys_path.iterdir():
         if path.name.endswith('~') or '#' in path.name: continue  # temp file
         dest_path = Path(path.name.replace('%', '/'))
         print_and_run(['sudo', 'cp', '-f', str(path), str(dest_path)])
@@ -215,19 +222,18 @@ def conf_install(args):
 
 def conf_import(args):
     '''Copy config into .ksys/'''
-    ksys_path = Path('.ksys')
-    ksys_path.mkdir(exist_ok=True)
+    dotksys_path = get_dotksys_path() or Path('.ksys')
+    dotksys_path.mkdir(exist_ok=True)
     for path in args.paths:
-        dest_path = ksys_path / str(path).replace('/', '%')
+        dest_path = dotksys_path / str(path).replace('/', '%')
         print(f'Copying {path} -> {dest_path}')
         shutil.copy(path, dest_path)
 
 def conf_diff(args):
     '''Diff config in .ksys/ against /etc/'''
-    ksys_path = Path('.ksys')
-    if not ksys_path.is_dir(): raise Exception('No directory ./.ksys')
+    if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
     num_cols = shutil.get_terminal_size((80, 20)).columns
-    for path in ksys_path.iterdir():
+    for path in dotksys_path.iterdir():
         if path.name.endswith('~') or '#' in path.name: continue  # temp file
         dest_path = Path(path.name.replace('%', '/'))
         if not dest_path.exists():
