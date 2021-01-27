@@ -10,7 +10,7 @@ if __name__ == '__main__':
     if (time.time() - Path(__file__).stat().st_mtime) < 30 or random.random() < 0.01:
         try: import kpa.dev_utils
         except ImportError: pass
-        else: kpa.dev_utils.run(__file__)
+        else: kpa.dev_utils.run(__file__, make_cache=False)
 
 
 import subprocess, os, random, re, shutil, json
