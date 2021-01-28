@@ -7,7 +7,6 @@ git
 glances
 hilite
 htop
-htslib
 icdiff
 jq
 mosh
@@ -16,7 +15,6 @@ python3
 r
 rename
 rustup-init
-samtools
 sshfs
 tig
 wget
@@ -34,6 +32,8 @@ gnu-sed
 alfred
 dropbox
 google-chrome
+google-cloud-sdk
+hammerspoon
 iterm2
 itsycal
 julia
@@ -62,7 +62,7 @@ q  # convenient logger for debugging
 requests
 tabview
 tqdm
-
+twine
 
 ## cargo
 broot
