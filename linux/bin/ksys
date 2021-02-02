@@ -29,7 +29,7 @@ def print_and_run(argv:List[str]):
     subprocess.call(argv)
 
 def get_dotksys_path() -> Optional[Path]:
-    """Return the path to .ksys/ in an ancestor directory, like how .git/ works"""
+    """Return the path to .ksys/ in an ancestor directory, like how .git/ works."""
     path = Path().absolute()
     while path:
         if (dotksys_path := (path / '.ksys')).is_dir():
@@ -39,20 +39,19 @@ def get_dotksys_path() -> Optional[Path]:
     return None
 
 def get_unit_name() -> str:
-    """Guess what `<name>.service` to use. First look for `.ksys/<name>.service` and then check if we're in `/srv/<name>/`"""
+    """Guess the `<name>.service` to use. First look for `.ksys/<name>.service` and then check if we're in `/srv/<name>/`."""
     if (dotksys_path := get_dotksys_path()):
         assert len(list(dotksys_path.glob('*.service'))) == 1  # If >1, choose one?
         for filepath in dotksys_path.iterdir():
             filename = filepath.name.split('%')[-1]
             if filename.endswith('.service'):
                 return '.'.join(filename.split('.')[:-1])
-    path = Path().absolute()
-    if path.parts[:2] != ('/', 'srv') or len(path.parts) < 3:
-        raise Exception(f"Not in /srv/*/ : {path}")
-    return f"kpa-{path.parts[2]}"
+    if (path := Path().absolute()).parts[:2] == ('/', 'srv') and len(path.parts) >= 3:
+        return f"kpa-{path.parts[2]}"
+    raise Exception("Couldn't detect service name, because there's no ancestral .ksys/ and you're not in /srv/*/")
 
 def log(args:argparse.Namespace):
-    """Show logs for a service"""
+    """Show logs for a service."""
     unit_name = args.unit or get_unit_name()
     if args and args.all:
         cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
@@ -68,7 +67,7 @@ def log(args:argparse.Namespace):
         print()
 
 def stat(args:argparse.Namespace):
-    """Show the status and recent logs for a service"""
+    """Show the status and recent logs for a service."""
     unit_name = (args and args.unit) or get_unit_name()
     cmd = ["sudo", "systemctl", "--no-pager", "status", "-n0", unit_name]
     print_and_run(cmd); print()
@@ -228,7 +227,7 @@ def conf_install(args:argparse.Namespace):
         print_and_run(['sudo', 'systemctl', 'daemon-reload'])
 
 def conf_import(args:argparse.Namespace):
-    """Copy config into .ksys/"""
+    """Copy config into `.ksys/`."""
     dotksys_path = get_dotksys_path() or Path('.ksys')
     dotksys_path.mkdir(exist_ok=True)
     for path in args.paths:
@@ -237,7 +236,7 @@ def conf_import(args:argparse.Namespace):
         shutil.copy(path, dest_path)
 
 def conf_diff(args:argparse.Namespace):
-    """Diff config in .ksys/ against /etc/"""
+    """Diff config in `.ksys/` against `/etc/`."""
     if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
     num_cols = shutil.get_terminal_size((80, 20)).columns
     for path in dotksys_path.iterdir():
