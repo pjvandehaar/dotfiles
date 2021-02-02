@@ -17,13 +17,14 @@ from typing import Optional
 import subprocess, os, random, re, shutil, json
 from pathlib import Path
 
-os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'
+os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'  # Tells `journalctl` to print dates in this timezone
 
 def print_and_run(argv):
     print(argv)
     subprocess.call(argv)
 
 def get_dotksys_path() -> Optional[Path]:
+    """Return the path to .ksys/ in an ancestor directory, like how .git/ works"""
     path = Path().absolute()
     while path:
         if (dotksys_path := (path / '.ksys')).is_dir():
@@ -33,20 +34,20 @@ def get_dotksys_path() -> Optional[Path]:
     return None
 
 def get_unit_name() -> str:
-    # First, look in `.ksys/`.
+    """Guess what `<name>.service` to use. First look for `.ksys/<name>.service` and then check if we're in `/srv/<name>/`"""
     if (dotksys_path := get_dotksys_path()):
         assert len(list(dotksys_path.glob('*.service'))) == 1  # If >1, choose one?
         for filepath in dotksys_path.iterdir():
             filename = filepath.name.split('%')[-1]
             if filename.endswith('.service'):
                 return '.'.join(filename.split('.')[:-1])
-    # Next, see if we're in `/srv/*/`.
     path = Path().absolute()
     if path.parts[:2] != ('/', 'srv') or len(path.parts) < 3:
         raise Exception(f"Not in /srv/*/ : {path}")
     return f"kpa-{path.parts[2]}"
 
 def log(args):
+    """Show logs for a service"""
     unit_name = args.unit or get_unit_name()
     if args and args.all:
         cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
@@ -62,6 +63,7 @@ def log(args):
         print()
 
 def stat(args):
+    """Show the status and recent logs for a service"""
     unit_name = (args and args.unit) or get_unit_name()
     cmd = ["sudo", "systemctl", "--no-pager", "status", "-n0", unit_name]
     print_and_run(cmd); print()
@@ -69,7 +71,7 @@ def stat(args):
     print_and_run(cmd)
 
 def restart(args):
-    '''Restart a service, and then show some logs to let you verify that it's working.'''
+    """Restart a service, and then show some logs to let you verify that it's working."""
     unit_name = args.unit or get_unit_name()
     try: cursor = json.loads(subprocess.check_output(['sudo', 'journalctl', '-u', unit_name, '--quiet', '--output-fields=__CURSOR', '-n1', '--output=json']))['__CURSOR']
     except Exception: cursor = None
@@ -100,7 +102,7 @@ def restart(args):
     subprocess.call(['sudo', 'systemctl', 'is-failed', unit_name])
 
 def venv(args):
-    '''Make ./venv/ and gitignore it.'''
+    """Make ./venv/ and gitignore it."""
     if Path('venv').exists():
         if args.force: shutil.rmtree('venv'); print('rm -rf venv')
         else: raise Exception('`./venv/` already exists.  Use -f to overwrite.')
@@ -167,7 +169,7 @@ server {
 nginx_template = re.subn(r'(\s})', r'\1}', re.subn(r'({\s)', r'{\1', nginx_template)[0])[0]  # escape `{ ` and ` }`
 
 def conf_create(args):
-    '''Create ./.ksys/ and put config in it.'''
+    """Create ./.ksys/ and put config in it."""
     dotksys_path = Path('.ksys')
     dotksys_path.mkdir(exist_ok=True)
     name = str(args.name) if args.name else get_unit_name()
@@ -202,7 +204,7 @@ def conf_create(args):
     print('Now populate Exec= in .ksys/*.service and run `ksys conf-diff` and `ksys conf-install`')
 
 def conf_install(args):
-    '''Copy config from .ksys/ to /etc/'''
+    """Copy config from .ksys/ to /etc/ and restart services as appropriate."""
     if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
     for path in dotksys_path.iterdir():
         if path.name.endswith('~') or '#' in path.name: continue  # temp file
@@ -221,7 +223,7 @@ def conf_install(args):
         print_and_run(['sudo', 'systemctl', 'daemon-reload'])
 
 def conf_import(args):
-    '''Copy config into .ksys/'''
+    """Copy config into .ksys/"""
     dotksys_path = get_dotksys_path() or Path('.ksys')
     dotksys_path.mkdir(exist_ok=True)
     for path in args.paths:
@@ -230,7 +232,7 @@ def conf_import(args):
         shutil.copy(path, dest_path)
 
 def conf_diff(args):
-    '''Diff config in .ksys/ against /etc/'''
+    """Diff config in .ksys/ against /etc/"""
     if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
     num_cols = shutil.get_terminal_size((80, 20)).columns
     for path in dotksys_path.iterdir():
