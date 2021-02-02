@@ -228,8 +228,8 @@ def inspect_pid(pid):
             try:
                 if f.position > 1e6:
                     size = Path(f.path).stat().st_size
-                    percent = f.position / size * 99
-                    print(f'{f.position:15,}({percent:02.0f}%) {f.mode}  {f.path}')
+                    location = 'end' if f.position == size else f'{f.position / size * 99:02.0f}%'
+                    print(f'{f.position:15,}({location}) {f.mode:2} {f.path}')
                 else:
                     print(f'{f.position:15,}      {f.mode}  {f.path}')
             except Exception:
