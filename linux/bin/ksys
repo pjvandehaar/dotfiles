@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # -*- mode: python -*-
 
+"""
+ksys is a command line utility for managing systemd services and connecting them to nginx.
+It uses a directory .ksys/ (in the spirit of .git/) which stores config used in /etc/.
+"""
+
 # TODO: add `ksys test`, which restarts, sends some example requests, and shows logs if failed
 
 
@@ -19,7 +24,7 @@ from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'  # Tells `journalctl` to print dates in this timezone
 
-def print_and_run(argv):
+def print_and_run(argv:List[str]):
     print(argv)
     subprocess.call(argv)
 
@@ -46,7 +51,7 @@ def get_unit_name() -> str:
         raise Exception(f"Not in /srv/*/ : {path}")
     return f"kpa-{path.parts[2]}"
 
-def log(args):
+def log(args:argparse.Namespace):
     """Show logs for a service"""
     unit_name = args.unit or get_unit_name()
     if args and args.all:
@@ -62,7 +67,7 @@ def log(args):
     except KeyboardInterrupt:
         print()
 
-def stat(args):
+def stat(args:argparse.Namespace):
     """Show the status and recent logs for a service"""
     unit_name = (args and args.unit) or get_unit_name()
     cmd = ["sudo", "systemctl", "--no-pager", "status", "-n0", unit_name]
@@ -70,7 +75,7 @@ def stat(args):
     cmd = ["sudo", "journalctl", "--no-pager", "-n20", "-u", unit_name, '--no-hostname']
     print_and_run(cmd)
 
-def restart(args):
+def restart(args:argparse.Namespace):
     """Restart a service, and then show some logs to let you verify that it's working."""
     unit_name = args.unit or get_unit_name()
     try: cursor = json.loads(subprocess.check_output(['sudo', 'journalctl', '-u', unit_name, '--quiet', '--output-fields=__CURSOR', '-n1', '--output=json']))['__CURSOR']
@@ -101,7 +106,7 @@ def restart(args):
     # Show the current state of the service
     subprocess.call(['sudo', 'systemctl', 'is-failed', unit_name])
 
-def venv(args):
+def venv(args:argparse.Namespace):
     """Make ./venv/ and gitignore it."""
     if Path('venv').exists():
         if args.force: shutil.rmtree('venv'); print('rm -rf venv')
@@ -168,7 +173,7 @@ server {
 '''
 nginx_template = re.subn(r'(\s})', r'\1}', re.subn(r'({\s)', r'{\1', nginx_template)[0])[0]  # escape `{ ` and ` }`
 
-def conf_create(args):
+def conf_create(args:argparse.Namespace):
     """Create ./.ksys/ and put config in it."""
     dotksys_path = Path('.ksys')
     dotksys_path.mkdir(exist_ok=True)
@@ -203,7 +208,7 @@ def conf_create(args):
         ))
     print('Now populate Exec= in .ksys/*.service and run `ksys conf-diff` and `ksys conf-install`')
 
-def conf_install(args):
+def conf_install(args:argparse.Namespace):
     """Copy config from .ksys/ to /etc/ and restart services as appropriate."""
     if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
     for path in dotksys_path.iterdir():
@@ -222,7 +227,7 @@ def conf_install(args):
             print('You might need to run `certbot`')
         print_and_run(['sudo', 'systemctl', 'daemon-reload'])
 
-def conf_import(args):
+def conf_import(args:argparse.Namespace):
     """Copy config into .ksys/"""
     dotksys_path = get_dotksys_path() or Path('.ksys')
     dotksys_path.mkdir(exist_ok=True)
@@ -231,7 +236,7 @@ def conf_import(args):
         print(f'Copying {path} -> {dest_path}')
         shutil.copy(path, dest_path)
 
-def conf_diff(args):
+def conf_diff(args:argparse.Namespace):
     """Diff config in .ksys/ against /etc/"""
     if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
     num_cols = shutil.get_terminal_size((80, 20)).columns
@@ -290,8 +295,5 @@ if __name__ == '__main__':
     conf_diff_parser = commands.add_parser('conf-diff')
     conf_diff_parser.set_defaults(func=conf_diff)
 
-    args = parser.parse_args()
-    if args.command is None:
-        stat(None)
-    else:
-        args.func(args)
+    args = parser.parse_args() if sys.argv[1:] else parser.parse_args(['stat'])
+    args.func(args)
