@@ -9,14 +9,12 @@
 
 # TODO: show per-process diskio (only possible on linux for my own processes, I think)
 # TODO: show per-process swap/paging
-# TODO: show per-process state?
+# TODO: show per-process state (R/S/D)
 
 # TODO: show some overall stats, like:
 #        RAM/cache/swap/paging,
 #        `df`, disk reads/second, disk read latency,
 #        kbps_in, kbps_out, %tcp_retransmission
-
-# TODO: Consider showing R/S/D state in tree
 
 
 if __name__ == '__main__':
