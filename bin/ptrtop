@@ -18,12 +18,9 @@
 
 
 if __name__ == '__main__':
-    # This is slow, so only run it soon after modifying this file, or otherwise randomly.
-    import time, random; from pathlib import Path
-    if (time.time() - Path(__file__).stat().st_mtime) < 30 or random.random() < 0.01:
-        try: import kpa.dev_utils
-        except ImportError: pass
-        else: kpa.dev_utils.run(__file__)
+    try: import kpa.dev_utils
+    except ImportError: pass
+    else: kpa.dev_utils.run(__file__, run_rarely=True, make_cache=False)
 
 
 from typing import Dict, Optional, Callable, Tuple, Any, List, Set, Union
