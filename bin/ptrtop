@@ -28,10 +28,11 @@ if __name__ == '__main__':
         else: kpa.dev_utils.run(__file__)
 
 
-from typing import Dict, Optional, Callable, Tuple, Any
+from typing import Dict, Optional, Callable, Tuple, Any, List, Set, Union
 import psutil, signal, time, sys, itertools, shutil, functools, subprocess, re
 from psutil import AccessDenied
-
+ProcDict = Dict[str,Any]
+PID = int
 
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
@@ -45,7 +46,7 @@ def use_ipdb():
     sys.excepthook = excepthook
 
 @functools.lru_cache()
-def username_by_uid():
+def username_by_uid() -> Dict[str,str]:
     # This handles cases where `psutil.Process(pid).username()` returns `uid` (integer) instead of the username (str)
     lines = subprocess.check_output(['/usr/bin/getent','passwd']).decode('ascii').split('\n')
     username_by_uid = {}
@@ -54,7 +55,7 @@ def username_by_uid():
         username_by_uid[parts[2]] = parts[0]
     return username_by_uid
 
-def decode_username(username):
+def decode_username(username:str) -> str:
     assert isinstance(username, str)
     if not username.isdigit():
         return username
@@ -66,10 +67,10 @@ def decode_username(username):
 
 # Note: `proc` is a psutil.Process()
 #       `p` is a dictionary representing a process
-def get_pid_tree(user_filter=None):
-    p_for_pid = {}  # {pid: {...}}
+def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = False) -> ProcDict:
+    p_for_pid: Dict[PID,ProcDict] = {}  # {pid: {...}}
 
-    ppidmap = psutil._ppid_map() # {pid -> ppid}
+    ppidmap: Dict[PID,PID] = psutil._ppid_map() # {pid -> ppid}
     for pid in set(itertools.chain(ppidmap.keys(), ppidmap.values())):
         p_for_pid[pid] = {'pid':pid, 'children':[]}
     for pid,ppid in ppidmap.items():
@@ -85,18 +86,18 @@ def get_pid_tree(user_filter=None):
                 p['user'] = decode_username(p['proc'].username())
             except psutil.NoSuchProcess: pass
 
-        def delete_if_bad(pid):
+        def delete_if_bad(pid:PID) -> None:
             p = p_for_pid[pid]
             for child in p['children']: delete_if_bad(child['pid'])
             p['children'] = [child for child in p['children'] if child['pid'] in p_for_pid]
-            if p.get('user') not in user_filter and len(p['children']) == 0:
+            if user_filter and p.get('user') not in user_filter and len(p['children']) == 0:
                 del p_for_pid[pid]
         delete_if_bad(0)
         if not p_for_pid: raise Exception("No processes left after filter")
 
     for pid, p in p_for_pid.items():
         try:
-            proc = p['proc'] if 'proc' in p else psutil.Process(pid)
+            proc: psutil.Process = p['proc'] if 'proc' in p else psutil.Process(pid)
             with proc.oneshot():
                 p['proc'] = proc
                 p['user'] = decode_username(proc.username())
@@ -117,6 +118,17 @@ def get_pid_tree(user_filter=None):
                 except AccessDenied: pass
         except psutil.NoSuchProcess: pass # process can die at any time, raising this error when we call its methods
 
+    if show_big_files:
+        def add_big_files(p:ProcDict) -> None:
+            for child in p['children']: add_big_files(child)
+            try: open_files = (p['proc'] if p.get('proc') else psutil.Process(pid)).open_files()
+            except (psutil.NoSuchProcess, psutil.AccessDenied): return
+            for f in sorted(open_files, key=lambda f:f.path):
+                if f.position > 3e6 and (size := Path(f.path).stat().st_size) > 100e6:
+                    location = 'end' if f.position == size else f'{f.position / size * 99:02.0f}%'
+                    p.setdefault('bigfiles', []).append(f'{f.path}  {size//1_000_000:5,}M ({location}) {f.mode:2}')
+        add_big_files(p_for_pid[0])
+
     time.sleep(1)
 
     for p in p_for_pid.values():
@@ -129,7 +141,7 @@ def get_pid_tree(user_filter=None):
     for p in p_for_pid.values(): p.pop('proc', None) # if a process has died, `repr(proc)` raises an Exception? or, ipdb introspection does?
     return p_for_pid[0]
 
-def accum_proc_info(p):
+def accum_proc_info(p:ProcDict) -> None:
     for child in p['children']: accum_proc_info(child)
     p['family'] = {}
     for k in 'cpu mem_rss num_fds num_con'.split():
@@ -137,28 +149,28 @@ def accum_proc_info(p):
         # TODO: if any of these is missing k, we should write "{x}+"
 
 
-def repr_fd(x):
+def repr_fd(x:ProcDict) -> str:
     if 'num_fds' not in x: return ' '*4+'?'
     ret = f"{x['num_fds']:5.0f}"
     if ret.strip() == '0': return ' '*4+'.'
     return ret
-def repr_con(x):
+def repr_con(x:ProcDict) -> str:
     if 'num_con' not in x: return ' '*4+'?'
     ret = f"{x['num_con']:5.0f}"
     if ret.strip() == '0': return ' '*4+'.'
     return ret
-def repr_cpu(x):
+def repr_cpu(x:ProcDict) -> str:
     if 'cpu' not in x: return ' '*4+'? '
     ret = f'{x["cpu"]*100:6.1f}' # okay for 99 cpus
     if ret.strip() == '0.0': return ' '*4+'. '
     if ret.strip()[:-1] == '0.': return ' '*4+'.'+ret[-1]
     return ret
-def repr_mem(x):
+def repr_mem(x:ProcDict) -> str:
     if 'mem_rss' not in x: return ' '*6+'?'
     ret = f'{x["mem_rss"]/2**20:7.0f}' # okay for 9999GB
     if ret.strip() == '0': return ' '*6+'.'
     return ret
-def repr_name(x):
+def repr_name(x:ProcDict) -> str:
     if x.get('cmdline',''):
         if x['cmdline']==['SCREEN']: return 'screen'
         if x['cmdline']==['/usr/local/bin/bash','-l']: return 'bash'
@@ -171,18 +183,28 @@ def repr_name(x):
     if x.get('name',''): return x['name']
     return '?'
 
-def repr_p(p, tree_prefix_first='', tree_prefix_rest='', p_sort_key=(lambda p: p['pid'])):
+def repr_p(p:ProcDict, tree_prefix_first:str = '', tree_prefix_rest:str = '', p_sort_key:Callable = (lambda p: p['pid'])) -> str:
+    '''Print out a process for the process tree'''
+    lines = []
     f = p['family']
-    line = (f"{p['pid']:6} {p.get('user','?')[:9]:9}" +
-            repr_fd(f) + repr_con(f) + '  ' + repr_cpu(f) + repr_mem(f) +
-            ' ' + tree_prefix_first + repr_name(p))
-    ret = line[:TERM_WIDTH] + '\n'
+    lines.append(f"{p['pid']:6} {p.get('user','?')[:9]:9}" +
+                 repr_fd(f) + repr_con(f) + '  ' + repr_cpu(f) + repr_mem(f) +
+                 ' ' + tree_prefix_first + repr_name(p))
+    # Sometimes the process deserves its own line:
     if p['children'] and (p.get('mem_rss',0) > 30e6 or p.get('cpu',0) >= 0.01):
-        line = (
-            f"{p['pid']:6} {p.get('user','?')[:9]:9}" +
-            repr_fd(p) + repr_con(p) + '  ' + repr_cpu(p) + repr_mem(p) +
-            ' ' + tree_prefix_rest + '├──•')
-        ret = line[:TERM_WIDTH] + '\n' + ret
+        lines.insert(0,
+                     f"{p['pid']:6} {p.get('user','?')[:9]:9}" +
+                     repr_fd(p) + repr_con(p) + '  ' + repr_cpu(p) + repr_mem(p) +
+                     ' ' + tree_prefix_rest + '├──•')
+
+    NUMERIC_COLS_WIDTH = 6+1 + 9 + 5 + 5 + 2 + 6 + 7+1
+    for i, bigfile in enumerate(p.get('bigfiles', [])):
+        if i==0 and len(lines[0]) + 1 + len(bigfile) < TERM_WIDTH:
+            lines[0] = lines[0] + bigfile.rjust(TERM_WIDTH - len(lines[0]))
+        else:
+            lines.insert(0, ' '*NUMERIC_COLS_WIDTH + tree_prefix_rest + bigfile.rjust(TERM_WIDTH - len(tree_prefix_rest) - NUMERIC_COLS_WIDTH))
+
+    ret = '\n' + '\n'.join(line[:TERM_WIDTH] for line in lines)
 
     p['children'].sort(key=p_sort_key)
     for i, child in enumerate(p['children']):
@@ -199,7 +221,8 @@ def repr_p(p, tree_prefix_first='', tree_prefix_rest='', p_sort_key=(lambda p: p
     return ret
 
 
-def inspect_pid(pid):
+def inspect_pid(pid:PID) -> None:
+    '''Print out info about one process'''
     try:
         p = psutil.Process(pid)
     except psutil.NoSuchProcess:
@@ -229,16 +252,16 @@ def inspect_pid(pid):
                 if f.position > 1e6:
                     size = Path(f.path).stat().st_size
                     location = 'end' if f.position == size else f'{f.position / size * 99:02.0f}%'
-                    print(f'{f.position:15,}({location}) {f.mode:2} {f.path}')
+                    print(f'{size:15,}({location}) {f.mode:2} {f.path}')
                 else:
-                    print(f'{f.position:15,}      {f.mode}  {f.path}')
+                    print(f'{size:15,}      {f.mode}  {f.path}')
             except Exception:
                 print(' ', f.path)
     except psutil.AccessDenied:
         print('[cannot access open files]')
     print()
 
-    def repr_addr(a):
+    def repr_addr(a) -> str:
         if a == (): return ' '*15+'-'+' '*6
         try:return f'{"["+a.ip+"]":>15}:{a.port:<6}' if ':' in a.ip else f'{a.ip:>15}:{a.port:<6}'
         except Exception: return repr(a)
@@ -270,15 +293,50 @@ def inspect_pid(pid):
     print(p.cmdline()); print()
 
 
+def summarize_users() -> None:
+    users: Dict[str, Dict[str, float]] = {}
+    xs:List[ProcDict] = []
+    for proc in psutil.process_iter(attrs='username cpu_times memory_info num_fds connections'.split()):
+        i = proc.info
+        username = decode_username(i['username'])
+        u = users.setdefault(username, {'cpu':0, 'mem_rss':0, 'num_fds':0, 'num_con':0})
+        u['mem_rss'] += i['memory_info'].rss if i['memory_info'] else 0
+        u['num_fds'] += i['num_fds'] or 0
+        u['num_con'] += len(i['connections'] or [])
+        if i['cpu_times'] is not None:
+            xs.append({
+                'username': username,
+                'proc': proc,
+                'cpu_s1': i['cpu_times'].system + i['cpu_times'].user,
+                'cpu_s1_t': time.time(),
+            })
+    time.sleep(1)
+    for x in xs:
+        try: c = x['proc'].cpu_times()
+        except psutil.NoSuchProcess: pass
+        users[x['username']]['cpu'] += (c.system+c.user - x['cpu_s1']) / (time.time()-x['cpu_s1_t'])
+    system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
+    total_used = {'cpu': sum(d['cpu'] for d in users.values()), 'mem_rss': sum(d['mem_rss'] for d in users.values())}
+    def user_is_idle(d:dict)->bool: return repr_cpu(d).strip()=='.' and repr_mem(d).strip()=='.' and d['num_fds']==0 and d['num_con']==0
+    username_len = max(max(len(u) for u,d in users.items() if not user_is_idle(d)), len('[available] '))
+    def repr_username(u:str)->str: return f'{u[:username_len]:{username_len}}'
+    print(f'{repr_username("[available]")}{repr_cpu(system_avail)} {repr_mem(system_avail)}')
+    print(f'{repr_username("[used]")}{repr_cpu(total_used)} {repr_mem(total_used)}')
+    print(f'{repr_username(" ")}  %CPU      MB   #FD  #CON')
+    for username, d in sorted(users.items(), key=lambda a: a[1]['mem_rss'], reverse=True):
+        d = users[username]
+        if user_is_idle(d): continue
+        print(f"{repr_username(username)}{repr_cpu(d)} {repr_mem(d)}{d['num_fds'] or '.':>6}{d['num_con'] or '.':>6}")
+
+
 if __name__ == '__main__':
     use_ipdb()
 
     if set(sys.argv[1:]).intersection(['-h', '--help']):
-        print(' ptrtop                  show tree of all processes')
-        print(" ptrtop USER...          show tree of USER's processes and their parents")
-        print('                         these may specify the sort order by using one of --fd --con --cpu --mem')
-        print(" ptrtop PID...           show info about individual processes")
-        print(' ptrtop --users          show resources used by each user')
+        print(" ptrtop            Show tree of all processes (sort by --fd --con --cpu --mem) (show --bigfiles)")
+        print(" ptrtop USER...    Show tree of USER's processes and their ancestors\n")
+        print(" ptrtop PID        Show info about a process\n")
+        print(" ptrtop --users    Show resources used by each user\n")
         print("Some information requires `sudo` for others' processes.")
 
     # Print info about one PID
@@ -288,43 +346,9 @@ if __name__ == '__main__':
 
     # Summarize resource use by each user
     elif sys.argv[1:] == ['--users']:
-        users: Dict[str, Dict[str, float]] = {}
-        xs = []
-        for proc in psutil.process_iter(attrs='username cpu_times memory_info num_fds connections'.split()):
-            i = proc.info
-            username = decode_username(i['username'])
-            u = users.setdefault(username,{
-                'cpu':0, 'mem_rss':0, 'num_fds':0, 'num_con':0,
-            })
-            u['mem_rss'] += i['memory_info'].rss if i['memory_info'] else 0
-            u['num_fds'] += i['num_fds'] or 0
-            u['num_con'] += len(i['connections'] or [])
-            if i['cpu_times'] is not None:
-                xs.append({
-                    'username': username,
-                    'proc': proc,
-                    'cpu_s1': i['cpu_times'].system + i['cpu_times'].user,
-                    'cpu_s1_t': time.time(),
-                })
-        time.sleep(1)
-        for x in xs:
-            try:c = x['proc'].cpu_times()
-            except psutil.NoSuchProcess: pass
-            users[x['username']]['cpu'] += (c.system+c.user - x['cpu_s1']) / (time.time()-x['cpu_s1_t'])
-        system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
-        total_used = {'cpu': sum(d['cpu'] for d in users.values()), 'mem_rss': sum(d['mem_rss'] for d in users.values())}
-        def user_is_idle(d): return repr_cpu(d).strip()=='.' and repr_mem(d).strip()=='.' and d['num_fds']==0 and d['num_con']==0
-        username_len = max(max(len(u) for u,d in users.items() if not user_is_idle(d)), len('[available] '))
-        def repr_username(u:str): return f'{u[:username_len]:{username_len}}'
-        print(f'{repr_username("[available]")}{repr_cpu(system_avail)} {repr_mem(system_avail)}')
-        print(f'{repr_username("[used]")}{repr_cpu(total_used)} {repr_mem(total_used)}')
-        print(f'{repr_username(" ")}  %CPU      MB   #FD  #CON')
-        for username, d in sorted(users.items(), key=lambda a: a[1]['mem_rss'], reverse=True):
-            d = users[username]
-            if user_is_idle(d): continue
-            print(f"{repr_username(username)}{repr_cpu(d)} {repr_mem(d)}{d['num_fds'] or '.':>6}{d['num_con'] or '.':>6}")
+        summarize_users()
 
-    # Show the whole process tree, possibly filtered to some users
+    # Show the whole process tree, optionally filtered to some users
     else:
         p_sort_key: Optional[Callable[[Any], Tuple[Any, Any, Any]]] = None
         if '--fd' in sys.argv[1:]:    p_sort_key = lambda p: (-p['family']['num_fds'], -p['family']['num_con'], p['pid'])
@@ -333,13 +357,14 @@ if __name__ == '__main__':
         elif '--mem' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
         user_filter = set(arg for arg in sys.argv[1:] if not arg.startswith('-'))
 
-        root = get_pid_tree(user_filter)
+        root = get_pid_tree(user_filter, show_big_files='--bigfiles' in sys.argv[1:])
         system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
         if p_sort_key is None:
             cpu_usage = root['family']['cpu'] / system_avail['cpu']
             mem_usage = root['family']['mem_rss'] / system_avail['mem_rss']
             if cpu_usage > mem_usage and cpu_usage > 0.3:  p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/2**20, 0), p['pid'])
             else:                                          p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
+
         print(repr_p(root, p_sort_key=p_sort_key).rstrip('\n'))
         print('   PID USER       #FD #CON    %CPU     MB')
         print(f'                            {repr_cpu(system_avail)}{repr_mem(system_avail)}')

@@ -18,8 +18,8 @@ if __name__ == '__main__':
         else: kpa.dev_utils.run(__file__, make_cache=False)
 
 
-from typing import Optional
-import subprocess, os, random, re, shutil, json
+from typing import Optional,List
+import subprocess, os, random, re, shutil, json, sys, argparse
 from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'  # Tells `journalctl` to print dates in this timezone
@@ -253,7 +253,6 @@ def conf_diff(args:argparse.Namespace):
 
 
 if __name__ == '__main__':
-    import argparse
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest='command')
 
