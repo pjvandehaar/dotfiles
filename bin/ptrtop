@@ -16,6 +16,8 @@
 #        `df`, disk reads/second, disk read latency,
 #        kbps_in, kbps_out, %tcp_retransmission
 
+# TODO: with `--bigfiles`, shorten names from `/data/pheweb/name` -> `/da*/ph*/name`?  Or show relative paths?
+# TODO: with `--bigfiles`, show `w` as ` w` (in the rightmost column).
 
 if __name__ == '__main__':
     try: import kpa.dev_utils
@@ -117,7 +119,7 @@ def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = Fa
     if show_big_files:
         def add_big_files(p:ProcDict) -> None:
             for child in p['children']: add_big_files(child)
-            try: open_files = (p['proc'] if p.get('proc') else psutil.Process(pid)).open_files()
+            try: open_files = (p['proc'] if p.get('proc') else psutil.Process(p['pid'])).open_files()
             except (psutil.NoSuchProcess, psutil.AccessDenied): return
             for f in sorted(open_files, key=lambda f:f.path):
                 if f.position > 3e6 and (size := Path(f.path).stat().st_size) > 100e6:
