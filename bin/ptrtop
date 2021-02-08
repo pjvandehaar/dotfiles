@@ -16,7 +16,7 @@
 #        `df`, disk reads/second, disk read latency,
 #        kbps_in, kbps_out, %tcp_retransmission
 
-# TODO: with `--bigfiles`, shorten names from `/data/pheweb/name` -> `/da*/ph*/name`?  Or show relative paths?
+# TODO: with `--bigfiles`, shorten names from `/data/pheweb/name` -> `/da*/ph*/name`.  Memoize.
 # TODO: with `--bigfiles`, show `w` as ` w` (in the rightmost column).
 
 if __name__ == '__main__':
