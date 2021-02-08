@@ -16,9 +16,6 @@
 #        `df`, disk reads/second, disk read latency,
 #        kbps_in, kbps_out, %tcp_retransmission
 
-# TODO: with `--bigfiles`, shorten names from `/data/pheweb/name` -> `/da*/ph*/name`.  Memoize.
-# TODO: with `--bigfiles`, show `w` as ` w` (in the rightmost column).
-
 if __name__ == '__main__':
     try: import kpa.dev_utils
     except ImportError: pass
@@ -26,7 +23,7 @@ if __name__ == '__main__':
 
 
 from typing import Dict, Optional, Callable, Tuple, Any, List, Set, Union
-import psutil, signal, time, sys, itertools, shutil, functools, subprocess, re
+import psutil, signal, time, sys, itertools, shutil, functools, subprocess, re, os
 from pathlib import Path
 from psutil import AccessDenied
 ProcDict = Dict[str,Any]
@@ -42,6 +39,25 @@ def use_ipdb():
         sys.excepthook = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1)
         return sys.excepthook(*args, **kwargs)
     sys.excepthook = excepthook
+
+@functools.lru_cache(None)
+def shorten_filepath(filepath: str) -> str:
+    parent, filename = os.path.split(filepath)
+    return shorten_filedir(parent) + '/' + filename
+@functools.lru_cache(None)
+def shorten_filedir(filedir: str) -> str:
+    if filedir == '/': return ''
+    parent, filename = os.path.split(filedir)
+    shortened_parent = shorten_filedir(parent)
+    sibling_filenames = [name for name in get_filenames_in_filedir(parent) if name != filename]
+    for length in range(3,len(filename)-2):
+        prefix = filename[:length]
+        if not any(name.startswith(prefix) for name in sibling_filenames):
+            return f'{shortened_parent}/{prefix}*'
+    return f'{shortened_parent}/{filename}'
+@functools.lru_cache(None)
+def get_filenames_in_filedir(filedir: str) -> List[str]:
+    return os.listdir(filedir)
 
 @functools.lru_cache()
 def username_by_uid() -> Dict[str,str]:
@@ -124,7 +140,9 @@ def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = Fa
             for f in sorted(open_files, key=lambda f:f.path):
                 if f.position > 3e6 and (size := Path(f.path).stat().st_size) > 100e6:
                     location = 'end' if f.position == size else f'{f.position / size * 99:02.0f}%'
-                    p.setdefault('bigfiles', []).append(f'{f.path}  {size//1_000_000:5,}M ({location}) {f.mode:2}')
+                    path = shorten_filepath(f.path)
+                    mode = ' w' if f.mode == 'w' else f.mode  # Usually `r` is left column and `w`/`+` is right column.
+                    p.setdefault('bigfiles', []).append(f'{path}  {size//1_000_000:5,}M ({location}) {mode:2}')
         add_big_files(p_for_pid[0])
 
     time.sleep(1)
