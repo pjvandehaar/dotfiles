@@ -217,12 +217,12 @@ def repr_p(p:ProcDict, tree_prefix_first:str = '', tree_prefix_rest:str = '', p_
                      repr_fd(p) + repr_con(p) + '  ' + repr_cpu(p) + repr_mem(p) +
                      ' ' + tree_prefix_rest + '├──•')
 
-    NUMERIC_COLS_WIDTH = 6+1 + 9 + 5 + 5 + 2 + 6 + 7+1
     for i, bigfile in enumerate(p.get('bigfiles', [])):
         if i==0 and len(lines[0]) + 1 + len(bigfile) < TERM_WIDTH:
             lines[0] = lines[0] + bigfile.rjust(TERM_WIDTH - len(lines[0]))
         else:
-            lines.insert(0, ' '*NUMERIC_COLS_WIDTH + tree_prefix_rest + bigfile.rjust(TERM_WIDTH - len(tree_prefix_rest) - NUMERIC_COLS_WIDTH))
+            prefix = ''.join('│' if char in '│├' else ' ' for char in lines[0]).rstrip()
+            lines.insert(0, prefix + bigfile.rjust(TERM_WIDTH - len(prefix)))
 
     ret = '\n' + '\n'.join(line[:TERM_WIDTH] for line in lines)
 
