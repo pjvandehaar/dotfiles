@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
 
 from typing import Dict, Optional, Callable, Tuple, Any, List, Set, Union
-import psutil, signal, time, sys, itertools, shutil, functools, subprocess, re, os
+import psutil, signal, time, sys, itertools, shutil, functools, subprocess, re, os, getpass
 from pathlib import Path
 from psutil import AccessDenied
 ProcDict = Dict[str,Any]
@@ -354,9 +354,9 @@ if __name__ == '__main__':
 
     if set(sys.argv[1:]).intersection(['-h', '--help']):
         print(" ptrtop            Show tree of all processes (sort by --fd --con --cpu --mem) (show --bigfiles)")
-        print(" ptrtop USER...    Show tree of USER's processes and their ancestors\n")
+        print(" ptrtop USER...    Show tree of USER's processes and their ancestors (me=$USER)\n")
         print(" ptrtop PID        Show info about a process\n")
-        print(" ptrtop --users    Show resources used by each user\n")
+        print(" ptrtop --users    Show total resources used by each user\n")
         print("Some information requires `sudo` for others' processes.")
 
     # Print info about one PID
@@ -376,6 +376,7 @@ if __name__ == '__main__':
         elif '--cpu' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/2**20, 0), p['pid'])
         elif '--mem' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
         user_filter = set(arg for arg in sys.argv[1:] if not arg.startswith('-'))
+        if 'me' in user_filter: user_filter.add(getpass.getuser())
 
         root = get_pid_tree(user_filter, show_big_files='--bigfiles' in sys.argv[1:])
         system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
