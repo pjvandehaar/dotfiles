@@ -138,7 +138,11 @@ def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = Fa
             try: open_files = (p['proc'] if p.get('proc') else psutil.Process(p['pid'])).open_files()
             except (psutil.NoSuchProcess, psutil.AccessDenied): return
             for f in sorted(open_files, key=lambda f:f.path):
-                if f.position > 3e6 and (size := Path(f.path).stat().st_size) > 100e6:
+                if not hasattr(f, 'position'):  # macOS
+                    if (size := Path(f.path).stat().st_size) > 100e6:
+                        path = shorten_filepath(f.path)
+                        p.setdefault('bigfiles', []).append(f'{path}  {size//1_000_000:5,}M')
+                elif f.position > 3e6 and (size := Path(f.path).stat().st_size) > 100e6:
                     location = 'end' if f.position == size else f'{f.position / size * 99:02.0f}%'
                     path = shorten_filepath(f.path)
                     mode = ' w' if f.mode == 'w' else f.mode  # Usually `r` is left column and `w`/`+` is right column.
