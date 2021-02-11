@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 readlinkf() { perl -MCwd -le 'print Cwd::abs_path shift' "$1"; }
+
+# TODO: rewrite in python to allow `symlinks/~%.config%htop%htoprc` and to show all conflicts at once.
 
 linkify_directory() {
     dir="$(readlinkf "$1")"
