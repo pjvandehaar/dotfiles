@@ -21,7 +21,7 @@ from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'  # Tells `journalctl` to print dates in this timezone
 
-def print_and_run(argv:List[str]):
+def print_and_run(argv:List[str]) -> None:
     print(argv)
     subprocess.call(argv)
 
@@ -47,7 +47,7 @@ def get_unit_name() -> str:
         return f"kpa-{path.parts[2]}"
     raise Exception("Couldn't detect service name, because there's no ancestral .ksys/ and you're not in /srv/*/")
 
-def log(args:argparse.Namespace):
+def log(args:argparse.Namespace) -> None:
     """Show logs for a service."""
     unit_name = args.unit or get_unit_name()
     if args and args.all:
@@ -63,7 +63,7 @@ def log(args:argparse.Namespace):
     except KeyboardInterrupt:
         print()
 
-def stat(args:argparse.Namespace):
+def stat(args:argparse.Namespace) -> None:
     """Show the status and recent logs for a service."""
     unit_name = (args and args.unit) or get_unit_name()
     cmd = ["sudo", "systemctl", "--no-pager", "status", "-n0", unit_name]
@@ -71,7 +71,7 @@ def stat(args:argparse.Namespace):
     cmd = ["sudo", "journalctl", "--no-pager", "-n20", "-u", unit_name, '--no-hostname']
     print_and_run(cmd)
 
-def restart(args:argparse.Namespace):
+def restart(args:argparse.Namespace) -> None:
     """Restart a service, and then show some logs to let you verify that it's working."""
     unit_name = args.unit or get_unit_name()
     try: cursor = json.loads(subprocess.check_output(['sudo', 'journalctl', '-u', unit_name, '--quiet', '--output-fields=__CURSOR', '-n1', '--output=json']))['__CURSOR']
@@ -102,7 +102,7 @@ def restart(args:argparse.Namespace):
     # Show the current state of the service
     subprocess.call(['sudo', 'systemctl', 'is-failed', unit_name])
 
-def venv(args:argparse.Namespace):
+def venv(args:argparse.Namespace) -> None:
     """Make ./venv/ and gitignore it."""
     if Path('venv').exists():
         if args.force: shutil.rmtree('venv'); print('rm -rf venv')
@@ -170,7 +170,7 @@ server {
 '''
 nginx_template = re.subn(r'(\s})', r'\1}', re.subn(r'({\s)', r'{\1', nginx_template)[0])[0]  # escape `{ ` and ` }`
 
-def conf_create(args:argparse.Namespace):
+def conf_create(args:argparse.Namespace) -> None:
     """Create ./.ksys/ and put config in it."""
     dotksys_path = Path('.ksys')
     dotksys_path.mkdir(exist_ok=True)
@@ -205,7 +205,7 @@ def conf_create(args:argparse.Namespace):
         ))
     print('Now populate Exec= in .ksys/*.service and run `ksys conf-diff` and `ksys conf-install`')
 
-def conf_install(args:argparse.Namespace):
+def conf_install(args:argparse.Namespace) -> None:
     """Copy config from .ksys/ to /etc/ and restart services as appropriate."""
     if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
     for path in dotksys_path.iterdir():
@@ -224,7 +224,7 @@ def conf_install(args:argparse.Namespace):
             print('You might need to run `certbot`')
         print_and_run(['sudo', 'systemctl', 'daemon-reload'])
 
-def conf_import(args:argparse.Namespace):
+def conf_import(args:argparse.Namespace) -> None:
     """Copy config into `.ksys/`."""
     dotksys_path = get_dotksys_path() or Path('.ksys')
     dotksys_path.mkdir(exist_ok=True)
@@ -233,7 +233,7 @@ def conf_import(args:argparse.Namespace):
         print(f'Copying {path} -> {dest_path}')
         shutil.copy(path, dest_path)
 
-def conf_diff(args:argparse.Namespace):
+def conf_diff(args:argparse.Namespace) -> None:
     """Diff config in `.ksys/` against `/etc/`."""
     if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
     num_cols = shutil.get_terminal_size((80, 20)).columns
