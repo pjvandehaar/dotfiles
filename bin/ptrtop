@@ -353,7 +353,7 @@ if __name__ == '__main__':
     use_ipdb()
 
     if set(sys.argv[1:]).intersection(['-h', '--help']):
-        print(" ptrtop            Show tree of all processes (sort by --fd --con --cpu --mem) (show --bigfiles)")
+        print(" ptrtop            Show tree of all processes (sort by --fd --con --cpu --mem)")
         print(" ptrtop USER...    Show tree of USER's processes and their ancestors (me=$USER)\n")
         print(" ptrtop PID        Show info about a process\n")
         print(" ptrtop --users    Show total resources used by each user\n")
@@ -378,7 +378,7 @@ if __name__ == '__main__':
         user_filter = set(arg for arg in sys.argv[1:] if not arg.startswith('-'))
         if 'me' in user_filter: user_filter.add(getpass.getuser())
 
-        root = get_pid_tree(user_filter, show_big_files='--bigfiles' in sys.argv[1:])
+        root = get_pid_tree(user_filter, show_big_files=True)
         system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
         if p_sort_key is None:
             cpu_usage = root['family']['cpu'] / system_avail['cpu']
