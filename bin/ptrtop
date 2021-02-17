@@ -81,7 +81,7 @@ def decode_username(username:str) -> str:
 
 # Note: `proc` is a psutil.Process()
 #       `p` is a dictionary representing a process
-def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = False) -> ProcDict:
+def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = False, drop_boring:bool = True) -> ProcDict:
     p_for_pid: Dict[PID,ProcDict] = {}  # {pid: {...}}
 
     ppidmap: Dict[PID,PID] = psutil._ppid_map() # {pid -> ppid}
@@ -158,6 +158,11 @@ def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = Fa
             assert cpu_s2 >= p['cpu_s1']
             p['cpu'] = (cpu_s2 - p['cpu_s1']) / (time.time() - p['cpu_s1_t'])
     accum_proc_info(p_for_pid[0])
+
+    if drop_boring:
+        p_for_pid[0]['children'] = [child for child in p_for_pid[0]['children'] if child['family']['cpu']>0.01 or child['family']['mem_rss']>30e6]
+        p_for_pid[1]['children'] = [child for child in p_for_pid[1]['children'] if child['family']['cpu']>0.01 or child['family']['mem_rss']>30e6]
+
     for p in p_for_pid.values(): p.pop('proc', None) # if a process has died, `repr(proc)` raises an Exception? or, ipdb introspection does?
     return p_for_pid[0]
 
@@ -353,8 +358,10 @@ if __name__ == '__main__':
     use_ipdb()
 
     if set(sys.argv[1:]).intersection(['-h', '--help']):
-        print(" ptrtop            Show tree of all processes (sort by --fd --con --cpu --mem)")
-        print(" ptrtop USER...    Show tree of USER's processes and their ancestors (me=$USER)\n")
+        print(" ptrtop            Show tree of processes")
+        print(" ptrtop USER...    Show tree of USER's processes and their ancestors (me=$USER)")
+        print("                   These exclude children of pid 0 and pid 1 that have clade_usage < 1%cpu and 30MB (unless you pass --all)")
+        print("                   You can sort by --fd --con --cpu --mem (default: most constrained resource)\n")
         print(" ptrtop PID        Show info about a process\n")
         print(" ptrtop --users    Show total resources used by each user\n")
         print("Some information requires `sudo` for others' processes.")
@@ -375,10 +382,11 @@ if __name__ == '__main__':
         elif '--con' in sys.argv[1:]: p_sort_key = lambda p: (-p['family']['num_con'], -p['family']['num_fds'], p['pid'])
         elif '--cpu' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/2**20, 0), p['pid'])
         elif '--mem' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
+        drop_boring = '--all' not in sys.argv[1:]
         user_filter = set(arg for arg in sys.argv[1:] if not arg.startswith('-'))
         if 'me' in user_filter: user_filter.add(getpass.getuser())
 
-        root = get_pid_tree(user_filter, show_big_files=True)
+        root = get_pid_tree(user_filter, show_big_files=True, drop_boring=drop_boring)
         system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
         if p_sort_key is None:
             cpu_usage = root['family']['cpu'] / system_avail['cpu']
