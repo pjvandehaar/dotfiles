@@ -28,7 +28,6 @@
 (when (>= emacs-major-version 24)
   (require 'package)
   ;; MELPA-stable is the best repo. It installs the latest tagged commit.
-  ;; ELPA doesn't have ESS. Marmalade is out-of-date. MELPA tracks master.
   (add-to-list 'package-archives
                '("melpa-stable" . "https://stable.melpa.org/packages/") t)
   (package-initialize)
@@ -50,6 +49,9 @@
 
 ;; Disable electric-indent-mode (due to pasting problems mostly).  If you want auto-indent, use C-j.
 (when (fboundp 'electric-indent-mode) (electric-indent-mode -1))
+
+;; Disable change-log-mode for `CHANGELOG.md`
+(rassq-delete-all 'change-log-mode auto-mode-alist)
 
 ;; I think that `setq-default` will let modes that override this setting do so.
 (setq-default vc-follow-symlinks t)
