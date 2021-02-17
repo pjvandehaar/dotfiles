@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # /usr/bin/zcat on macOS expects the file extension `.Z`.
+# /usr/bin/zcat on some linuxes cannot pass-through plaintext
 # in some cases it is useful to add `complete -r zcat` in .bashrc.
 if [[ -n "$*" ]]; then
     gzip -cdfq "$*"
