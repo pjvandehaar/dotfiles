@@ -147,6 +147,8 @@ def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = Fa
                     path = shorten_filepath(f.path)
                     mode = ' w' if f.mode == 'w' else f.mode  # Usually `r` is left column and `w`/`+` is right column.
                     p.setdefault('bigfiles', []).append(f'{path}  {size//1_000_000:5,}M ({location}) {mode:2}')
+            if len(p.get('bigfiles',[])) > 50:
+                p['bigfiles'] = p['bigfiles'][:5] + ['[{} total...]'.format(len(p['bigfiles']))] + p['bigfiles'][-5:]
         add_big_files(p_for_pid[0])
 
     time.sleep(1)
