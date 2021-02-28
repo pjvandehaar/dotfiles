@@ -15,9 +15,14 @@ if __name__ == '__main__':
     else: kpa.dev_utils.run(__file__, make_cache=False, run_rarely=True)
 
 
-from typing import Optional,List
+from typing import Optional,List,TypeVar,Iterator
 import subprocess, os, random, re, shutil, json, sys, argparse
 from pathlib import Path
+T = TypeVar('T')
+def get_one(iterable:Iterator[T]) -> T:
+    lst = list(iterable)
+    if len(lst) != 1: raise Exception(f"Should just be one: {repr(lst)}")
+    return lst[0]
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'  # Tells `journalctl` to print dates in this timezone
 
@@ -36,20 +41,15 @@ def get_dotksys_path() -> Optional[Path]:
     return None
 
 def get_unit_name() -> str:
-    """Guess the `<name>.service` to use. First look for `.ksys/<name>.service` and then check if we're in `/srv/<name>/`."""
+    """Guess the `<name>.service` to use. First look for `.ksys/<name>.service` and then check if we're in `/srv/<name>/` or `/etc/<name>/`."""
     if (dotksys_path := get_dotksys_path()):
-        assert len(list(dotksys_path.glob('*.service'))) == 1  # If >1, choose one?
-        for filepath in dotksys_path.iterdir():
-            filename = filepath.name.split('%')[-1]
-            if filename.endswith('.service'):
-                return '.'.join(filename.split('.')[:-1])
+        service_filepath = get_one(dotksys_path.glob('*.service'))
+        return service_filepath.name.split('%')[-1][:-len('.service')]
     if (path := Path().absolute()).parts[:2] == ('/', 'srv') and len(path.parts) >= 3:
         return f"kpa-{path.parts[2]}"
-    if str(Path().absolute()).startswith('/etc/apache2'):
-        return 'apache2'
-    if str(Path().absolute()).startswith('/etc/nginx'):
-        return 'nginx'
-    raise Exception("Couldn't detect service name, because there's no ancestral .ksys/ and you're not in /srv/*/")
+    if (path := Path().absolute()).parts[:2] == ('/', 'etc') and len(path.parts) >= 3:
+        return path.parts[2].split('.')[0] # handle "logrotate.d", "cron.daily", "rsyslog.conf", etc
+    raise Exception("Couldn't detect service name, because there's no ancestral .ksys/ and you're not in /srv/*/ or /etc/*/")
 
 def log(args:argparse.Namespace) -> None:
     """Show logs for a service."""
