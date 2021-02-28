@@ -45,8 +45,10 @@ def get_unit_name() -> str:
                 return '.'.join(filename.split('.')[:-1])
     if (path := Path().absolute()).parts[:2] == ('/', 'srv') and len(path.parts) >= 3:
         return f"kpa-{path.parts[2]}"
-    if str(Path().absolute()).startswith('/etc/apache2/'):
+    if str(Path().absolute()).startswith('/etc/apache2'):
         return 'apache2'
+    if str(Path().absolute()).startswith('/etc/nginx'):
+        return 'nginx'
     raise Exception("Couldn't detect service name, because there's no ancestral .ksys/ and you're not in /srv/*/")
 
 def log(args:argparse.Namespace) -> None:
