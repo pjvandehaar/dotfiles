@@ -56,7 +56,7 @@ alias px="pipenv run"
 # =========
 
 # aliases mask functions
-unalias path glq gh h cdl mcd 2>/dev/null
+unalias path glq h cdl mcd ew se 2>/dev/null
 
 path() { echo "$PATH" | tr : "\n"; }
 alias e="\$EDITOR"
@@ -105,7 +105,7 @@ if exists __git_complete; then
     __git_complete glb _git_log
     __git_complete glq _git_log
 fi
-gh() {
+ptrgh() {
     for remote in $(git remote); do
         echo "## $remote"
         \git remote get-url "$remote" |
