@@ -49,6 +49,8 @@ $(v=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=75 53f37 98ca 21e1f6 815d 2eab1
 export PIPENV_VENV_IN_PROJECT=1
 alias px="pipenv run"
 
+alias ffmpeg="ffmpeg -hide_banner"
+
 [[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)" # ?? from Ubuntu .bashrc
 
 
