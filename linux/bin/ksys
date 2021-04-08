@@ -19,7 +19,7 @@ from typing import Optional,List,TypeVar,Iterator
 import subprocess, os, random, re, shutil, json, sys, argparse
 from pathlib import Path
 
-os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'  # Tells `journalctl` to print dates in this timezone
+os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'  # Tells `journalctl` to print dates in this timezone.  Maybe move to `.bashrc`?
 
 def print_and_run(argv:List[str]) -> None:
     print(argv)
@@ -46,7 +46,7 @@ def get_unit_name() -> str:
         return f"kpa-{path.parts[2]}"
     if (path := Path().absolute()).parts[:2] == ('/', 'etc') and len(path.parts) >= 3:
         return path.parts[2].split('.')[0] # handle "logrotate.d", "cron.daily", "rsyslog.conf", etc
-    raise Exception("Couldn't detect service name, because there's no ancestral .ksys/ and you're not in /srv/*/ or /etc/*/")
+    raise Exception("Couldn't detect service name, because no ancestor directory contains `.ksys/` and you're not in `/srv/*/` or `/etc/*/`.")
 
 def log(args:argparse.Namespace) -> None:
     """Show logs for a service."""
