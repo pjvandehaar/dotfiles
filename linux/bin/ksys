@@ -38,11 +38,10 @@ def get_dotksys_path() -> Optional[Path]:
 def get_unit_name() -> str:
     """Guess the `<name>.service` to use. First look for `.ksys/<name>.service` and then check if we're in `/srv/<name>/` or `/etc/<name>/`."""
     if (dotksys_path := get_dotksys_path()):
-        service_filepaths = list(dotksys_path.glob('*.service'))
-        if len(service_filepaths) == 0: raise Exception(f'No service file found in {str(dotksys_path)}')
-        if len(service_filepaths) > 1: raise Exception('Use `-u` to choose one of: ' + ' '.join(path.name.split('%')[-1] for path in service_filepaths))
-        filename = service_filepaths[0].name.split('%')[-1]
-        return '.'.join(filename.split('.')[:-1])
+        service_names = ['.'.join(path.name.split('%')[-1].split('.')[:-1]) for path in dotksys_path.glob('*.service')]
+        if len(service_names) == 0: raise Exception(f'No service file found in {str(dotksys_path)}')
+        if len(service_names) > 1: raise Exception(f'Use `-u` to choose one of: {" ".join(service_names)}')
+        return service_names[0]
     if (path := Path().absolute()).parts[:2] == ('/', 'srv') and len(path.parts) >= 3:
         return f"kpa-{path.parts[2]}"
     if (path := Path().absolute()).parts[:2] == ('/', 'etc') and len(path.parts) >= 3:
