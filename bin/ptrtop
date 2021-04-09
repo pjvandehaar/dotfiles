@@ -6,6 +6,7 @@
 #  - htop/atop: does hierarchy, but not sorting or clade_usage
 #  - iotop/iostat/dstat
 
+# TODO: show systemd unit file (gotten by `ps -o unit= $PID`)
 
 # TODO: show per-process diskio (only possible on linux for my own processes, I think)
 # TODO: show per-process swap/paging
