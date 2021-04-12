@@ -60,6 +60,8 @@ alias ffmpeg="ffmpeg -hide_banner"
 # aliases mask functions
 unalias path glq h cdl mcd ew se 2>/dev/null
 
+alias py="python3"
+alias ipy="ipython3"
 path() { echo "$PATH" | tr : "\n"; }
 alias e="\$EDITOR"
 ew() { "$EDITOR" "$(which "$1")"; }
