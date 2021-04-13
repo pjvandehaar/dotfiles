@@ -1,3 +1,6 @@
+
+# Note: if I run into trouble with this, consider switching to Starship (but without a custom font)
+
 if [[ -z $TERM || $TERM = dumb || $- != *i* ]]; then
     unset PROMPT_COMMAND
     PS1="\w $ "
