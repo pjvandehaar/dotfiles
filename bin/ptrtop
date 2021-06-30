@@ -2,13 +2,13 @@
 # -*- mode: python -*-
 
 # This script is like `top`, but:
-# 1. It shows large files that are opened by a process, and it shows what position in that file is being read or written.
+# 1. It shows large files that are opened by a process, and it shows what position in that file is being read or written (on linux).
 # 2. It organizes processes in their tree of parents and children.
 #    Processes are sorted according to CPU or RAM (whichever is used more on your computer).
 #    A process's descendants all count towards its CPU and RAM usage.
 #    Eg, firefox has lots of child processes, and all of their CPU and RAM is counted towards the parent Firefox.
 #    If a parent process has substantial individual CPU or RAM, it also shows a fake child "•" of only its own usage.
-# It can also inspect a single process with `ptrtop $pid` (including open files) or compare users' total usage with `ptrtop --users`.
+# You can inspect a single process with `ptrtop $pid` (including open files) or compare users' total usage with `ptrtop --users`.
 
 # Requirements: `pip3 install psutil`
 
