@@ -287,14 +287,11 @@ def inspect_pid(pid:PID) -> None:
 
     try:
         for i, f in enumerate(sorted(p.open_files(), key=lambda f:f.path)):
-            if i == 0: print('[open files]')
+            if i == 0: print('[files]   SIZE POS MODE PATH')
             try:
-                if f.position > 1e6:
-                    size = Path(f.path).stat().st_size
-                    location = 'end' if f.position == size else f'{f.position / size * 99:02.0f}%'
-                    print(f'{size:15,}({location}) {f.mode:2} {f.path}')
-                else:
-                    print(f'{size:15,}      {f.mode}  {f.path}')
+                size = Path(f.path).stat().st_size
+                location = 'end' if f.position == size else f'{f.position / size * 99:02.0f}%'
+                print(f'{size:15,} {location} {f.mode:2} {f.path}')
             except Exception:
                 print(' ', f.path)
     except psutil.AccessDenied:
