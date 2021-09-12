@@ -1,8 +1,7 @@
 ##network
 - `lsof -i`
-- `sshfs user@host:dir mountpoint`
 - `netstat -rn` # see routing tables - "default" is router.
-- `sudo ngrep -d any "classbooklist"` # print all packets matching a regex
+- `sudo ngrep -d any "github"` # print all packets matching a regex
     - alternative: capture with tcpdump, then filter with wireshark `frame contains "foo"`.
 
 ##process' file usage
@@ -64,7 +63,7 @@ M-z _char_              | Delete until _char_
 - M-e
 - C-M-f
 - C-M-b
-- **toggle comment:** <select region> M-;
+- **toggle comment:** (select region) M-;
 
 ##python
 - **postmortem debugger:** `python3 -m pdb foo.py`
@@ -85,4 +84,4 @@ unzip -d foo2 foo.zip
 ```
 
 ##gif
-ffmpeg -i IMG_1246.m4v -s 360x640 -pix_fmt rgb24 -r 10  -f gif - | gifsicle --optimize=3 --delay=10 > out.gif
+`ffmpeg -i IMG_1246.m4v -s 360x640 -pix_fmt rgb24 -r 10  -f gif - | gifsicle --optimize=3 --delay=10 > out.gif`
