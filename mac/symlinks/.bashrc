@@ -11,6 +11,7 @@ export PATH
 PATH="$dotfiles_path/mac/bin:$PATH"
 PATH="$dotfiles_path/bin:$PATH"
 PATH="$HOME/bin:$PATH"
+PATH="$PATH:/usr/local/sbin"
 PATH="$PATH:$HOME/.cargo/bin"
 PATH="$PATH:$HOME/perl5/bin"
 PATH="$(perl -e'@p=split(":",$ENV{"PATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup

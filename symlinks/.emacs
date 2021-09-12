@@ -21,6 +21,10 @@
  ;; If there is more than one, they won't work right.
  )
 
+;; Put backups in ~/.emacs-saves/ instead of literring all over.
+(setq backup-directory-alist `(("." . "~/.emacs-saves")))
+(setq backup-by-copying t)
+
 ;; Packaging:
 ;; when first installing this .emacs, do `M-x package-install <return> <package-name>`
 ;; sometimes do: `M-x list-packages` to check for updates

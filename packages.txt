@@ -8,6 +8,7 @@ glances
 hilite
 htop
 icdiff
+insect
 jq
 mosh
 node
