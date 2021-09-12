@@ -16,12 +16,6 @@
 ##bash
 - `type ls`
 - `diff <(sort .bashrc) <(sort .bash_profile)`
-- `history | tail -n1000 | sort -k2 | less`
-  - requires `export HISTTIMEFORMAT="%Y/%m/%d %T"`
-- `echo $OLDPWD`
-- **one-at-a-time:** `... | xargs -L1 ...`
-- **replace text:** `... | xargs -I% ...`
-- **don't wrap lines:** `less -S`
 
 ##find
 - **find young files:**
@@ -34,23 +28,12 @@
 - **perl (sed-like):** `rename -e 's/.*(?=[0-9])//' *`
 - **numbering:** `rename -N ...01 -e 's/^/$N/' *`
 
-##lastpass
-- `lpass ls | grep umich`
-- `lpass show umich.edu`
-
-##git
-- **use colors to combine add/remove lines:** `git diff --color-words`
-- **characterwise diff:** `git diff --color-words=.`
-- **select changes:** `git {checkout,reset,stage} -p`
-- `git grep -E 'pattern'`
-- `git fetch -a && git reset --hard origin/master`
-- `git log --stat=,,5`
-
 ##csv
 - `pip3 install csvkit`
 - `csvcut -c bar,baz foo.csv`
 
 ##emacs
+
 key                     | effect
 ------------------------|-------
 M-x `menu-bar-open`, F10|
@@ -101,5 +84,5 @@ zip -e -r foo foo
 unzip -d foo2 foo.zip
 ```
 
-##vid -> gif
+##gif
 ffmpeg -i IMG_1246.m4v -s 360x640 -pix_fmt rgb24 -r 10  -f gif - | gifsicle --optimize=3 --delay=10 > out.gif
