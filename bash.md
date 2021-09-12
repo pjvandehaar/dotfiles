@@ -1,38 +1,37 @@
-##network
+## Network
 - `lsof -i`
 - `netstat -rn` # see routing tables - "default" is router.
 - `sudo ngrep -d any "github"` # print all packets matching a regex
     - alternative: capture with tcpdump, then filter with wireshark `frame contains "foo"`.
 
-##process' file usage
+## Process' file usage
 - `htop` followed by `l`
 - **check current read position in file:** `lsof -p <pid> -o` or `lsof -o <filename>`
 
-##readline
+## Readline
 - **expand inline:** `C-M-e`, `C-x *`
 - **jump to char:**: `C-]`
 
-##bash
+## Bash
 - `type ls`
 - `diff <(sort .bashrc) <(sort .bash_profile)`
 
-##find
+## find
 - **find young files:**
   - Linux: `find . -mmin -60 -exec stat -c "%y   %n" {} \;`
   - OSX: `find . -mmin -60 -exec stat -f "%Sm   %N" {} \;`
 
-##rename
+## rename
 - **dry-run:** `rename -n`
 - **sanitize:** `rename -z`
 - **perl (sed-like):** `rename -e 's/.*(?=[0-9])//' *`
 - **numbering:** `rename -N ...01 -e 's/^/$N/' *`
 
-##csv
+## csv
 - `pip3 install csvkit`
 - `csvcut -c bar,baz foo.csv`
 
-##emacs
-
+## emacs
 key                     | effect
 ------------------------|-------
 M-x `menu-bar-open`, F10|
@@ -56,7 +55,7 @@ C-x _tab_               | Enter indentation mode (sometimes need C-u)
 C-c C-{f,b}             | HTML-mode: Go to matching tag
 M-z _char_              | Delete until _char_
 
-##emacs + python
+## emacs + python
 - C-M-a
 - C-M-e
 - M-a
@@ -65,13 +64,13 @@ M-z _char_              | Delete until _char_
 - C-M-b
 - **toggle comment:** (select region) M-;
 
-##python
+## python
 - **postmortem debugger:** `python3 -m pdb foo.py`
   - **stack:** `where`, `up`, `down`
   - **run code:**: `!`, `p`, `pp`, `interact`
   - **context:** `list`, `list start, end`, `args`
 
-##encryption
+## encryption
 ```
 tar -cz foo | openssl aes-256-cbc > foo.tar.gz.a2c
 mkdir -p foo2 && cat foo.tar.gz.a2c | openssl aes-256-cbc -d | tar -xz -C foo2
@@ -83,5 +82,5 @@ zip -e -r foo foo
 unzip -d foo2 foo.zip
 ```
 
-##gif
+## gif
 `ffmpeg -i IMG_1246.m4v -s 360x640 -pix_fmt rgb24 -r 10  -f gif - | gifsicle --optimize=3 --delay=10 > out.gif`
