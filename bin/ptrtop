@@ -18,6 +18,12 @@
 #  - iotop/iostat/dstat
 #  - glances
 
+# TODO: make rows and clades easier to scan.  use a slight grey background on each third line.
+#       or de-emphasize lines that are not an immediate child of pid1.
+#       or rainbow by depth
+# TODO: use fg/bg/bold to visualize CPU/mem usage (like `glances`). 800MB should stand out but doesn't.
+# TODO: highlight $(basename $0) like `glances`.
+
 # TODO: show systemd unit file (gotten by `ps -o unit= $PID`)
 
 # TODO: show per-process diskio (only possible on linux for my own processes, I think)
