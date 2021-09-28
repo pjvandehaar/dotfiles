@@ -61,8 +61,10 @@ def use_ipdb():
 
 @functools.lru_cache(None)
 def shorten_filepath(filepath: str) -> str:
-    parent, filename = os.path.split(filepath)
-    return shorten_filedir(parent) + '/' + filename
+    try:
+        parent, filename = os.path.split(filepath)
+        return shorten_filedir(parent) + '/' + filename
+    except PermissionError: return filepath
 @functools.lru_cache(None)
 def shorten_filedir(filedir: str) -> str:
     if filedir == '/': return ''
@@ -77,6 +79,59 @@ def shorten_filedir(filedir: str) -> str:
 @functools.lru_cache(None)
 def get_filenames_in_filedir(filedir: str) -> List[str]:
     return os.listdir(filedir)
+
+def get_lsof_file_info(pid:int) -> Dict[int,Tuple[str,int,int]]:
+    '''pid -> (mode, position, size)'''
+    try:
+        out = subprocess.check_output(f'lsof -o -o 20 -P -F -p {pid}'.split())
+    except subprocess.CalledProcessError:
+        return {}
+    ret: Dict[int,Tuple[str,int,int]] = {}
+    fd, mode, size, offset = -1, '', -1, -1
+    for line in out.split(b'\n'):
+        # These lines should always appear in this order: f a s o
+        if line[:1] == b'f' and line[1:].isdigit():
+            fd = int(line[1:])
+        elif line[:1] == b'a':
+            mode = line[1:].decode('ascii')
+        elif line[:1] == b's':
+            size = int(line[1:])
+        elif line[:1] == b'o':
+            if line[1:3] == b'0t': offset = int(line[3:])
+            elif line[1:3] == b'0x': offset = int(line[3:], 16)
+            else: offset = int(line[1:])
+            ret[fd] = (mode, offset, size)
+    return ret
+
+def get_file_info(pid:int, proc:psutil.Process, run_lsof:bool = False, only_size_when_offset:bool = True) -> List[Tuple[str,str,int,int,str]]:
+    '''[(path, mode, size, position, percent), ...]'''
+    def clean_mode(mode:str) -> str:
+        if mode == 'w': return ' w'
+        if mode in ['u', 'r+']: return 'rw'
+        return mode
+    def get_percent(size:int, position:int) -> str:
+        if size == -1 or position == -1: return ''
+        if size == position: return 'end'
+        return f'{position / size * 99:2.0f}%'
+    try: open_files = sorted(proc.open_files(), key=lambda f:f.path)
+    except (psutil.NoSuchProcess, psutil.AccessDenied): return []
+    ret = []
+    if run_lsof:
+        info_by_fd = get_lsof_file_info(pid)
+        for f in open_files:
+            if (info := info_by_fd.get(f.fd)):
+                mode, size, position = info[0], info[2], info[1]
+                ret.append((f.path, clean_mode(mode), size, position, get_percent(size, position)))
+            else:
+                ret.append((f.path, '', -1, -1, ''))
+    else:
+        for f in open_files:
+            position = getattr(f, 'position', -1)  # macOS lacks f.position and f.mode
+            size = Path(f.path).stat().st_size if position > 3e6 else -1
+            ret.append((f.path, clean_mode(getattr(f, 'mode', '')), size, position, get_percent(size, position)))
+    return ret
+
+
 
 @functools.lru_cache()
 def username_by_uid() -> Dict[str,str]:
@@ -151,24 +206,17 @@ def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = Fa
                 except AccessDenied: pass
         except psutil.NoSuchProcess: pass # process can die at any time, raising this error when we call its methods
 
-    if show_big_files:
-        def add_big_files(p:ProcDict) -> None:
-            for child in p['children']: add_big_files(child)
-            try: open_files = (p['proc'] if p.get('proc') else psutil.Process(p['pid'])).open_files()
-            except (psutil.NoSuchProcess, psutil.AccessDenied): return
-            for f in sorted(open_files, key=lambda f:f.path):
-                if not hasattr(f, 'position'):  # macOS
-                    if (size := Path(f.path).stat().st_size) > 100e6:
-                        path = shorten_filepath(f.path)
-                        p.setdefault('bigfiles', []).append(f'{path}  {size//1_000_000:5,}M')
-                elif f.position > 3e6 and (size := Path(f.path).stat().st_size) > 100e6:
-                    location = 'end' if f.position == size else f'{f.position / size * 99:02.0f}%'
-                    path = shorten_filepath(f.path)
-                    mode = ' w' if f.mode == 'w' else f.mode  # Usually `r` is left column and `w`/`+` is right column.
-                    p.setdefault('bigfiles', []).append(f'{path}  {size//1_000_000:5,}M ({location}) {mode:2}')
-            if len(p.get('bigfiles',[])) > 50:
-                p['bigfiles'] = p['bigfiles'][:5] + ['[{} total...]'.format(len(p['bigfiles']))] + p['bigfiles'][-5:]
-        add_big_files(p_for_pid[0])
+    def add_big_files(p:ProcDict) -> None:
+        for child in p['children']: add_big_files(child)
+        # TODO: can I find a heuristic for when to spend the time to run lsof?
+        file_info = get_file_info(p['pid'], p['proc'] if p.get('proc') else psutil.Process(p['pid']), run_lsof=show_big_files)
+        for (path, mode, size, position, percent) in file_info:
+            if size >= 100e3 and position >= 3e6:
+                path = shorten_filepath(path)
+                p.setdefault('bigfiles', []).append(f'{path}  {size//1_000_000:5,}M ({percent}) {mode:2}')
+        if len(p.get('bigfiles',[])) > 50:
+            p['bigfiles'] = p['bigfiles'][:5] + ['[{} total...]'.format(len(p['bigfiles']))] + p['bigfiles'][-5:]
+    add_big_files(p_for_pid[0])
 
     time.sleep(1)
 
@@ -292,14 +340,10 @@ def inspect_pid(pid:PID) -> None:
     print()
 
     try:
-        for i, f in enumerate(sorted(p.open_files(), key=lambda f:f.path)):
-            if i == 0: print('[files]   SIZE POS MODE PATH')
-            try:
-                size = Path(f.path).stat().st_size
-                location = 'end' if f.position == size else f'{f.position / size * 99:02.0f}%'
-                print(f'{size:15,} {location} {f.mode:2} {f.path}')
-            except Exception:
-                print(' ', f.path)
+        file_info = get_file_info(pid, p, run_lsof=True, only_size_when_offset=False)
+        for i, (path, mode, size, position, percent) in enumerate(file_info):
+            if i == 0: print('[files]    SIZE  POS MODE PATH')
+            print(f'{size:15,}  {percent:3} {mode:2}  {path}')
     except psutil.AccessDenied:
         print('[cannot access open files]')
     print()
@@ -403,8 +447,9 @@ if __name__ == '__main__':
         drop_boring = '--all' not in sys.argv[1:]
         user_filter = set(arg for arg in sys.argv[1:] if not arg.startswith('-'))
         if 'me' in user_filter: user_filter.add(getpass.getuser())
+        show_big_files = '--big' in sys.argv[1:]
 
-        root = get_pid_tree(user_filter, show_big_files=True, drop_boring=drop_boring)
+        root = get_pid_tree(user_filter, show_big_files=show_big_files, drop_boring=drop_boring)
         system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
         if p_sort_key is None:
             cpu_usage = root['family']['cpu'] / system_avail['cpu']
