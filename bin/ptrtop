@@ -119,7 +119,8 @@ def get_file_info(pid:int, proc:psutil.Process, run_lsof:bool = False, only_size
     if run_lsof:
         info_by_fd = get_lsof_file_info(pid)
         for f in open_files:
-            if (info := info_by_fd.get(f.fd)):
+            info = info_by_fd.get(f.fd)
+            if info:
                 mode, size, position = info[0], info[2], info[1]
                 ret.append((f.path, clean_mode(mode), size, position, get_percent(size, position)))
             else:
