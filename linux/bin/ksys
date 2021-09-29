@@ -112,6 +112,17 @@ def restart(args:argparse.Namespace) -> None:
     # Show the current state of the service
     subprocess.call(['sudo', 'systemctl', 'is-failed', unit_name])
 
+def watch(args:argparse.Namespace) -> None:
+    """Watch a path (file or directory) for changes, and restart when it changes"""
+    # TODO: maybe hide this output and just show `ksys log --follow`?
+    import watchgod
+    print('--> Watching: ', args.path)
+    for changes in watchgod.watch(args.path):
+        print('--> Restarting!')
+        unit_name = args.unit or get_unit_name()
+        cmd = ['sudo', 'systemctl', 'restart', unit_name]
+        print_and_run(cmd); print()
+
 def venv(args:argparse.Namespace) -> None:
     """Make ./venv/ and gitignore it."""
     if Path('venv').exists():
@@ -278,6 +289,12 @@ if __name__ == '__main__':
     restart_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
     restart_parser.add_argument('-t', '--timeout', type=int, default=None, help='How long to watch logs.  Has no effect on oneshots.')
     restart_parser.set_defaults(func=restart)
+
+    watch_parser = commands.add_parser('watch', aliases=['w'], help="Reload when a file or directory changes")
+    watch_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
+    watch_parser.add_argument('-t', '--timeout', type=int, default=2, help='How long to follow logs.  Has no effect on oneshots.')
+    watch_parser.add_argument('path', type=str, help='What path (file or directory) to watch')
+    watch_parser.set_defaults(func=watch)
 
     venv_parser = commands.add_parser('venv')
     venv_parser.add_argument('-f', '--force', action='store_true', help='Overwrite any existing `./venv/`')
