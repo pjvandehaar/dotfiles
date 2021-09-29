@@ -16,14 +16,23 @@ if __name__ == '__main__':
 
 
 from typing import Optional,List,TypeVar,Iterator
-import subprocess, os, random, re, shutil, json, sys, argparse
+import subprocess, os, random, re, shutil, json, sys, argparse, time
 from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'  # Tells `journalctl` to print dates in this timezone.  Maybe move to `.bashrc`?
 
-def print_and_run(argv:List[str]) -> None:
-    print(argv)
-    subprocess.call(argv)
+def print_and_run(argv:List[str], timeout:int = None) -> None:
+    print(argv, flush=True)
+    if timeout:
+        # Normally you can do subprocess.call(argv, timeout=5), but `sudo` ruins that.
+        p = subprocess.Popen(argv)  # Executes in background
+        time.sleep(timeout)
+        assert p.pid > 1
+        subprocess.call(['sudo', '/bin/kill', '-9', str(p.pid)])
+        p.wait()  # Clean up zombie
+        print(f'\n--> {timeout} second timeout')
+    else:
+        subprocess.call(argv)  # Executes in foreground
 
 def get_dotksys_path() -> Optional[Path]:
     """Return the path to .ksys/ in an ancestor directory, like how .git/ works."""
@@ -87,15 +96,17 @@ def restart(args:argparse.Namespace) -> None:
         else:
             last_run_id = subprocess.check_output(['systemctl','show','--value','-property=InvocationID',unit_name]).decode().strip()
             cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-pager', '--no-hostname']
+        try: print_and_run(cmd)
+        except KeyboardInterrupt: pass
     else:
         if cursor:
             cmd = ['sudo', 'journalctl', '-u', unit_name, '--no-pager', '--no-hostname', '--follow', '--after-cursor', cursor]
         else:
             # This misses messages that are printed too quick after the restart
             cmd = ["sudo", "journalctl", '-u', unit_name, '--no-pager', '--no-hostname', '--follow', '-n1']
-        print('--- Ctrl-C quits ---')
-    try: print_and_run(cmd)
-    except KeyboardInterrupt: pass
+        print('--- Ctrl-C quits ---', flush=True)
+        try: print_and_run(cmd, timeout=args.timeout) if args.timeout else print_and_run(cmd)
+        except KeyboardInterrupt: pass
     print()
 
     # Show the current state of the service
@@ -265,6 +276,7 @@ if __name__ == '__main__':
 
     restart_parser = commands.add_parser('restart', aliases=['r'])
     restart_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
+    restart_parser.add_argument('-t', '--timeout', type=int, default=None, help='How long to watch logs.  Has no effect on oneshots.')
     restart_parser.set_defaults(func=restart)
 
     venv_parser = commands.add_parser('venv')
