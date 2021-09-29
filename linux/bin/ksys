@@ -117,11 +117,10 @@ def watch(args:argparse.Namespace) -> None:
     # TODO: maybe hide this output and just show `ksys log --follow`?
     import watchgod
     print('--> Watching: ', args.path)
+    unit_name = args.unit or get_unit_name()
     for changes in watchgod.watch(args.path):
         print('--> Restarting!')
-        unit_name = args.unit or get_unit_name()
-        cmd = ['sudo', 'systemctl', 'restart', unit_name]
-        print_and_run(cmd); print()
+        subprocess.call(['sudo', 'systemctl', 'restart', unit_name])
 
 def venv(args:argparse.Namespace) -> None:
     """Make ./venv/ and gitignore it."""
