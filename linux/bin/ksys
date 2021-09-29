@@ -55,14 +55,12 @@ def log(args:argparse.Namespace) -> None:
         cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
     elif args and args.follow:
         cmd = ["sudo", "journalctl", "-u", unit_name, '--follow', '--no-hostname']
-        print('--- Ctrl-C quits ---')
+        print('--- Ctrl-C quits ---', flush=True)
     else:
         last_run_id = subprocess.check_output(['systemctl','show','--value','-p','InvocationID',unit_name]).decode().strip()
         cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-hostname']
-    try:
-        print_and_run(cmd)
-    except KeyboardInterrupt:
-        print()
+    try: print_and_run(cmd)
+    except KeyboardInterrupt: print()
 
 def stat(args:argparse.Namespace) -> None:
     """Show the status and recent logs for a service."""
