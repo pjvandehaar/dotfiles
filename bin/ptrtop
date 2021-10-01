@@ -51,6 +51,8 @@ PID = int
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 TERM_WIDTH = shutil.get_terminal_size().columns
+MACHINE_CPU_COUNT = psutil.cpu_count()
+MACHINE_RAM = psutil.virtual_memory().total
 
 def use_ipdb():
     def excepthook(*args, **kwargs):
@@ -286,7 +288,7 @@ def repr_p(p:ProcDict, tree_prefix_first:str = '', tree_prefix_rest:str = '', p_
                  repr_fd(f) + repr_con(f) + '  ' + repr_cpu(f) + repr_mem(f) +
                  ' ' + tree_prefix_first + repr_name(p))
     # Sometimes the process deserves its own line:
-    if p['children'] and (p.get('mem_rss',0) > 30e6 or p.get('cpu',0) >= 0.01):
+    if p['children'] and (p.get('mem_rss',0) > MACHINE_RAM/100 or p.get('cpu',0) >= MACHINE_CPU_COUNT/100):
         lines.insert(0,
                      f"{p['pid']:6} {p.get('user','?')[:9]:9}" +
                      repr_fd(p) + repr_con(p) + '  ' + repr_cpu(p) + repr_mem(p) +
@@ -403,7 +405,7 @@ def summarize_users() -> None:
         try: c = x['proc'].cpu_times()
         except psutil.NoSuchProcess: pass
         users[x['username']]['cpu'] += (c.system+c.user - x['cpu_s1']) / (time.time()-x['cpu_s1_t'])
-    system_avail = {'cpu': psutil.cpu_count(), 'mem_rss': psutil.virtual_memory().total}
+    system_avail = {'cpu': MACHINE_CPU_COUNT, 'mem_rss': MACHINE_RAM}
     total_used = {'cpu': sum(d['cpu'] for d in users.values()), 'mem_rss': sum(d['mem_rss'] for d in users.values())}
     def user_is_idle(d:dict)->bool: return repr_cpu(d).strip()=='.' and repr_mem(d).strip()=='.' and d['num_fds']==0 and d['num_con']==0
     username_len = max(max(len(u) for u,d in users.items() if not user_is_idle(d)), len('[available] '))
