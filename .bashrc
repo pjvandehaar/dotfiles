@@ -180,9 +180,9 @@ spaced_less() {
 # overrides
 # =========
 
-alias pip="echo Use pip2 or pip3 or pythonX -m pip or conda! #"
-alias python="echo Use python2 or python3! #"
-alias ipython="echo Use ipython2 or ipython3! #"
+alias pip=pip3
+alias python=python3
+alias ipython=ipython3
 alias ipython3="ipython3 --no-confirm-exit"
 
 alias grep='grep --color=auto'
