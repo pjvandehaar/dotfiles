@@ -1,0 +1,34 @@
+#!/bin/bash
+set -euo pipefail
+
+filename="${1:-index.html}"
+if ! [[ $filename == *.html ]]; then
+    echo "Filename should end with html but yours doesnt: $filename"
+    exit 1
+fi
+if [[ -e $filename ]]; then
+    echo "$filename already exists!"
+    exit 1
+fi
+
+cat > "$filename" <<EOF
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+  body{font-size:1.2rem;line-height:1.6;max-width:35rem;margin:0 auto;margin-bottom:4rem;}
+  p{margin-bottom:0;} ul{margin-top:0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/showdown@1.9.1/dist/showdown.min.js"></script>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', () => {
+    const converter = new showdown.Converter({disableForced4SpacesIndentedSublists:true});
+    const html      = converter.makeHtml(document.querySelector('#markdown-template').text);
+    document.body.insertAdjacentHTML('beforeend', html);
+});
+</script>
+<script type="template" id="markdown-template">
+
+EOF
