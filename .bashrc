@@ -138,6 +138,13 @@ alias ptrflake8='flake8 --show-source --ignore=E501,E302,E251,E701,E226,E305,E22
 alias ptrmypy='mypy --pretty --ignore-missing-imports --cache-dir=/dev/null'
 ptrwatch() { watchexec -w "$1" "./$1"; }
 
+ptrjup() {
+    local fname="$1"
+    if ! [[ $fname = *.ipynb ]]; then fname="$fname.ipynb"; fi
+    if ! [[ -e "$1" ]]; then echo '{"cells":[],"metadata":{},"nbformat":4,"nbformat_minor":2}' > "$fname"; fi
+    jupyter-notebook "$fname"
+}
+
 ptrnybbleswap() { python3 -c $'import sys,signal as g;g.signal(g.SIGPIPE,g.SIG_DFL);x=sys.stdin.buffer.read(10000)\nwhile sys.stdout.buffer.write(bytes([oct//16+(oct%16)*16 for oct in x])):x=sys.stdin.buffer.read(10000)'; }
 ptrbitwiseinverse() { python3 -c $'import sys,signal as g;g.signal(g.SIGPIPE,g.SIG_DFL);x=sys.stdin.buffer.read(10000)\nwhile sys.stdout.buffer.write(bytes([oct^255 for oct in x])):x=sys.stdin.buffer.read(10000)'; }
 ptrcut() { if [[ $1 == "-"* ]]; then perl -nale 'print $F[$#F+1'"$1"']'; else perl -nale 'print $F['"$1"']'; fi; }
