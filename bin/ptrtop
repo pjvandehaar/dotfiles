@@ -212,7 +212,8 @@ def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = Fa
     def add_big_files(p:ProcDict) -> None:
         for child in p['children']: add_big_files(child)
         # TODO: can I find a heuristic for when to spend the time to run lsof?
-        file_info = get_file_info(p['pid'], p['proc'] if p.get('proc') else psutil.Process(p['pid']), run_lsof=show_big_files)
+        if 'proc' not in p: return
+        file_info = get_file_info(p['pid'], p['proc'], run_lsof=show_big_files)
         for (path, mode, size, position, percent) in file_info:
             if size >= 100e3 and position >= 3e6:
                 path = shorten_filepath(path)

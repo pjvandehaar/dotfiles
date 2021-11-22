@@ -48,7 +48,7 @@ def get_unit_name() -> str:
     """Guess the `<name>.service` to use. First look for `.ksys/<name>.service` and then check if we're in `/srv/<name>/` or `/etc/<name>/`."""
     if (dotksys_path := get_dotksys_path()):
         service_names = ['.'.join(path.name.split('%')[-1].split('.')[:-1]) for path in dotksys_path.glob('*.service')]
-        if len(service_names) == 0: raise Exception(f'No service file found in {str(dotksys_path)}')
+        if len(service_names) == 0: raise Exception(f'The directory {str(dotksys_path)} exists but contains no *.service file')
         if len(service_names) > 1: raise Exception(f'Use `-u` to choose one of: {" ".join(service_names)}')
         return service_names[0]
     if (path := Path().absolute()).parts[:2] == ('/', 'srv') and len(path.parts) >= 3:
@@ -192,9 +192,9 @@ nginx_template = re.subn(r'(\s})', r'\1}', re.subn(r'({\s)', r'{\1', nginx_templ
 
 def conf_create(args:argparse.Namespace) -> None:
     """Create ./.ksys/ and put config in it."""
+    name = str(args.name) if args.name else get_unit_name()
     dotksys_path = Path('.ksys')
     dotksys_path.mkdir(exist_ok=True)
-    name = str(args.name) if args.name else get_unit_name()
     directory = str(Path().absolute()) + '/'  # aesthetic
     if args.timer:
         filename = f'/etc/systemd/system/{name}.service'.replace('/', '%')
@@ -305,7 +305,7 @@ if __name__ == '__main__':
     conf_create_parser = commands.add_parser('conf-create')
     conf_create_parser.add_argument('--name', type=str, default=None, help='What name to use (defaults to kpa-{dirname})')
     conf_create_parser.add_argument('--timer', action='store_true', help='Create a timer rather than a daemon')
-    conf_create_parser.add_argument('--nginx-hostname', type=str, default=None, help='Create nginx config for a daemon listening on this hostname (or `.` for default')
+    conf_create_parser.add_argument('--nginx-hostname', type=str, default=None, help='Create nginx config for a daemon listening on this hostname (or `.` for default)')
     conf_create_parser.set_defaults(func=conf_create)
 
     conf_install_parser = commands.add_parser('conf-install')
