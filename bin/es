@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+assert sys.version_info >= (3,6)
+
+import logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    filename='/tmp/alfred-es.log', filemode='w', # overwrite
+    format='%(relativeCreated)d %(asctime)s %(message)s',
+)
+logging.debug('logging ready')
+
+from typing import List,Iterator
+import traceback
+import re
+import urllib.parse
+import argparse
+import xml.etree.ElementTree
+logging.debug('imported most')
+import requests
+logging.debug('imported requests')
+import lxml
+from bs4 import BeautifulSoup
+logging.debug('imported BeautifulSoup + lxml')
+
+
+HTML_URL_TEMPLATE = 'https://www.wordreference.com/esen/{}'
+
+def get_display_items(query:str) -> 'List[DisplayItem]':
+    query = urllib.parse.quote(query)
+
+    r = requests.get(HTML_URL_TEMPLATE.format(query))
+    r.raise_for_status()
+
+    soup = BeautifulSoup(r.content, 'lxml')
+
+    trs = soup.select('table.WRD tr')
+    trs = [tr for tr in trs if 'wrtopsection' not in tr['class']]
+
+    for elem in soup.select('tr em.tooltip span'): elem.decompose()
+
+    for elem in soup.select('tr em.tooltip'):
+        elem.insert_before('(')
+        elem.insert_after(')')
+
+    for elem in soup.select('tr td + td'): elem.insert_before(' | ')
+
+
+    default_action_url = HTML_URL_TEMPLATE.format(query)
+    display_items = [DisplayItem(cleanup(tr.text), action_url=default_action_url) for tr in trs]
+    return display_items or [DisplayItem('no results found')]
+
+def cleanup(text:str) -> str:
+    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r'(^ )|( $)', '', text)
+    text = text.replace('| |', '|')
+    text = re.sub(r'(^\|)|(\|$)', '', text)
+    return text
+
+
+
+def print_display_items(display_items, fmt):
+    if fmt == 'plaintext': print('\n'.join(item.to_plaintext() for item in display_items))
+    elif fmt == 'wrap': print('\n'.join(TerminalLineWrapper().wrap(item.to_plaintext()) for item in display_items))
+    elif fmt == 'json': print('\n'.join(json.dumps(item.to_dict(), indent=1) for item in display_items))
+    elif fmt == 'xml': print('<?xml version="1.0" encoding="utf-8"?>\n<items>' + ''.join(item.to_xml() for item in display_items) + '</items>')
+    else: raise Exception()
+
+class DisplayItem:
+    "defines a line/row to be displayed in plaintext/xml(alfred)/json/whatever"
+    def __init__(self, maintext, subtext=None, action_url=None, autocomplete=None, copytext=None):
+        self.maintext, self.subtext, self.action_url, self.autocomplete, self.copytext = (
+            maintext, subtext, action_url, autocomplete, copytext
+        )
+    def to_plaintext(self):
+        return f'{self.maintext:25} {self.subtext.strip()}' if self.subtext else self.maintext
+    def to_dict(self):
+        attrs = ['maintext', 'subtext', 'action_url', 'autocomplete', 'copytext']
+        attrs = [attr for attr in attrs if self.__getattribute__(attr) is not None]
+        return {attr:self.__getattribute__(attr) for attr in attrs}
+    def to_xml(self):
+        def E(tag, attr=None, children=(), text=None):
+            elem = xml.etree.ElementTree.Element(tag, attrib=attr or {})
+            if text: elem.text = "" + text
+            for child in children: elem.append(child)
+            return elem
+        return xml.etree.ElementTree.tostring(
+            E('item', {'autocomplete': self.autocomplete or self.maintext, 'valid':'yes'}, children=[
+                E('title', text=self.maintext),
+                E('subtitle', text=self.subtext),
+                E('arg', text=self.action_url),
+                E('text', attr={'type':'copy'}, text=self.copytext or self.maintext),
+            ])).decode('utf-8')
+
+
+class TerminalLineWrapper:
+    def __init__(self):
+        import shutil
+        self.cols = shutil.get_terminal_size().columns
+    def wrap(self, text):
+        ret = ''
+        x = self.how_many_chars_fit_in_width(text, self.cols)
+        ret += (text[:x])
+        while x < len(text):
+            text = text[x:]
+            x = self.how_many_chars_fit_in_width(text, self.cols - 8)
+            ret += '\n' + ' '*8 + text[:x]
+        return ret
+    def how_many_chars_fit_in_width(self, s, width):
+        for i, c in enumerate(s):
+            width -= self.width_of_char(c)
+            if width < 0: return i
+        return len(s)
+    def width_of_char(self, c):
+        # TODO: try `wcwidth.wcswidth(c)`.
+        import unicodedata
+        ## A: ambiguous (1 in iterm)
+        ## F: full width (2)
+        ## H: halfwidth (1)
+        ## N : not asian (1)
+        ## Na: narrow (1)
+        ## W: wide (2)
+        u_eaw = unicodedata.east_asian_width(c)
+        if u_eaw in ('H','N','Na','A'): return 1
+        elif u_eaw in ('F','W'): return 2
+        else: raise Exception(ord(c))
+
+def use_ipdb():
+    def excepthook(*args, **kwargs):
+        # TODO: print exception, then `input()` and let user decide whether to re-run or go to ipdb.
+        from IPython.core import ultratb
+        sys.excepthook = ultratb.FormattedTB(mode='Verbose', color_scheme='Linux', call_pdb=1)
+        return sys.excepthook(*args, **kwargs)
+    sys.excepthook = excepthook
+
+if __name__ == u'__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--fmt', default='wrap', choices=['plaintext', 'wrap', 'xml', 'json'])
+    parser.add_argument('--test', action='store_true')
+    parser.add_argument('--ipdb', action='store_true')
+    parser.add_argument('--print-exceptions', action='store_true')
+    parser.add_argument('--log-to-stderr', action='store_true')
+    parser.add_argument('query', nargs='?', default=None)
+    args = parser.parse_args()
+    logging.debug('args parsed')
+
+    if args.log_to_stderr:
+        logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
+
+    if args.test == bool(args.query):
+        parser.print_help()
+        exit(1)
+
+    if args.test:
+        queries = ['guaje', 'estafan']
+        for query in queries:
+            print('TESTING QUERY:', query)
+            display_items = get_display_items(query)
+            print_display_items(display_items, args.fmt)
+            print('')
+
+
+    elif args.ipdb:
+        use_ipdb()
+        display_items = get_display_items(args.query)
+        print_display_items(display_items, args.fmt)
+
+
+    elif args.print_exceptions:
+        try:
+            display_items = get_display_items(args.query)
+            print_display_items(display_items, args.fmt)
+        except Exception:
+            print(traceback.format_exc())
+
+    else:
+        try:
+            display_items = get_display_items(args.query)
+            print_display_items(display_items, args.fmt)
+        except Exception:
+            err_filepath = '/tmp/alfred-es.err'
+            with open(err_filepath, 'w') as f: f.write(traceback.format_exc())
+            print_display_items([DisplayItem(f'ERROR logged to {err_filepath}', subtext='cmd-c to copy', copytext=traceback.format_exc())], args.fmt)
+
+    logging.debug('exiting')
