@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys
-assert sys.version_info >= (3,6)
+import sys; assert sys.version_info >= (3,6)
 
 import logging
 logging.basicConfig(
@@ -12,45 +11,69 @@ logging.basicConfig(
 )
 logging.debug('logging ready')
 
+from kpa.func_utils import list_from_iter
 from typing import List,Iterator
-import traceback
-import re
-import urllib.parse
-import argparse
-import xml.etree.ElementTree
+import traceback, itertools, re, urllib.parse, argparse, xml.etree.ElementTree
 logging.debug('imported most')
 import requests
 logging.debug('imported requests')
 import lxml
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 logging.debug('imported BeautifulSoup + lxml')
 
 
 HTML_URL_TEMPLATE = 'https://www.wordreference.com/esen/{}'
 
-def get_display_items(query:str) -> 'List[DisplayItem]':
+@list_from_iter
+def get_display_items(query:str) -> 'Iterator[DisplayItem]':
     query = urllib.parse.quote(query)
 
-    r = requests.get(HTML_URL_TEMPLATE.format(query))
+    def get_text(node:Tag) -> str: return cleanup(node.text).replace(query, '•')
+    def get_tr_parity(tr:Tag) -> int:
+        if 'odd' in tr['class']: return 1
+        if 'even' in tr['class']: return 2
+        return 0
+
+    url = HTML_URL_TEMPLATE.format(query)
+    r = requests.get(url)
     r.raise_for_status()
 
     soup = BeautifulSoup(r.content, 'lxml')
 
     trs = soup.select('table.WRD tr')
-    trs = [tr for tr in trs if 'wrtopsection' not in tr['class']]
-
-    for elem in soup.select('tr em.tooltip span'): elem.decompose()
-
-    for elem in soup.select('tr em.tooltip'):
-        elem.insert_before('(')
-        elem.insert_after(')')
-
-    for elem in soup.select('tr td + td'): elem.insert_before(' | ')
+    trs = [tr for tr in trs if not {'wrtopsection','langHeader'}.intersection(tr['class'])]
+    for elem in soup.select('tr .tooltip span'): elem.decompose()  # delete tooltips
+    for elem in soup.select('tr em'): elem.insert_before('('); elem.insert_after(')')  # wrap italics in ()
+    for elem in soup.select('tr td + td'): elem.insert_before(' | ')  # show columns as |
 
 
-    default_action_url = HTML_URL_TEMPLATE.format(query)
-    display_items = [DisplayItem(cleanup(tr.text), action_url=default_action_url) for tr in trs]
-    return display_items or [DisplayItem('no results found')]
+    # for tr in trs: print(tr['class'], tr.get('id'), is_translation_tr(tr), is_example_tr(tr), get_text(tr))
+
+    for _, tr_group in itertools.groupby(trs, key=get_tr_parity):
+        tr_group = list(tr_group)
+        while tr_group:
+            if len(tr_group) == 1:
+                yield DisplayItem(get_text(tr_group[0]), action_url=url)
+                break
+            tr0,tr1 = tr_group[0], tr_group[1]
+            text0, text1 = get_text(tr0), get_text(tr1)
+            if len(tr_group) == 2:
+                yield DisplayItem(text0, subtext=text1, action_url=url)
+                break
+
+            if _has(tr0, '.FrEx') and _has(tr1, '.ToEx'):
+                yield DisplayItem(f'  {text0}', subtext=f'  = {text1}', action_url=url)
+                del tr_group[:2]
+            elif _has(tr0, '.ToWrd') and _has(tr1, '.ToWrd') and len(text0)+len(text1) < 30:
+                yield DisplayItem(f'  {text0} / {text1}', action_url=url)
+                del tr_group[:2]
+            else:
+                yield DisplayItem(text0, action_url=url)
+                del tr_group[:1]
+
+def _has(node:Tag, selector:str) -> bool: return bool(node.select(selector))
+def is_translation_tr(tr:Tag) -> bool: return bool(tr.select('.FrWrd, .ToWrd'))
+def is_example_tr(tr:Tag) -> bool: return bool(tr.select('.FrEx, .ToEx'))
 
 def cleanup(text:str) -> str:
     text = re.sub(r'\s+', ' ', text)
@@ -155,7 +178,7 @@ if __name__ == u'__main__':
         exit(1)
 
     if args.test:
-        queries = ['guaje', 'estafan']
+        queries = ['guaje', 'estafan', 'chistoso', 'zancadilla']
         for query in queries:
             print('TESTING QUERY:', query)
             display_items = get_display_items(query)
