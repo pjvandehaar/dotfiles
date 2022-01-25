@@ -71,6 +71,8 @@ def get_display_items(query:str) -> 'Iterator[DisplayItem]':
                 yield DisplayItem(text0, action_url=url)
                 del tr_group[:1]
 
+    if not trs: yield DisplayItem("-", action_url=url)
+
 def _has(node:Tag, selector:str) -> bool: return bool(node.select(selector))
 def is_translation_tr(tr:Tag) -> bool: return bool(tr.select('.FrWrd, .ToWrd'))
 def is_example_tr(tr:Tag) -> bool: return bool(tr.select('.FrEx, .ToEx'))
