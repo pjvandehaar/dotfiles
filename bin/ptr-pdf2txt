@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+set -x
+
+pdf=$1
+echo "OCRing $pdf"
+
+tmp=$(mktemp -d)
+pdftopng "$pdf" "$tmp/x"
+
+for f in $tmp/*.png; do
+  tesseract "$f" "$f"
+done
+
+echo -e "\n\n"
+
+cat $tmp/*.txt

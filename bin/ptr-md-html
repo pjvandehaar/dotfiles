@@ -17,6 +17,10 @@ cat > "$filename" <<EOF
 <head>
 <meta charset="utf8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+  body{font-size:1.2rem;line-height:1.6;max-width:35rem;margin:0 auto;margin-bottom:4rem;padding:0.5rem;}
+  p{margin-bottom:0;} ul{margin-top:0;}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js"></script>
 <script type="text/javascript">
 document.addEventListener('DOMContentLoaded', () => {
