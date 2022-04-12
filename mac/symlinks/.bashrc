@@ -11,6 +11,8 @@ export PATH
 PATH="$dotfiles_path/mac/bin:$PATH"
 PATH="$dotfiles_path/bin:$PATH"
 PATH="$HOME/bin:$PATH"
+PATH="$PATH:/opt/homebrew/bin"
+PATH="$PATH:/opt/homebrew/sbin"
 PATH="$PATH:/usr/local/sbin"
 PATH="$PATH:$HOME/.cargo/bin"
 PATH="$PATH:$HOME/perl5/bin"
@@ -31,7 +33,7 @@ export PERL5LIB="$HOME/perl5/lib/perl5:$PERL5LIB"
 unalias l 2>/dev/null  # aliases mask functions
 if type -t exa >/dev/null; then
     # note: use -@ to show file attributes
-    alias l="exa -laF --git --time-style=long-iso --bytes --sort=modified --ignore-glob='.DS_Store|*~|*#*'"
+    alias l="exa -laF --no-user --git --time-style=long-iso --bytes --sort=modified --ignore-glob='.DS_Store|*~|*#*'"
 elif type -t gls >/dev/null; then
     function l {
         # BLOCK_SIZE adds thousands-commas
@@ -40,7 +42,7 @@ elif type -t gls >/dev/null; then
     }
 else
     function l {
-        CLICOLOR_FORCE=1 ls -lAFhtr -G "$@" |
+        CLICOLOR_FORCE=1 ls -lAFhtron -G "$@" |
         grep -E --color=never -v '(~|#|\.DS_Store)$'
     }
 fi
