@@ -2,6 +2,13 @@
 set -euo pipefail
 # This script auto-reconnects to a tmux session
 
+# If host isn't specified, use the first host in ~/.ssh/config
+if [ "X${1:-}" = "X" ] &&  [[ -e "$HOME/.ssh/config" ]]; then
+    host="$(cat "$HOME/.ssh/config" | head -1 | cut -d' ' -f2)"
+    echo "[ssh $host]"
+    set "$host"
+fi
+
 if [ "X$1" = "X" ]; then
     echo "usage: `basename $0` <host>"
     exit 1
