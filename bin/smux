@@ -2,6 +2,12 @@
 set -euo pipefail
 # This script auto-reconnects to a tmux session
 
+use_sudo=''
+if [[ "${1:-}" = "sudo" ]]; then
+    use_sudo=yes
+    shift
+fi
+
 # If host isn't specified, use the first host in ~/.ssh/config
 if [ "X${1:-}" = "X" ] &&  [[ -e "$HOME/.ssh/config" ]]; then
     host="$(cat "$HOME/.ssh/config" | head -1 | cut -d' ' -f2)"
@@ -28,4 +34,8 @@ AUTOSSH_PORT=$(awk 'BEGIN { srand(); do r = rand()*32000; while ( r < 20000 ); p
 export AUTOSSH_POLL AUTOSSH_LOGFILE AUTOSSH_DEBUG AUTOSSH_PATH AUTOSSH_GATETIME AUTOSSH_PORT
 
 # -t is the ssh option to force a pseudo terminal (pty)
-autossh -t $@ "tmux new -As0"
+if [[ -n "$use_sudo" ]]; then
+    autossh -t $@ "sudo tmux new -As0"
+else
+    autossh -t $@ "tmux new -As0"
+fi
