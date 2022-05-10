@@ -81,6 +81,8 @@ se() {
 alias ta="tig --all"
 alias gs='git status'
 alias gg='git grep'
+alias gd='git diff'
+alias gds='git diff --staged'
 alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
@@ -105,6 +107,8 @@ glq() {
 if exists __git_complete; then
     __git_complete gs  _git_status
     __git_complete gg  _git_grep
+    __git_complete gd  _git_diff
+    __git_complete gds _git_diff
     __git_complete gl  _git_log
     __git_complete gla _git_log
     __git_complete glb _git_log
