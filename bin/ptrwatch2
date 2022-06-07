@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+"""Run `./ptrwatch2 run.py`.  Similar to watchexec."""
+# TODO: look into watchfiles.run_process
+
+import sys, os
+import subprocess as sub
+from watchfiles import watch
+
+
+def run(args):
+    print('======', args)
+    sub.run(args)
+    print('\n')
+
+
+if __name__ == '__main__':
+    cmd = sys.argv[1:]
+    if os.path.exists(cmd[0]) and not cmd[0].startswith(('/', '.')):
+        cmd[0] = f'./{cmd[0]}'
+    print(f'Watching: {cmd[0]}')
+    run(cmd)
+    for changeset in watch(cmd[0]):
+        run(cmd)

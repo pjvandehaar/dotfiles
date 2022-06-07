@@ -139,9 +139,11 @@ ds() {
 ptrsu() { sudo su --preserve-environment; }
 ptrwrite() { cp -p "$1" "$1.ptrwrite.tmp"; cat > "$1.ptrwrite.tmp"; mv "$1.ptrwrite.tmp" "$1"; }
 ptr_ipynb() { cat "$1" | jq -r '.cells | .[] | select(.cell_type=="code") | .source | join("")'; }
-alias ptrflake8='flake8 --show-source --ignore=E501,E302,E251,E701,E226,E305,E225,E261,E231,E301,E306,E402,E704,E265,E201,E202,E303,E124,E241,E127,E266,E221,E126,E129,F811,E222,E401,E702,E203,E116,E228,W504,B007,E271,F401'
+alias ptrflake8='flake8 --show-source --ignore=E501,E302,E251,E701,E226,E305,E225,E261,E231,E301,E306,E402,E704,E265,E201,E202,E303,E124,E241,E127,E266,E221,E126,E129,F811,E222,E401,E702,E203,E116,E228,W504,B007,E271,F401,E128'
 alias ptrmypy='mypy --pretty --ignore-missing-imports --cache-dir=/dev/null'
-ptrwatch() { watchexec -w "$1" "./$1"; }
+ptrwatch() { if [[ $1 = /* ]]; then watchexec -w "$1" "$*"; else watchexec -w "$1" "./$*"; fi; }
+alias wt=ptrwatch
+ptrwatchmem() { while free -m|grep Mem|awk '{print $3}'; do sleep 4; done; }
 
 ptrjup() {
     local fname="$1"
@@ -171,6 +173,11 @@ ptrstat() {
 }
 ptrcount() { perl -nle '$h{$_}++; END{foreach my $k (sort {$h{$b}<=>$h{$a}} keys(%h)){print "$h{$k}\t$k"}}'; }
 ptrstrip() { perl -ple 's{^\s+}{}; s{\s+}{}'; }
+ptrview() {
+    if [ -t 0 ]; then cat "$1"; else cat; fi |
+    (head -n 1000; echo '~FIN~') |
+    tabview -
+}
 ptrviewtab() {
     if [ -t 0 ]; then cat "$1"; else cat; fi |
     (head -n 1000; echo '~FIN~') |

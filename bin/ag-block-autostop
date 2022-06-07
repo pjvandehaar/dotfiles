@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+
+'''
+By default, RGC EC2 instances won't autostop when >20% of RAM is in use.
+This script fills up 20% of RAM.
+'''
+
+import psutil, sys
+
+mem = psutil.virtual_memory()
+print(f'=> RAM usage: {int(mem.used/1e6):,}MB / {int(mem.total/1e6):,}MB = {int(mem.percent)}%')
+
+if mem.percent > 50: print(f"Error: You're already using {int(mem.percent)}% of RAM!  Don't waste it!"); sys.exit(1)
+
+bytes_to_waste = int(mem.total / 5)
+s = ' '*bytes_to_waste
+
+mem = psutil.virtual_memory()
+print(f'=> RAM usage: {int(mem.used/1e6):,}MB / {int(mem.total/1e6):,}MB = {int(mem.percent)}%')
+
+input('=> Press ENTER or Ctrl-C to quit.')

@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+
+## Note: Within this file, a "path" must always be absolute and `cat`-able.  Eg, s3 paths are `/mnt/s3/path/to/file` and never `s3://`.
+##       That's a little weird, because this handles all s3 buckets you have access to, including buckets that you don't have mounted in /mnt/s3/.
+##       But I think it's a decent rule anyways.
+
+import sys, os, functools, json, datetime, itertools, re, shutil
+from kpa.terminal_utils import ignore_sigpipe, termcolor
+from pprint import pprint
+from typing import List
+ignore_sigpipe()
+term_width = shutil.get_terminal_size().columns
+
+SHOW_ALL = False
+OPEN_IN_IPYTHON = False
+
+def show_help() -> None:
+    print('v /path/to/dir        Shows contents, like `ls`')
+    print('v /path/to/d          Shows completions, like `ls /path/to/d*`')
+    print('v /path/to/file       Shows information about the file')
+    print('                      If the file looks tabular, show it in a spreedsheet viewer')
+    print('                      If the file looks binary, show `hexdump` and `strings`')
+    print('cat file | v          Same as `v file`')
+    print()
+    print('This script handles s3://, /mnt/s3/, gzip, dx_proj:/dx_path')
+    print('Pass `--all` to prevent truncating results (whether dir listing or file printing).')
+    print('Pass `--py` to open the result in IPython.')
+
+
+def show_path(path:str):
+    path = get_absolute_path(path)
+    if path.startswith('/mnt/s3/') or path == '/mnt/s3':
+        show_s3_path(path)
+    else:
+        show_normal_path(path)
+
+def show_s3_path(path:str):
+    if path.rstrip('/') == '/mnt/s3':
+        for bucket in s3_list_all_buckets():
+            print(f' - /mnt/s3/{bucket}/')
+        return
+    bucket_and_key = remove_required_prefix(path, '/mnt/s3/')
+    assert not path.endswith('/')
+    if '/' not in bucket_and_key:
+        bucket, key = bucket_and_key, ''
+    else:
+        bucket, key = bucket_and_key.split('/', 1)
+    if s3_exists(bucket, key):
+        assert not key.endswith('/')
+        show_s3_file(bucket, key)
+    elif s3_exists(bucket, key+'/'):
+        show_s3_dir(bucket, key+'/')
+    else:
+        show_s3_prefix(bucket, key)
+
+def show_s3_file(bucket:str, key:str):
+    import smart_open
+    print(f'=> File /mnt/s3/{bucket}/{key}')
+    ## Show metadata:
+    print(' => Created', s3_get_object(bucket, key)['LastModified'].strftime('%Y-%m-%d_%H:%M:%S'))
+    length = int(s3_get_object(bucket, key)['ContentLength'])
+    print(f' => {length:,} bytes')
+    if length == 0: return
+    #pprint(s3_get_object(bucket, key))
+    ## Show contents:
+    try:
+        with smart_open.smart_open(f's3://{bucket}/{key}', 'rt') as f:
+            lines = list(f) if SHOW_ALL else list(itertools.islice(f, 0, 15))  # TODO: Make this `-n 50`
+    except UnicodeDecodeError:
+        with smart_open.smart_open(f's3://{bucket}/{key}', 'rb') as f:
+            print(repr(f.read(500)))
+    else:
+        show_lines(lines)
+
+def show_s3_dir(bucket:str, key:str):
+    print(f'=> Dir /mnt/s3/{bucket}/{key}')
+    mtime = int(s3_get_object(bucket, key)['Metadata']['mtime'])
+    print(' => mtime =', datetime.datetime.fromtimestamp(mtime).strftime('%Y-%m-%d_%H:%M:%S'))
+    show_pathlist(s3_list_dir(bucket, key, output_trailing_slash=True), shared_prefix=f'/mnt/s3/{bucket}/{key}')
+
+def show_s3_prefix(bucket:str, key:str):
+    print(f'=> Prefix /mnt/s3/{bucket}/{key}')
+    show_pathlist(s3_list_dir(bucket, key, output_trailing_slash=True, partial_filename=True), shared_prefix=f'/mnt/s3/{bucket}/{key}')
+
+def show_normal_path(path:str):
+    print('Not implemented for local path', path)
+    ## TODO: Reuse code from show_s3_file
+
+
+## Utils:
+
+def show_lines(lines:List[str]):
+    for delim in '\t, ;':
+        ## TODO: Skip # lines, except last if it agrees
+        ## TODO: Make this handle quotes
+        if delim in lines[0]:
+            num_fields = lines[0].count(delim)
+            if all(line.count(delim) == num_fields for line in lines):
+                table = [line.rstrip('\n').split(delim) for line in lines]
+                show_table(table)
+                return
+    for line in lines: print(line.rstrip('\n'))
+
+def show_table(table:List[List[str]]):
+    ## TODO: For tsv, show: (1) shape, (2) column summary, (3) 10 rows printed with alternating bolding, where numeric cols get bg color spectrum like `stocks-and-bonds`.
+    ##       Also: if it's narrow, just print it.  If it's too wide, use tabview.
+    if OPEN_IN_IPYTHON:
+        import io, pandas as pd, IPython
+        df = pd.DataFrame(table[1:], columns=table[0])
+        print('>>> df'); print(df); print()
+        IPython.start_ipython(argv=['--no-confirm-exit'], display_banner=False, user_ns={'df':df})
+    else:
+        column_widths = [0]*len(table[0])
+        for colidx in range(len(table[0])):
+            cell_widths = sorted(len(row[colidx]) for row in table)
+            column_widths[colidx] = max(4, cell_widths[len(table)*9//10]) + 2
+        if len(table)>100 or sum(column_widths) + len(table[0]) > term_width or sum(len(colname)+1 for colname in table[0]) > term_width:
+            ## If the table is really long or wide, use tabview:
+            import tabview
+            tabview.view(table, column_widths=column_widths, column_gap=1)
+        else:
+            ## If it's small, just print it:
+            print('=> Columns:')
+            for colidx, colname in enumerate(table[0]):
+                print(f'  - {colname}')  # TODO: show type, min-1Q-median-3Q-max NA? for num, Counter for str, CONSTANT for constant, UNIQUE for uniq str
+            ## TODO: Align decimals of floats
+            ## TODO: Align ints to the right, with thousands commas
+            ## TODO: Center colnames
+            for rowidx,row in enumerate(table):
+                #if rowidx % 2 == 0: print('\x1B[1;33m', end='')
+                for colidx, cell in enumerate(row):
+                    width = column_widths[colidx]
+                    r = f'{cell[:width]:{width}} '
+                    if r.startswith('0.0') or r.startswith('-0.0'):
+                        nonzero = r.lstrip('-0.')
+                        zero = r[:-len(nonzero)]
+                        r = '\x1B[1;32m' + zero + '\x1B[0m' + nonzero
+                    print(r, end='')
+                print()
+                #if rowidx % 2 == 0: print('\x1B[0m', end='')
+
+def show_pathlist(pathlist:str, shared_prefix:str = ''):
+    suffixes = [remove_required_prefix(path, shared_prefix) for path in pathlist]
+    assert len(suffixes) == len(set(suffixes))
+    if SHOW_ALL:
+        for suf in suffixes: print(f' - {hilite(shared_prefix)}{suf}')
+    else:
+        if len(suffixes) < 50:
+            for suf in suffixes: print(f' - {hilite(shared_prefix)}{suf}')
+        else:
+            ## Try replacing numbers with #.
+            numless_suffixes = {re.subn(r'[0-9]+', '#', suf)[0]:suf for suf in suffixes}
+            if len(numless_suffixes) < 40 and len(numless_suffixes) < len(suffixes)/2:
+                for nsuf,suf in numless_suffixes.items():
+                    if nsuf != suf:
+                        print(f' - {hilite(shared_prefix)}{nsuf}       (eg: {suf})')  # TODO: Start eg on a col % 4
+                    else:
+                        print(f' - {hilite(shared_prefix)}{suf}')
+            else:
+                for suf in suffixes[:20]: print(f' - {hilite(shared_prefix)}{suf}')
+                print(f' => {len(suffixes)} total')
+    if OPEN_IN_IPYTHON:
+        print('=> Saved to variable `pathlist`.\n')
+        import IPython
+        IPython.start_ipython(argv=['--no-confirm-exit'], display_banner=False, user_ns={'pathlist':pathlist})  # TODO: import os, pathlib, etc
+
+def hilite(text:str) -> str:
+    return '\x1B[1;34m' + text + '\x1B[0m'
+    return termcolor(text, fg=3)
+
+def get_absolute_path(path:str):
+    '''Like os.path.abspath(), but handles `s3://`'''
+    ## TODO: support dx_proj:/dx_path
+    path = removeprefix(path, 's3://')
+    path = os.path.abspath(path)  # Note: This strips trailing /.  Is that okay?
+    assert path.startswith('/')
+    return path
+
+def s3_exists(bucket:str, key:str) -> bool:
+    import boto3, botocore
+    try: s3_get_object(bucket, key); return True
+    except botocore.exceptions.ClientError: return False
+
+def s3_list_dir(bucket:str, key:str, output_trailing_slash=False, partial_filename=False) -> List[str]:
+    '''
+    Returns ["{bucket}/{key}", ...].
+    If `output_trailing_slash`, then directories will have a trailing slash.
+    That trailing slash is needed for `s3.get_object()`.
+    But a normal filesystem doesn't include trailing slashes, so it's off by default.
+    If `partial_filename`, you can use enter a prefix to get completions, like `s3_list_dir('s3://rgc-ag-data/a')`.
+    '''
+    import botocore
+    if not partial_filename and key and not key.endswith('/'): key += '/'
+    result_keys = []
+    try:
+        for page in s3_paginate('list_objects_v2', Bucket=bucket, Prefix=key, Delimiter='/'):
+            for x in page.get('CommonPrefixes',[]):
+                result_keys.append(x['Prefix'])
+            for x in page.get('Contents',[]):
+                if x['Key'] != key:
+                    result_keys.append(x['Key'])
+    except botocore.exceptions.ClientError as exc:
+        raise Exception(f"Failed to get {path}") from exc
+    if not output_trailing_slash:
+        result_keys = [k.rstrip('/') for k in result_keys]
+    return [f'/mnt/s3/{bucket}/{k}' for k in result_keys]
+
+def s3_paginate(s3_command:str, **kwargs):
+    paginator = get_s3().get_paginator(s3_command)
+    return paginator.paginate(**kwargs)
+
+def s3_list_all_buckets() -> List[str]:
+    return [bucket['Name'] for bucket in get_s3().list_buckets()['Buckets']]
+
+def s3_get_head(bucket:str, key:str, bytes:int = 500) -> bytes:
+    import botocore
+    try:
+        return get_s3().get_object(Bucket=bucket, Key=key, Range=f'bytes=0-{bytes}')['Body'].read()
+    except botocore.exceptions.ClientError as exc:
+        raise Exception(f"Failed to get {path}") from exc
+
+@functools.lru_cache(None)
+def s3_get_object(bucket:str, key:str) -> dict:
+    return get_s3().get_object(Bucket=bucket, Key=key)
+
+@functools.lru_cache(None)
+def get_s3() -> "boto3.client":
+    import boto3
+    return boto3.client('s3')
+
+def smarter_open(path:str, mode:str = 'r'):
+    import smart_open
+    if path.startswith('/mnt/s3/'):
+        path = 's3://' + remove_required_prefix(path, '/mnt/s3/')
+    return smart_open.smart_open(path, mode)
+
+def removeprefix(s:str, prefix:str) -> str:
+    '''Backport of str.removeprefix(prefix)'''
+    if s.startswith(prefix):
+        return s[len(prefix):]
+    return s
+
+def remove_required_prefix(s:str, prefix:str) -> str:
+    assert s.startswith(prefix)
+    return s[len(prefix):]
+
+
+
+
+if __name__ == '__main__':
+    if {'-h', '--help'}.intersection(sys.argv):
+        show_help()
+        sys.exit(1)
+
+    if {'-a', '--all'}.intersection(sys.argv):
+        SHOW_ALL = True
+    if '--py' in sys.argv:
+        OPEN_IN_IPYTHON = True
+
+    input_paths = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
+
+    if len(input_paths) == 0:
+        show_path('.')
+
+    elif len(input_paths) == 1:
+        show_path(input_paths[0])
+
+    else:
+        show_help()

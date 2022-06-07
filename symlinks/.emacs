@@ -45,6 +45,8 @@
   ;;   (smooth-scrolling-mode))
 )
 
+(menu-bar-mode -1) ;; Disable menubar
+
 (add-to-list 'load-path "~/dotfiles/third-party/emacs")
 (require 'git)
 (require 'git-blame)
