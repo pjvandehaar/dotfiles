@@ -44,8 +44,9 @@ _PP_prompt() {
         _runtime="${_PP_PIN} ${_runtime} "
     fi
 
-    local _gitexe="$(which git)" # avoid problems with aliases/functions
     local _git='' # This variable stores the result of all this.
+    if ! [[ $PWD/ = /mnt/* ]]; then
+    local _gitexe="$(which git)" # avoid problems with aliases/functions
     local _git_branch; _git_branch="$($_PP_timeout 0.1 "$_gitexe" rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
     if [[ $_rs == 124 ]]; then
         _git="${_PP_RED} looking for .git timedout ${_PP_NONE}"
@@ -148,6 +149,7 @@ _PP_prompt() {
                 fi
             fi
         fi
+    fi
     fi
 
     PS1="${_git}${_runtime}${_err}${_PP_NONE}"
