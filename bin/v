@@ -4,25 +4,30 @@
 ##       That can be surprising, because this handles all s3 buckets you can access, including buckets that aren't mounted in /mnt/s3/.
 ##       But I prefer `/mnt/s3/` over `s3://`.
 
+# TODO: Support `v /path/to/chr#range#-#.tsv`.  If multiple files match, list them.  If only one, show it.  #=\d+  %=.*
+
+# TODO: Add custom bash_completion using <https://github.com/kislyuk/argcomplete>
+
 import sys, os, functools, json, datetime, itertools, re, shutil, io, argparse, textwrap
-from kpa.terminal_utils import ignore_sigpipe
 from pprint import pprint
+from collections import Counter
+import signal; signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 from typing import List
-ignore_sigpipe()
+
 term_width = shutil.get_terminal_size().columns
 
-SHOW_ALL = False  # This is easier than passing args down thru functions
-OPEN_IN_IPYTHON = False
-OPEN_IN_VISIDATA = True
-
+OPEN_IN_IPYTHON = False  # This is easier than passing args down thru functions
+OPEN_IN_VISIDATA = False
+MAX_NUM_LINES = None
 
 def run(argv: List[str] = None):
     if argv is None: argv = sys.argv
     args = parse_args(argv)
-    global SHOW_ALL, OPEN_IN_IPYTHON, OPEN_IN_VISIDATA
-    if args.all: SHOW_ALL = True
+    global OPEN_IN_IPYTHON, OPEN_IN_VISIDATA, MAX_NUM_LINES
     if args.py: OPEN_IN_IPYTHON = True
     if args.vd: OPEN_IN_VISIDATA = True
+    if args.num_lines: MAX_NUM_LINES = args.num_lines
+    if args.all: MAX_NUM_LINES = sys.maxsize
     if not args.path and not sys.stdin.isatty(): show_lines(read_stdin_lines_and_switch_to_tty())
     else: show_path(args.path or '.')
 
@@ -40,7 +45,8 @@ def parse_args(argv: List[str] = None) -> argparse.Namespace:
         '''),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument('-a', '--all', action='store_true', help='By default, output is truncated to fit your terminal.  This option outputs the full result.')
+    parser.add_argument('-a', '--all', action='store_true', help='Output all lines, without truncating or summarizing to fit your terminal.  Sets `-n` to infinity.`')
+    parser.add_argument('-n', '--num-lines', type=int, default=None, help='Maximum number of lines to show from file or pathlist.')
     parser.add_argument('--py', action='store_true', help='Open the result in IPython.')
     parser.add_argument('--vd', action='store_true', help='Open the result in VisiData.')
     parser.add_argument('path', nargs='?', help=argparse.SUPPRESS)
@@ -65,9 +71,13 @@ def show_s3_path(path:str):
 
 def show_s3_file(bucket:str, key:str):
     print(f'=> File /mnt/s3/{bucket}/{key}')
-    print(' => Created', s3_get_object(bucket, key)['LastModified'].strftime('%Y-%m-%d_%H:%M:%S'))
+    mtime_str = s3_get_object(bucket, key)['LastModified'].strftime('%Y-%m-%d_%H:%M:%S')
     length = int(s3_get_object(bucket, key)['ContentLength'])
-    print(f' => {length:,} bytes')
+    if length > 1e9: length_str = f'{int(length/1e9)} GB'
+    elif length > 1e6: length_str = f'{int(length/1e6)} MB'
+    elif length > 1e3: length_str = f'{int(length/1e3)} KB'
+    else: length_str = f'{length} B'
+    print(f'   {length_str}      {mtime_str}')
     #pprint(s3_get_object(bucket, key))
     if length:
         show_file(f'/mnt/s3/{bucket}/{key}')
@@ -84,7 +94,7 @@ def show_s3_completions(bucket:str, key:str):
 def show_file(path:str):
     try:
         with smarter_open(path, 'rt') as f:
-            lines = list(f) if SHOW_ALL else list(itertools.islice(f, 0, 50))  # TODO: Configure with `-n 50`
+            lines = list(itertools.islice(f, 0, MAX_NUM_LINES or 1000))
     except UnicodeDecodeError:
         with smarter_open(path, 'rb') as f:
             print(repr(f.read(500)))
@@ -103,16 +113,18 @@ def show_completions(path:str):
 ## Utils:
 
 def show_lines(lines:List[str]):
+    ## Try to make a table:
     for delim in '\t, ;|':
-        ## TODO: Handle quotes
-        ## TODO: Detect whether lines[0] is a header or just a row
+        # TODO: Find cols that are all int/float, and use them to determine what's data, what's colnames, and what's metadata
+        # TODO: Guess whether lines[0] is a header or just a row
+        # TODO: Handle quotes?
         ## Ignore # lines when detecting a table
+        ## Then add # lines back into the table if they have num_fields
         hash_lines = []
         for line in lines:
             if not line.startswith('#'): break
             hash_lines.append(line)
         nohash_lines = lines[len(hash_lines):]
-
         if delim in nohash_lines[0]:
             num_fields = nohash_lines[0].count(delim)
             if all(line.count(delim) == num_fields for line in nohash_lines):
@@ -124,7 +136,9 @@ def show_lines(lines:List[str]):
                 table = [line.rstrip('\n').split(delim) for line in good_hash_lines+nohash_lines]
                 show_table(table)
                 return
-    for line in lines: print(line.rstrip('\n'))
+    ## Give up and just print:
+    # TODO: Say if truncated
+    for line in lines[:MAX_NUM_LINES or 30]: print(line.rstrip('\n'))
 
 def show_table(table:List[List[str]]):
     if OPEN_IN_IPYTHON:
@@ -137,24 +151,42 @@ def show_table(table:List[List[str]]):
         for colidx in range(len(table[0])):
             cell_widths = sorted(len(row[colidx]) for row in table)
             column_widths[colidx] = max(4, cell_widths[len(table)*9//10]) + 2
-        if OPEN_IN_VISIDATA or len(table)>100 or sum(column_widths) + len(table[0]) > term_width or sum(len(colname)+1 for colname in table[0]) > term_width:
-            ## Use VisiData for big tables:
-            print('VisiData column commands:  F=tabulate.  ]=sort.  -=hide.')
-            print('VisiData sheet commands:  C=summarize_columns.  q=close.  enter=focus_row.')
+        if OPEN_IN_VISIDATA or (MAX_NUM_LINES and len(table)>40):
+            print('VisiData sheet commands:  C=summarize_columns.  q=close.')
+            print('VisiData column commands:  F=tabulate.  ]=sort.  -=hide.  !=favorite.')
+            print('VisiData row commands:  enter=focus_row.  d=delete.  gz^=replace_headers.')
             import visidata
             df = get_df(table)
             visidata.vd.view_pandas(df)
         else:
-            ## Just print small tables:
+            ## Summarize columns:
+            df = get_df(table)
             print('=> Columns:')
             for colidx, colname in enumerate(table[0]):
-                print(f'  - {colname}')  # TODO: show type, min-1Q-median-3Q-max NA? for num, Counter for str, CONSTANT for constant, UNIQUE for uniq str
-            ## TODO: Align decimals of floats
-            ## TODO: Align ints to the right, with thousands commas
-            ## TODO: Center colnames
+                coltype = str(df[colname].dtype)
+                coltype = {'object':'str', 'float64':'flt', 'int64':'int'}.get(coltype, coltype)
+                counter = Counter(row[colidx] for row in table[1:])
+                line = f'  - [{coltype}] {colname}    '
+                if len(counter) == 1: line += f'  CONST({table[1][colidx]})'
+                elif len(counter) == len(table): line += '  UNIQUE'
+                else:
+                    if coltype in ['int','flt'] and counter.most_common(1)[0][1] < 5:
+                        line += f'  min={df[colname].min()}  max={df[colname].max()}'
+                    else:
+                        #line += f'  counts={dict(counter.most_common(3))}'
+                        line += '  counts={' + ' '.join(f'{count}*{repr(elem)}' for elem,count in counter.most_common(3)) + '}'
+                print(line)
+            ## Show table head:
+            print()
+            # TODO: Align decimals of floats
+            # TODO: Align ints to the right, with thousands commas
+            # TODO: Center colnames
+            if not MAX_NUM_LINES: table = table[:10]
+            for num_cols_that_fit in range(1, 1+len(table[0])):
+                total_width = sum(1+column_widths[colidx] for colidx in range(num_cols_that_fit))
+                if total_width > term_width: num_cols_that_fit -= 1; break
             for rowidx,row in enumerate(table):
-                #if rowidx % 2 == 0: print('\x1B[1;33m', end='')
-                for colidx, cell in enumerate(row):
+                for colidx, cell in enumerate(row[:num_cols_that_fit]):
                     width = column_widths[colidx]
                     r = f'{cell[:width]:{width}} '
                     if r.startswith('0.0') or r.startswith('-0.0'):
@@ -163,7 +195,6 @@ def show_table(table:List[List[str]]):
                         r = '\x1B[1;32m' + zero + '\x1B[0m' + nonzero
                     print(r, end='')
                 print()
-                #if rowidx % 2 == 0: print('\x1B[0m', end='')
 
 def get_df(table:List[List[str]]) -> "pd.DataFrame":
     import pandas as pd
@@ -174,19 +205,25 @@ def show_pathlist(pathlist:List[str], shared_prefix:str = ''):
     if not pathlist: print(' - Nothing matched!'); return
     suffixes = [remove_required_prefix(path, shared_prefix) for path in pathlist]
     assert len(suffixes) == len(set(suffixes))
-    if SHOW_ALL:
-        for suf in suffixes: print(f' - {deemphasize(shared_prefix)}{suf}')
+    if MAX_NUM_LINES:
+        if len(suffixes) <= MAX_NUM_LINES:
+            for suf in suffixes: print(f' - {deemphasize(shared_prefix)}{suf}')
+        else:
+            for suf in suffixes[:MAX_NUM_LINES]: print(f' - {deemphasize(shared_prefix)}{suf}')
+            print(f' => {len(suffixes)} total')
     else:
         if len(suffixes) < 50:
             for suf in suffixes: print(f' - {deemphasize(shared_prefix)}{suf}')
         else:
             ## Try replacing numbers with #.
+            numless_suffix_counts = Counter(re.subn(r'[0-9]+', '#', suf)[0] for suf in suffixes)
             numless_suffixes = {re.subn(r'[0-9]+', '#', suf)[0]:suf for suf in suffixes}
             if len(numless_suffixes) < 40 and len(numless_suffixes) < len(suffixes)/2:
                 for nsuf,suf in numless_suffixes.items():
                     if nsuf != suf:
                         example = re.search(r'[0-9].*[0-9]', suf).group(0)
-                        print(f' - {deemphasize(shared_prefix)}{nsuf}     (eg: {example})')
+                        spaces = ' '*(8 - (len(nsuf) % 4))  # Align to a grid, to hopefully align some lines
+                        print(f' - {deemphasize(shared_prefix)}{nsuf}{spaces}({numless_suffix_counts[nsuf]}, eg: {example})')
                     else:
                         print(f' - {deemphasize(shared_prefix)}{suf}')
             else:
