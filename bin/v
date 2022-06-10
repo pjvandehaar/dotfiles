@@ -36,17 +36,42 @@ def parse_args(argv: List[str] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog='v',
         usage=textwrap.dedent('''
-          v /path/to/dir/         Lists files, like `ls`
-          v /path/to/d            Shows completions, like `ls /path/to/d*`
-          v /path/to/file         Shows the file, with a spreadsheet for tabular data
-          cat file | v            Same as `v file`
+           $ v s3://rgc-ag-data/app_data/finemap/chip_UKB_GHS/CHIP_
+            /mnt/s3/rgc-ag-data/app_data/finemap/chip_UKB_GHS/CHIP_UKB_GHS.regions
+            /mnt/s3/rgc-ag-data/app_data/finemap/chip_UKB_GHS/CHIP_UKB_GHS.chr#_range#-#.config    (26, eg: 8_range128813195-130313195)
+            /mnt/s3/rgc-ag-data/app_data/finemap/chip_UKB_GHS/CHIP_UKB_GHS.chr#_range#-#.cred#     (62, eg: 8_range128813195-130313195.cred3)
+            /mnt/s3/rgc-ag-data/app_data/finemap/chip_UKB_GHS/CHIP_UKB_GHS.chr#_range#-#.ld.gz     (26, eg: 8_range128813195-130313195)
+            /mnt/s3/rgc-ag-data/app_data/finemap/chip_UKB_GHS/CHIP_UKB_GHS.chr#_range#-#.log_sss   (26, eg: 8_range128813195-130313195)
+            /mnt/s3/rgc-ag-data/app_data/finemap/chip_UKB_GHS/CHIP_UKB_GHS.chr#_range#-#.snp       (26, eg: 8_range128813195-130313195)
+            /mnt/s3/rgc-ag-data/app_data/finemap/chip_UKB_GHS/CHIP_UKB_GHS.chr#_range#-#.snp_cred  (26, eg: 8_range128813195-130313195)
 
-        This script handles gzip and s3://
+           $ v /mnt/s3/rgc-ag-data/app_data/finemap/UKB_HAL_NMSC/UKB_GHS_NMSC_HAL.chr9_range518755-761780.SuSiE.tsv
+            => Columns:
+              - [str] Region      CONST(chr9_range518755-761780)
+              - [str] rsid        UNIQUE  min=9:518814586:T:C  max=9:630311990:G:A
+              - [int] chromosome  CONST(9)
+              - [int] position    UNIQUE  min=518755  max=637391
+              - [str] allele1     counts={277*'G' 274*'C' 241*'A'}
+              - [str] allele2     counts={287*'G' 235*'A' 235*'T'}
+              - [flt] maf         min=0.001  max=0.499
+              - [flt] beta        min=-0.38094  max=0.25603
+              - [flt] se          min=0.00802  max=0.16434
+              - [str] status      CONST(success)
+              - [flt] PIP         min=0.0127  max=0.0194
+              - [flt] CS1(median|ld|=0.900834157239296)  CONST(NA)
+            => Head:
+              Region                     rsid        chrom  position  allele1  allele2  maf       beta       se      status     PIP    CS1(me
+              chr9_range518755-761780  9:518755:G:A   9      518755    G        A      0.497     0.00011   0.00842   success   0.0128   NA
+              chr9_range518755-761780  9:518898:T:G   9      518898    T        G      0.001    -0.01576   0.14180   success   0.0128   NA
+              chr9_range518755-761780  9:518908:G:A   9      518908    G        A      0.360     0.01821   0.00856   success   0.0147   NA
+              chr9_range518755-761780  9:519047:G:C   9      519047    G        C      0.285     0.01392   0.00908   success   0.0147   NA
+
+        ---
         '''),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument('-a', '--all', action='store_true', help='Output all lines, without truncating or summarizing to fit your terminal.  Sets `-n` to infinity.`')
-    parser.add_argument('-n', '--num-lines', type=int, default=None, help='Maximum number of lines to show from file or pathlist.')
+    parser.add_argument('-n', dest='num_lines', type=int, default=None, help='Maximum number of lines to show from file or pathlist.')
     parser.add_argument('--py', action='store_true', help='Open the result in IPython.')
     parser.add_argument('--vd', action='store_true', help='Open the result in VisiData.')
     parser.add_argument('path', nargs='?', help=argparse.SUPPRESS)
@@ -168,13 +193,13 @@ def show_table(table:List[List[str]]):
                 counter = Counter(row[colidx] for row in table[1:])
                 line = f'  - [{coltype}] {colname}    '
                 if len(counter) == 1: line += f'  CONST({table[1][colidx]})'
-                elif len(counter) == len(table): line += '  UNIQUE'
                 else:
-                    if coltype in ['int','flt'] and counter.most_common(1)[0][1] < 5:
-                        line += f'  min={df[colname].min()}  max={df[colname].max()}'
+                    is_unique = len(counter) == len(table[1:])
+                    if is_unique: line += '  UNIQUE'
+                    if coltype in ['int','flt'] and counter.most_common(1)[0][1] < 5 or is_unique:
+                        line += f'   min={df[colname].min()}  max={df[colname].max()}'
                     else:
-                        #line += f'  counts={dict(counter.most_common(3))}'
-                        line += '  counts={' + ' '.join(f'{count}*{repr(elem)}' for elem,count in counter.most_common(3)) + '}'
+                        line += '   counts={' + ' '.join(f'{count}*{repr(elem)}' for elem,count in counter.most_common(4)) + '}'
                 print(line)
             ## Show table head:
             print()
