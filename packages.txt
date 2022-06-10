@@ -61,9 +61,9 @@ psutil
 pytype pyre-check mypy
 q  # convenient logger for debugging
 requests
-tabview
 tqdm
 twine
+visidata
 
 ## cargo
 broot
