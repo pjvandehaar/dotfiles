@@ -208,6 +208,8 @@ spaced_less() {
     less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
 }
 
+ptr_today() { cat ~/.full_history | grep -a "^$(date +%Y-%m-%d)"; }
+
 
 # overrides
 # =========

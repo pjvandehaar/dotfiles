@@ -86,6 +86,8 @@ petervh() {
     sshfs kpa@petervh.com:/home/kpa ~/mount/petervh && cd ~/mount/petervh
 }
 
+export BASH_SILENCE_DEPRECATION_WARNING=1  # Silence OSX zsh warning.
+
 
 # source common
 # =============
