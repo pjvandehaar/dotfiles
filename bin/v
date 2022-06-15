@@ -12,7 +12,7 @@ import sys, os, functools, json, datetime, itertools, re, shutil, io, argparse, 
 from pprint import pprint
 from collections import Counter
 import signal; signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-from typing import List
+from typing import List,Optional,Dict
 
 term_width = shutil.get_terminal_size().columns
 
@@ -109,7 +109,8 @@ def show_s3_file(bucket:str, key:str):
 
 def show_s3_dir(bucket:str, key:str):
     print(f'=> Dir /mnt/s3/{bucket}/{key}')
-    print(' => mtime =', datetime.datetime.fromtimestamp(int(s3_get_object(bucket, key)['Metadata']['mtime'])).strftime('%Y-%m-%d_%H:%M:%S'))
+    s3_obj = s3_get_object_if_exists(bucket, key)  # Some dirs don't exist as s3 keys!
+    if s3_obj: print(' => mtime =', datetime.datetime.fromtimestamp(int(s3_obj['Metadata']['mtime'])).strftime('%Y-%m-%d_%H:%M:%S'))
     show_pathlist(s3_list_dir(bucket, key, output_trailing_slash=True), shared_prefix=f'/mnt/s3/{bucket}/{key}')
 
 def show_s3_completions(bucket:str, key:str):
@@ -252,6 +253,9 @@ def show_pathlist(pathlist:List[str], shared_prefix:str = ''):
                     else:
                         print(f' - {deemphasize(shared_prefix)}{suf}')
             else:
+                # TODO: Handle `*.gz(.tbi)?`
+                #       eg, /mnt/s3/rgc-ag-data/app_data/pheweb/UKB/UKB_Freeze_450/ALL/generated-by-pheweb/pheno_gz/
+                #       Just try collapsing each file into its prefix.  If that cuts dirsize by >40%, show it.
                 for suf in suffixes[:20]: print(f' - {deemphasize(shared_prefix)}{suf}')
                 print(f' => {len(suffixes)} total')
     if OPEN_IN_IPYTHON:
@@ -276,7 +280,12 @@ def get_absolute_path(path:str):
 def s3_exists(bucket:str, key:str) -> bool:
     import boto3, botocore
     try: s3_get_object(bucket, key); return True
-    except botocore.exceptions.ClientError: return False
+    except botocore.exceptions.ClientError: pass
+    if key.endswith('/'):
+        # Note: Sometimes a directory doesn't exist on s3 as a key.  But it still has contents.
+        #       Eg, s3://rgc-ag-data/app_data/pheweb/UKB/UKB_Freeze_450/ALL/generated-by-pheweb/
+        return get_s3().list_objects_v2(Bucket=bucket, Prefix=key, MaxKeys=1)['KeyCount'] > 0
+    return False
 
 def s3_list_dir(bucket:str, key:str, output_trailing_slash=False, partial_filename=False) -> List[str]:
     '''
@@ -316,6 +325,10 @@ def s3_get_head(bucket:str, key:str, bytes:int = 500) -> bytes:
     except botocore.exceptions.ClientError as exc:
         raise Exception(f"Failed to get s3://{bucket}/{key}") from exc
 
+def s3_get_object_if_exists(bucket:str, key:str) -> Optional[dict]:
+    import botocore
+    try: return s3_get_object(bucket, key)
+    except botocore.exceptions.ClientError: return None
 @functools.lru_cache(None)
 def s3_get_object(bucket:str, key:str) -> dict:
     return get_s3().get_object(Bucket=bucket, Key=key)
