@@ -167,6 +167,7 @@ def show_lines(lines:List[str]):
     for line in lines[:MAX_NUM_LINES or 30]: print(line.rstrip('\n'))
 
 def show_table(table:List[List[str]]):
+    if table[0][0].startswith('\ufeff'): table[0][0] = table[0][0][1:]
     if OPEN_IN_IPYTHON:
         import IPython
         df = get_df(table)
@@ -198,9 +199,9 @@ def show_table(table:List[List[str]]):
                     is_unique = len(counter) == len(table[1:])
                     if is_unique: line += '  UNIQUE'
                     if coltype in ['int','flt'] and counter.most_common(1)[0][1] < 5 or is_unique:
-                        line += f'   min={df[colname].min()}  max={df[colname].max()}'
+                        line += f'   min={short_repr(df[colname].min())}  max={short_repr(df[colname].max())}'
                     else:
-                        line += '   counts={' + ' '.join(f'{count}*{repr(elem)}' for elem,count in counter.most_common(4)) + '}'
+                        line += '   counts={' + ' '.join(f'{count}*{short_repr(elem)}' for elem,count in counter.most_common(4)) + '}'
                 print(line)
             ## Show table head:
             print()
@@ -208,9 +209,15 @@ def show_table(table:List[List[str]]):
             # TODO: Align ints to the right, with thousands commas
             # TODO: Center colnames
             if not MAX_NUM_LINES: table = table[:10]
+            # TODO: If <10 cols fit, truncate
             for num_cols_that_fit in range(1, 1+len(table[0])):
                 total_width = sum(1+column_widths[colidx] for colidx in range(num_cols_that_fit))
                 if total_width > term_width: num_cols_that_fit -= 1; break
+            if num_cols_that_fit == 0:
+                print('=> Trucated wide table:')
+                num_cols_that_fit = 1
+                column_widths[0] = term_width-4
+                table = [[row[0][:term_width-4]] for row in table]
             for rowidx,row in enumerate(table):
                 for colidx, cell in enumerate(row[:num_cols_that_fit]):
                     width = column_widths[colidx]
@@ -221,6 +228,14 @@ def show_table(table:List[List[str]]):
                         r = '\x1B[1;32m' + zero + '\x1B[0m' + nonzero
                     print(r, end='')
                 print()
+
+def short_repr(x, maxwidth=20) -> str:
+    x = repr(x)
+    if len(x) <= maxwidth: return x
+    if maxwidth > 10: maxwidth -= 5
+    if maxwidth > 10: maxwidth -= 5
+    endquote = x[0] if x[0] in ['"', "'"] else ''
+    return f'{x[:maxwidth]}{endquote}(len={len(x)})'
 
 def get_df(table:List[List[str]]) -> "pd.DataFrame":
     import pandas as pd
