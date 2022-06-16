@@ -175,38 +175,54 @@ def show_lines(lines:List[str]):
 def show_table(table:List[List[str]]):
     import numpy as np
     if table[0][0].startswith('\ufeff'): table[0][0] = table[0][0][1:]
-    df = get_df(table)
     if OPEN_IN_IPYTHON:
         import IPython
+        df = get_df(table)
         print('>>> df'); print(df); print()
         IPython.start_ipython(argv=['--no-confirm-exit'], display_banner=False, user_ns={'df':df})
     elif OPEN_IN_VISIDATA or (MAX_NUM_LINES and len(table)>40):
+        import visidata
         print('VisiData sheet commands:  C=summarize_columns.  q=close.')
         print('VisiData column commands:  F=tabulate.  ]=sort.  -=hide.  !=favorite.')
         print('VisiData row commands:  enter=focus_row.  d=delete.  gz^=replace_headers.')
-        import visidata
+        df = get_df(table)
         visidata.vd.view_pandas(df)
     else:
-        ## Summarize columns:
-        print('=> Columns:')
+        ## Truncate if too wide
+        if len(table[0]) > 50:
+            print(f'   {len(table):,} rows * {len(table[0]):,} columns.  Truncating.')
+            table = [row[:15] for row in table]
+        print()
+
+        # Gather info about columns
         colnames = table[0]
         num_cols = len(colnames)
         p80_colname_len = sorted(len(colname) for colname in colnames)[int(num_cols*.8)]
+        df = get_df(table)
         info_for_colidx = {}
         for colidx, colname in enumerate(table[0]):
-            coltype = str(df[colname].dtype)
-            coltype = {'object':'', 'float64':'float', 'int64':'int'}.get(coltype, coltype)
-            is_numeric = coltype in ['int','float']
+            info = info_for_colidx.setdefault(colidx, {})
+            info['colname'] = colname
+            info['series'] = df[colname]
+            # Check counts:
             counter = Counter(row[colidx] for row in table[1:])
-            biggest_count = counter.most_common(1)[0][1]
-            is_const = len(counter) == 1
-            is_uniq = len(counter) == len(table[1:])
+            info['counter'] = counter
+            info['biggest_count'] = counter.most_common(1)[0][1]
+            info['is_const'] = len(counter) == 1
+            info['is_uniq'] = len(counter) == len(table[1:])
+            dtype = str(df[colname].dtype)
+            info['type'] = {'object':'', 'float64':'float', 'int64':'int'}.get(dtype, dtype)
+
+        ## Summarize columns:
+        print('=> Columns:')
+        for colidx, info in info_for_colidx.items():
+            is_const, is_uniq, coltype, colname, series, biggest_count, counter = info['is_const'], info['is_uniq'], info['type'], info['colname'], info['series'], info['biggest_count'], info['counter']
             const_uniq_str = 'CONST' if is_const else ('uniq' if is_uniq else '')
             line = f'  - {const_uniq_str:5} {coltype:5} {colname:{p80_colname_len+3}}   '
             if is_const:
-                line += f'{short_repr(df[colname].iloc[1], 60)}';
+                line += f'{short_repr(series.iloc[1], 60)}'
             elif coltype == 'float' and biggest_count < 5:
-                min_val, max_val = df[colname].min(), df[colname].max()
+                min_val, max_val = series.min(), series.max()
                 # TODO: Round 0.1001 to 0.100 not 0.1
                 difference_decimal_places = math.ceil(-np.log10(max_val - min_val) + 2)
                 min_val_decimal_places = math.ceil(-np.log10(np.abs(min_val)) + 2) if min_val>0 else 0
@@ -215,23 +231,18 @@ def show_table(table:List[List[str]]):
                 max_val = np.round(max_val, max(1, difference_decimal_places, max_val_decimal_places))
                 line += f'{min_val} - {max_val}'
             elif coltype == 'int' and biggest_count < 5:
-                min_val, max_val = df[colname].min(), df[colname].max()
+                min_val, max_val = series.min(), series.max()
                 line += f'{repr_int(min_val)} - {repr_int(max_val)}'
             elif is_uniq:
-                line += f'{short_repr(df[colname].min(), 30)} - {short_repr(df[colname].max(), 30)}'
+                line += f'{short_repr(series.min(), 30)} - {short_repr(series.max(), 30)}'
             elif len(counter) < 7:
                 line += 'counts={' + ' '.join(f'{count}*{short_repr(elem, 20)}' for elem,count in counter.most_common()) + '}'
             else:
                 line += 'counts={' + ' '.join(f'{count}*{short_repr(elem, 20)}' for elem,count in counter.most_common(4)) + ' …}'
             print(line)
-            info_for_colidx.setdefault(colidx, {
-                'is_const': is_const,
-                'is_uniq': is_uniq,
-                'type': coltype,
-                'is_numeric': is_numeric,
-            })
-        ## Show table head:
         print()
+
+        ## Show table head:
         # TODO: Align decimals of floats.
         # TODO: Align ints to the right
         if not MAX_NUM_LINES and len(table)>20:
@@ -241,10 +252,11 @@ def show_table(table:List[List[str]]):
             cell_widths = sorted(len(row[colidx]) for row in table)
             info['colwidth'] = max(4, cell_widths[len(table)*9//10]) + 2
             if info['is_const']: info['colwidth'] = 0
-        if sum(info['colwidth'] for info in info_for_colidx.values()) > term_width:
+        def get_total_width(): return sum(info['colwidth']+1 for info in info_for_colidx.values() if info['colwidth'])
+        if get_total_width() >= term_width - 3:
             for info in info_for_colidx.values():
                 if info['colwidth'] > 20: info['colwidth'] = 15
-        if sum(info['colwidth'] for info in info_for_colidx.values()) > term_width:
+        if get_total_width() >= term_width - 3:
             for num_cols_that_fit in range(1, 1+num_cols):
                 total_width = sum(1+info_for_colidx[colidx]['colwidth'] for colidx in range(num_cols_that_fit))
                 if total_width > term_width: num_cols_that_fit -= 1; break
@@ -272,7 +284,6 @@ def show_table(table:List[List[str]]):
 def short_repr(x, maxwidth=20) -> str:
     r = repr(x)
     if len(r) <= maxwidth: return r
-    endquote = r[0] if r[0] in ['"', "'"] else ''
     sidewidth = 1+maxwidth//4
     return f'{r[:sidewidth]}…{r[-sidewidth:]}(len={len(r)})'
 
