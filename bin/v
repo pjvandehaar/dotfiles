@@ -8,7 +8,7 @@
 
 # TODO: Add custom bash_completion using <https://github.com/kislyuk/argcomplete>
 
-import sys, os, functools, json, datetime, itertools, re, shutil, io, argparse, textwrap
+import sys, os, functools, json, datetime, itertools, re, shutil, io, argparse, textwrap, math
 from pprint import pprint
 from collections import Counter
 import signal; signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -47,24 +47,30 @@ def parse_args(argv: List[str] = None) -> argparse.Namespace:
 
            $ v /mnt/s3/rgc-ag-data/app_data/finemap/UKB_HAL_NMSC/UKB_GHS_NMSC_HAL.chr9_range518755-761780.SuSiE.tsv
             => Columns:
-              - [str] Region      CONST(chr9_range518755-761780)
-              - [str] rsid        UNIQUE  min=9:518814586:T:C  max=9:630311990:G:A
-              - [int] chromosome  CONST(9)
-              - [int] position    UNIQUE  min=518755  max=637391
-              - [str] allele1     counts={277*'G' 274*'C' 241*'A'}
-              - [str] allele2     counts={287*'G' 235*'A' 235*'T'}
-              - [flt] maf         min=0.001  max=0.499
-              - [flt] beta        min=-0.38094  max=0.25603
-              - [flt] se          min=0.00802  max=0.16434
-              - [str] status      CONST(success)
-              - [flt] PIP         min=0.0127  max=0.0194
-              - [flt] CS1(median|ld|=0.900834157239296)  CONST(NA)
+              - CONST       Region        'chr9_range518755-761780'
+              - uniq        rsid          '9:518755:G:A' - '9:637391:A:C'
+              - CONST int   chromosome    9
+              - uniq  int   position      518,755 - 637,391
+              -             allele1       counts={277*'G' 274*'C' 241*'A' 173*'T'}
+              -             allele2       counts={287*'G' 235*'A' 235*'T' 218*'C'}
+              -       float maf           0.001 - 0.499
+              -       float beta          -0.381 - 0.256
+              -       float se            0.00802 - 0.164
+              - CONST       status        'success'
+              -       float PIP           0.0128 - 0.01944
+              - CONST float CS1(median|ld|=0.900834157239296)   nan
+
             => Head:
-              Region                     rsid        chrom  position  allele1  allele2  maf       beta       se      status     PIP    CS1(me
-              chr9_range518755-761780  9:518755:G:A   9      518755    G        A      0.497     0.00011   0.00842   success   0.0128   NA
-              chr9_range518755-761780  9:518898:T:G   9      518898    T        G      0.001    -0.01576   0.14180   success   0.0128   NA
-              chr9_range518755-761780  9:518908:G:A   9      518908    G        A      0.360     0.01821   0.00856   success   0.0147   NA
-              chr9_range518755-761780  9:519047:G:C   9      519047    G        C      0.285     0.01392   0.00908   success   0.0147   NA
+              rsid          position allele allele  maf        beta      se        PIP
+             9:518755:G:A   518755   G      A      0.4970     0.00011   0.00842   0.0128
+             9:518898:T:G   518898   T      G      0.0014    -0.01576   0.14180   0.0128
+             9:518908:G:A   518908   G      A      0.3601     0.01821   0.00856   0.0147
+             9:519047:G:C   519047   G      C      0.2854     0.01392   0.00908   0.0147
+             9:519074:G:GA  519074   G      GA     0.0012    -0.01138   0.11820   0.0127
+             9:519182:G:A   519182   G      A      0.2218     0.01779   0.00985   0.0149
+             9:519210:A:G   519210   A      G      0.0529    -0.01184   0.01808   0.0128
+             9:519339:A:T   519339   A      T      0.0034    -0.09898   0.06853   0.0134
+             9:519594:C:G   519594   C      G      0.0051     0.03430   0.05666   0.0127
 
         ---
         '''),
@@ -120,7 +126,7 @@ def show_s3_completions(bucket:str, key:str):
 def show_file(path:str):
     try:
         with smarter_open(path, 'rt') as f:
-            lines = list(itertools.islice(f, 0, MAX_NUM_LINES or 1000))
+            lines = list(itertools.islice(f, 0, MAX_NUM_LINES or 1000))  # TODO: Read the first 1MB?
     except UnicodeDecodeError:
         with smarter_open(path, 'rb') as f:
             print(repr(f.read(500)))
@@ -167,62 +173,96 @@ def show_lines(lines:List[str]):
     for line in lines[:MAX_NUM_LINES or 30]: print(line.rstrip('\n'))
 
 def show_table(table:List[List[str]]):
+    import numpy as np
     if table[0][0].startswith('\ufeff'): table[0][0] = table[0][0][1:]
+    df = get_df(table)
     if OPEN_IN_IPYTHON:
         import IPython
-        df = get_df(table)
         print('>>> df'); print(df); print()
         IPython.start_ipython(argv=['--no-confirm-exit'], display_banner=False, user_ns={'df':df})
     else:
-        column_widths = [0]*len(table[0])
-        for colidx in range(len(table[0])):
-            cell_widths = sorted(len(row[colidx]) for row in table)
-            column_widths[colidx] = max(4, cell_widths[len(table)*9//10]) + 2
         if OPEN_IN_VISIDATA or (MAX_NUM_LINES and len(table)>40):
             print('VisiData sheet commands:  C=summarize_columns.  q=close.')
             print('VisiData column commands:  F=tabulate.  ]=sort.  -=hide.  !=favorite.')
             print('VisiData row commands:  enter=focus_row.  d=delete.  gz^=replace_headers.')
             import visidata
-            df = get_df(table)
             visidata.vd.view_pandas(df)
         else:
             ## Summarize columns:
-            df = get_df(table)
+            colnames = table[0]
+            num_cols = len(colnames)
+            p80_colname_len = sorted(len(colname) for colname in colnames)[int(num_cols*.8)]
+            info_for_colidx = {}
             print('=> Columns:')
             for colidx, colname in enumerate(table[0]):
                 coltype = str(df[colname].dtype)
-                coltype = {'object':'str', 'float64':'flt', 'int64':'int'}.get(coltype, coltype)
+                coltype = {'object':'', 'float64':'float', 'int64':'int'}.get(coltype, coltype)
+                is_numeric = coltype in ['int','float']
                 counter = Counter(row[colidx] for row in table[1:])
-                line = f'  - [{coltype}] {colname}    '
-                if len(counter) == 1: line += f'  CONST({table[1][colidx]})'
+                biggest_count = counter.most_common(1)[0][1]
+                is_const = len(counter) == 1
+                is_uniq = len(counter) == len(table[1:])
+                const_uniq_str = 'CONST' if is_const else ('uniq' if is_uniq else '')
+                line = f'  - {const_uniq_str:5} {coltype:5} {colname:{p80_colname_len+3}}   '
+                if is_const:
+                    line += f'{short_repr(df[colname].iloc[1], 60)}';
+                elif coltype == 'float' and biggest_count < 5:
+                    min_val, max_val = df[colname].min(), df[colname].max()
+                    # TODO: Round 0.1001 to 0.100 not 0.1
+                    difference_decimal_places = math.ceil(-np.log10(max_val - min_val) + 2)
+                    min_val_decimal_places = math.ceil(-np.log10(np.abs(min_val)) + 2) if min_val>0 else 0
+                    max_val_decimal_places = math.ceil(-np.log10(np.abs(max_val)) + 2) if max_val<0 else 0
+                    min_val = np.round(min_val, max(1, difference_decimal_places, min_val_decimal_places))
+                    max_val = np.round(max_val, max(1, difference_decimal_places, max_val_decimal_places))
+                    line += f'{min_val} - {max_val}'
+                elif coltype == 'int' and biggest_count < 5:
+                    min_val, max_val = df[colname].min(), df[colname].max()
+                    line += f'{repr_int(min_val)} - {repr_int(max_val)}'
+                elif is_uniq:
+                    line += f'{short_repr(df[colname].min(), 30)} - {short_repr(df[colname].max(), 30)}'
+                elif len(counter) < 7:
+                    line += 'counts={' + ' '.join(f'{count}*{short_repr(elem, 20)}' for elem,count in counter.most_common()) + '}'
                 else:
-                    is_unique = len(counter) == len(table[1:])
-                    if is_unique: line += '  UNIQUE'
-                    if coltype in ['int','flt'] and counter.most_common(1)[0][1] < 5 or is_unique:
-                        line += f'   min={short_repr(df[colname].min())}  max={short_repr(df[colname].max())}'
-                    else:
-                        line += '   counts={' + ' '.join(f'{count}*{short_repr(elem)}' for elem,count in counter.most_common(4)) + '}'
+                    line += 'counts={' + ' '.join(f'{count}*{short_repr(elem, 20)}' for elem,count in counter.most_common(4)) + ' ...}'
                 print(line)
+                info_for_colidx.setdefault(colidx, {
+                    'is_const': is_const,
+                    'is_uniq': is_uniq,
+                    'type': coltype,
+                    'is_numeric': is_numeric,
+                })
             ## Show table head:
             print()
             # TODO: Align decimals of floats
-            # TODO: Align ints to the right, with thousands commas
-            # TODO: Center colnames
-            if not MAX_NUM_LINES: table = table[:10]
-            # TODO: If <10 cols fit, truncate
-            for num_cols_that_fit in range(1, 1+len(table[0])):
-                total_width = sum(1+column_widths[colidx] for colidx in range(num_cols_that_fit))
-                if total_width > term_width: num_cols_that_fit -= 1; break
-            if num_cols_that_fit == 0:
-                print('=> Trucated wide table:')
-                num_cols_that_fit = 1
-                column_widths[0] = term_width-4
-                table = [[row[0][:term_width-4]] for row in table]
+            # TODO: Align ints to the right, with thousands commas if >10k
+            if not MAX_NUM_LINES and len(table)>20:
+                print('=> Head:')
+                table = table[:10]
+            for colidx,info in info_for_colidx.items():
+                cell_widths = sorted(len(row[colidx]) for row in table)
+                info['colwidth'] = max(4, cell_widths[len(table)*9//10]) + 2
+                if info['is_const']: info['colwidth'] = 0
+            column_widths = [info['colwidth'] for info in info_for_colidx.values()]
+            if sum(column_widths) + len(column_widths) > term_width:
+                # TODO: Shrink columns instead of (or in addition to) dropping columns
+                for num_cols_that_fit in range(1, 1+len(table[0])):
+                    total_width = sum(1+column_widths[colidx] for colidx in range(num_cols_that_fit))
+                    if total_width > term_width: num_cols_that_fit -= 1; break
+                if num_cols_that_fit > 0:
+                    table = [row[:num_cols_that_fit] for row in table]
+                else:
+                    print('=> Trucated wide table:')
+                    column_widths[0] = term_width-4
+                    table = [[row[0][:term_width-4]] for row in table]
             for rowidx,row in enumerate(table):
-                for colidx, cell in enumerate(row[:num_cols_that_fit]):
+                for colidx, cell in enumerate(row):
+                    info = info_for_colidx[colidx]
                     width = column_widths[colidx]
+                    if width == 0: continue
                     r = f'{cell[:width]:{width}} '
-                    if r.startswith('0.0') or r.startswith('-0.0'):
+                    if rowidx == 0 and len(table)>1 and r.endswith('  ') and len(r.rstrip()) < len(str(table[1][colidx])):
+                        r = ' ' + r[:-1]
+                    elif r.startswith('0.0') or r.startswith('-0.0'):
                         nonzero = r.lstrip('-0.')
                         zero = r[:-len(nonzero)]
                         r = '\x1B[1;32m' + zero + '\x1B[0m' + nonzero
@@ -230,12 +270,14 @@ def show_table(table:List[List[str]]):
                 print()
 
 def short_repr(x, maxwidth=20) -> str:
-    x = repr(x)
-    if len(x) <= maxwidth: return x
-    if maxwidth > 10: maxwidth -= 5
-    if maxwidth > 10: maxwidth -= 5
-    endquote = x[0] if x[0] in ['"', "'"] else ''
-    return f'{x[:maxwidth]}{endquote}(len={len(x)})'
+    r = repr(x)
+    if len(r) <= maxwidth: return r
+    endquote = r[0] if r[0] in ['"', "'"] else ''
+    sidewidth = 1+maxwidth//4
+    return f'{r[:sidewidth]}...{r[-sidewidth:]}(len={len(r)})'
+
+def repr_int(x) -> str:
+    return str(x) if abs(x) < 10e3 else f'{x:,}'
 
 def get_df(table:List[List[str]]) -> "pd.DataFrame":
     import pandas as pd
