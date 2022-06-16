@@ -8,6 +8,8 @@
 
 # TODO: Add custom bash_completion using <https://github.com/kislyuk/argcomplete>
 
+# TODO: Add `--less` which does `less -S`
+
 import sys, os, functools, json, datetime, itertools, re, shutil, io, argparse, textwrap, math
 from pprint import pprint
 from collections import Counter
@@ -189,8 +191,16 @@ def show_table(table:List[List[str]]):
         visidata.vd.view_pandas(df)
     else:
         ## Truncate if too wide
-        if len(table[0]) > 50:
-            print(f'   {len(table):,} rows * {len(table[0]):,} columns.  Truncating.')
+        if len(table[0]) > 100:
+            colnames = table[0]
+            print(f'   {len(table):,} rows * {len(colnames):,} columns.  Truncating.')
+            # Try deleting numbers to see if it gives a reasonable number of patterns to show:
+            numless_colname_counts = Counter(re.subn(r'[0-9]+', '#', c)[0] for c in colnames)
+            numless_colnames = {re.subn(r'[0-9]+', '#', c)[0]:c for c in colnames}
+            if len(numless_colnames) < 200:
+                print('=> Too many columns to show, but they match these patterns:')
+                # TODO: Indent this:
+                print('  ', [numless_colnames[nc] if count==1 else nc for nc,count in numless_colname_counts.items()])
             table = [row[:15] for row in table]
         print()
 
