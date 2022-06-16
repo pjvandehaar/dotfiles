@@ -148,7 +148,7 @@ def show_lines(lines:List[str]):
     ## Try to make a table:
     for delim in '\t, ;|':
         # TODO: Find cols that are all int/float, and use them to determine what's data, what's colnames, and what's metadata
-        # TODO: Guess whether lines[0] is a header or just a row
+        # TODO: Guess whether lines[0] is a header or just a row.  If it has int everywhere lines[1] does, it's a row.
         # TODO: Handle quotes?
         ## Ignore # lines when detecting a table
         ## Then add # lines back into the table if they have num_fields
@@ -180,101 +180,101 @@ def show_table(table:List[List[str]]):
         import IPython
         print('>>> df'); print(df); print()
         IPython.start_ipython(argv=['--no-confirm-exit'], display_banner=False, user_ns={'df':df})
+    elif OPEN_IN_VISIDATA or (MAX_NUM_LINES and len(table)>40):
+        print('VisiData sheet commands:  C=summarize_columns.  q=close.')
+        print('VisiData column commands:  F=tabulate.  ]=sort.  -=hide.  !=favorite.')
+        print('VisiData row commands:  enter=focus_row.  d=delete.  gz^=replace_headers.')
+        import visidata
+        visidata.vd.view_pandas(df)
     else:
-        if OPEN_IN_VISIDATA or (MAX_NUM_LINES and len(table)>40):
-            print('VisiData sheet commands:  C=summarize_columns.  q=close.')
-            print('VisiData column commands:  F=tabulate.  ]=sort.  -=hide.  !=favorite.')
-            print('VisiData row commands:  enter=focus_row.  d=delete.  gz^=replace_headers.')
-            import visidata
-            visidata.vd.view_pandas(df)
-        else:
-            ## Summarize columns:
-            colnames = table[0]
-            num_cols = len(colnames)
-            p80_colname_len = sorted(len(colname) for colname in colnames)[int(num_cols*.8)]
-            info_for_colidx = {}
-            print('=> Columns:')
-            for colidx, colname in enumerate(table[0]):
-                coltype = str(df[colname].dtype)
-                coltype = {'object':'', 'float64':'float', 'int64':'int'}.get(coltype, coltype)
-                is_numeric = coltype in ['int','float']
-                counter = Counter(row[colidx] for row in table[1:])
-                biggest_count = counter.most_common(1)[0][1]
-                is_const = len(counter) == 1
-                is_uniq = len(counter) == len(table[1:])
-                const_uniq_str = 'CONST' if is_const else ('uniq' if is_uniq else '')
-                line = f'  - {const_uniq_str:5} {coltype:5} {colname:{p80_colname_len+3}}   '
-                if is_const:
-                    line += f'{short_repr(df[colname].iloc[1], 60)}';
-                elif coltype == 'float' and biggest_count < 5:
-                    min_val, max_val = df[colname].min(), df[colname].max()
-                    # TODO: Round 0.1001 to 0.100 not 0.1
-                    difference_decimal_places = math.ceil(-np.log10(max_val - min_val) + 2)
-                    min_val_decimal_places = math.ceil(-np.log10(np.abs(min_val)) + 2) if min_val>0 else 0
-                    max_val_decimal_places = math.ceil(-np.log10(np.abs(max_val)) + 2) if max_val<0 else 0
-                    min_val = np.round(min_val, max(1, difference_decimal_places, min_val_decimal_places))
-                    max_val = np.round(max_val, max(1, difference_decimal_places, max_val_decimal_places))
-                    line += f'{min_val} - {max_val}'
-                elif coltype == 'int' and biggest_count < 5:
-                    min_val, max_val = df[colname].min(), df[colname].max()
-                    line += f'{repr_int(min_val)} - {repr_int(max_val)}'
-                elif is_uniq:
-                    line += f'{short_repr(df[colname].min(), 30)} - {short_repr(df[colname].max(), 30)}'
-                elif len(counter) < 7:
-                    line += 'counts={' + ' '.join(f'{count}*{short_repr(elem, 20)}' for elem,count in counter.most_common()) + '}'
-                else:
-                    line += 'counts={' + ' '.join(f'{count}*{short_repr(elem, 20)}' for elem,count in counter.most_common(4)) + ' ...}'
-                print(line)
-                info_for_colidx.setdefault(colidx, {
-                    'is_const': is_const,
-                    'is_uniq': is_uniq,
-                    'type': coltype,
-                    'is_numeric': is_numeric,
-                })
-            ## Show table head:
+        ## Summarize columns:
+        print('=> Columns:')
+        colnames = table[0]
+        num_cols = len(colnames)
+        p80_colname_len = sorted(len(colname) for colname in colnames)[int(num_cols*.8)]
+        info_for_colidx = {}
+        for colidx, colname in enumerate(table[0]):
+            coltype = str(df[colname].dtype)
+            coltype = {'object':'', 'float64':'float', 'int64':'int'}.get(coltype, coltype)
+            is_numeric = coltype in ['int','float']
+            counter = Counter(row[colidx] for row in table[1:])
+            biggest_count = counter.most_common(1)[0][1]
+            is_const = len(counter) == 1
+            is_uniq = len(counter) == len(table[1:])
+            const_uniq_str = 'CONST' if is_const else ('uniq' if is_uniq else '')
+            line = f'  - {const_uniq_str:5} {coltype:5} {colname:{p80_colname_len+3}}   '
+            if is_const:
+                line += f'{short_repr(df[colname].iloc[1], 60)}';
+            elif coltype == 'float' and biggest_count < 5:
+                min_val, max_val = df[colname].min(), df[colname].max()
+                # TODO: Round 0.1001 to 0.100 not 0.1
+                difference_decimal_places = math.ceil(-np.log10(max_val - min_val) + 2)
+                min_val_decimal_places = math.ceil(-np.log10(np.abs(min_val)) + 2) if min_val>0 else 0
+                max_val_decimal_places = math.ceil(-np.log10(np.abs(max_val)) + 2) if max_val<0 else 0
+                min_val = np.round(min_val, max(1, difference_decimal_places, min_val_decimal_places))
+                max_val = np.round(max_val, max(1, difference_decimal_places, max_val_decimal_places))
+                line += f'{min_val} - {max_val}'
+            elif coltype == 'int' and biggest_count < 5:
+                min_val, max_val = df[colname].min(), df[colname].max()
+                line += f'{repr_int(min_val)} - {repr_int(max_val)}'
+            elif is_uniq:
+                line += f'{short_repr(df[colname].min(), 30)} - {short_repr(df[colname].max(), 30)}'
+            elif len(counter) < 7:
+                line += 'counts={' + ' '.join(f'{count}*{short_repr(elem, 20)}' for elem,count in counter.most_common()) + '}'
+            else:
+                line += 'counts={' + ' '.join(f'{count}*{short_repr(elem, 20)}' for elem,count in counter.most_common(4)) + ' …}'
+            print(line)
+            info_for_colidx.setdefault(colidx, {
+                'is_const': is_const,
+                'is_uniq': is_uniq,
+                'type': coltype,
+                'is_numeric': is_numeric,
+            })
+        ## Show table head:
+        print()
+        # TODO: Align decimals of floats.
+        # TODO: Align ints to the right
+        if not MAX_NUM_LINES and len(table)>20:
+            print('=> Head:')
+            table = table[:10]
+        for colidx,info in info_for_colidx.items():
+            cell_widths = sorted(len(row[colidx]) for row in table)
+            info['colwidth'] = max(4, cell_widths[len(table)*9//10]) + 2
+            if info['is_const']: info['colwidth'] = 0
+        if sum(info['colwidth'] for info in info_for_colidx.values()) > term_width:
+            for info in info_for_colidx.values():
+                if info['colwidth'] > 20: info['colwidth'] = 15
+        if sum(info['colwidth'] for info in info_for_colidx.values()) > term_width:
+            for num_cols_that_fit in range(1, 1+num_cols):
+                total_width = sum(1+info_for_colidx[colidx]['colwidth'] for colidx in range(num_cols_that_fit))
+                if total_width > term_width: num_cols_that_fit -= 1; break
+            if num_cols_that_fit > 0:
+                table = [row[:num_cols_that_fit] for row in table]
+            else:
+                print('=> Trucated wide table:')
+                info_for_colidx[0]['colwidth'] = term_width-4
+                table = [[row[0][:term_width-4]] for row in table]
+        for rowidx,row in enumerate(table):
+            for colidx, cell in enumerate(row):
+                info = info_for_colidx[colidx]
+                width = info['colwidth']
+                if width == 0: continue
+                r = f'{cell[:width]:{width}} '
+                if rowidx == 0 and len(table)>1 and r.endswith('  ') and len(r.rstrip()) < len(str(table[1][colidx])):
+                    r = ' ' + r[:-1]
+                elif r.startswith('0.0') or r.startswith('-0.0'):
+                    nonzero = r.lstrip('-0.')
+                    zero = r[:-len(nonzero)]
+                    r = '\x1B[1;32m' + zero + '\x1B[0m' + nonzero
+                print(r, end='')
             print()
-            # TODO: Align decimals of floats
-            # TODO: Align ints to the right, with thousands commas if >10k
-            if not MAX_NUM_LINES and len(table)>20:
-                print('=> Head:')
-                table = table[:10]
-            for colidx,info in info_for_colidx.items():
-                cell_widths = sorted(len(row[colidx]) for row in table)
-                info['colwidth'] = max(4, cell_widths[len(table)*9//10]) + 2
-                if info['is_const']: info['colwidth'] = 0
-            column_widths = [info['colwidth'] for info in info_for_colidx.values()]
-            if sum(column_widths) + len(column_widths) > term_width:
-                # TODO: Shrink columns instead of (or in addition to) dropping columns
-                for num_cols_that_fit in range(1, 1+len(table[0])):
-                    total_width = sum(1+column_widths[colidx] for colidx in range(num_cols_that_fit))
-                    if total_width > term_width: num_cols_that_fit -= 1; break
-                if num_cols_that_fit > 0:
-                    table = [row[:num_cols_that_fit] for row in table]
-                else:
-                    print('=> Trucated wide table:')
-                    column_widths[0] = term_width-4
-                    table = [[row[0][:term_width-4]] for row in table]
-            for rowidx,row in enumerate(table):
-                for colidx, cell in enumerate(row):
-                    info = info_for_colidx[colidx]
-                    width = column_widths[colidx]
-                    if width == 0: continue
-                    r = f'{cell[:width]:{width}} '
-                    if rowidx == 0 and len(table)>1 and r.endswith('  ') and len(r.rstrip()) < len(str(table[1][colidx])):
-                        r = ' ' + r[:-1]
-                    elif r.startswith('0.0') or r.startswith('-0.0'):
-                        nonzero = r.lstrip('-0.')
-                        zero = r[:-len(nonzero)]
-                        r = '\x1B[1;32m' + zero + '\x1B[0m' + nonzero
-                    print(r, end='')
-                print()
 
 def short_repr(x, maxwidth=20) -> str:
     r = repr(x)
     if len(r) <= maxwidth: return r
     endquote = r[0] if r[0] in ['"', "'"] else ''
     sidewidth = 1+maxwidth//4
-    return f'{r[:sidewidth]}...{r[-sidewidth:]}(len={len(r)})'
+    return f'{r[:sidewidth]}…{r[-sidewidth:]}(len={len(r)})'
 
 def repr_int(x) -> str:
     return str(x) if abs(x) < 10e3 else f'{x:,}'
