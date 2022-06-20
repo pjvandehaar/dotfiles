@@ -33,7 +33,7 @@ _PP_prompt() {
     # Log last command to ~/.full_history like <https://www.jefftk.com/p/you-should-be-logging-shell-history>
     # TODO: strip the line number from $(history 1)
     # TODO: this gets re-run (and re-appended) when I hit enter on a blank line, but shouldn't.
-    echo "$(date +%Y-%m-%d--%H-%M-%S) $(hostname) $PWD $(history 1)" >> ~/.full_history
+    echo "$(date +%Y-%m-%d_%H:%M:%S%z) $(hostname) $PWD $(history 1)" >> ~/.full_history
 
     local _runtime=''
     if [[ "$_PP_runtime_seconds" -ge 5 ]]; then

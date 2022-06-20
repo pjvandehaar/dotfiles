@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+
+import datetime, argparse, glob, os, re, time
+
+
+machine_aliases = {
+    'C02TQ1DGG8WN': 'MBP',
+    'rgc-024082248.regeneron.regn.com': 'pv',
+}
+
+pv_fh_path = '/tmp/pv_full_history'
+age_minutes = (time.time() - os.stat(pv_fh_path).st_mtime) / 60
+if age_minutes > 60:
+    print(f'''Run: scp "pv:~/.full_history" {pv_fh_path}'''); input('Hit ENTER>')
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--all', action='store_true', help='Show all history, rather than just today')
+    parser.add_argument('--day', help='Show a single day.  eg: 2022-06-20')
+    args = parser.parse_args()
+    if args.all: day_str_filter = ''
+    elif args.day: day_str_filter = args.day
+    else: day_str_filter = datetime.datetime.today().strftime('%Y-%m-%d')
+    return day_str_filter
+day_str_filter = parse_args()
+
+def get_lines():
+    paths = [os.path.expanduser('~/.full_history')] + glob.glob('/tmp/*_full_history')
+    for path in paths:
+        print(f'=> Parsing {path}')
+        with open(path) as f:
+            for line in f:
+                line = line.rstrip()
+                if len(line)<5 or not line.startswith('20') or line.count(' ')<3: continue
+                time_str = line.split()[0]
+                if not time_str.startswith(day_str_filter): continue
+
+                m = re.match(r'^(\S+) (\S+) ([/~].*)  \d+  (.*)$', line)
+                assert m, repr(line)
+                time_str, machine, pwd, cmd = m.groups()
+                # Handle time
+                time_pattern = r'^(202#-##-##)(?:_|__|--)(##[-:]##[-:]##)(.*)'.replace('#','[0-9]')
+                m = re.match(time_pattern, time_str)
+                assert m, repr(time_str)
+                assert m.group(3) in ['', '_-0400', '-0400'], repr(m.group(3))
+                time_str = f"{m.group(1)}__{m.group(2).replace('-',':')}"
+                # Handle machine
+                machine = machine_aliases.get(machine, machine)
+                ## Handle PWD
+                pwd = pwd.replace('/Users/peter.vandehaar', '~')
+                pwd = pwd.replace('/home/s.peter.vandehaar', '~')
+
+                yield f'{time_str}  {machine}  {pwd}  {cmd}'
+
+
+lines = sorted(get_lines())
+print()
+def get_time(line): return datetime.datetime.strptime(line.split()[0], '%Y-%m-%d__%H:%M:%S')
+times = [get_time(line) for line in lines]
+for idx, line in enumerate(lines):
+    if idx > 0:
+        dt = times[idx]
+        prev_dt = times[idx-1]
+        delta_minutes = (dt - prev_dt).total_seconds() / 60
+        if delta_minutes > 15: print()
+    print(line)
