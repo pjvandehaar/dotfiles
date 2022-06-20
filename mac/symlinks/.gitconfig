@@ -39,6 +39,10 @@
 	textconv = samtools view -h
 [diff "bcf"]
 	textconv = htsfile -c
+[url "git@github.com:"]
+    pushInsteadOf = "https://github.com/"
+[url "https://github.com/"]
+    insteadOf = "git@github.com:"
 
 # OS-specific:
 [credential]
