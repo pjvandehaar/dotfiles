@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Run `./ptrwatch2 run.py`.  Similar to watchexec."""
 # TODO: look into watchfiles.run_process
+# TODO: Make a polling no-deps version of this.
+# TODO: Make this script support `watchgod`, `watchfiles`, dumb polling, etc.  Centralize this task here.
 
 import sys, os
 import subprocess as sub

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
-## TODO: `echo '.schema' | sqlite3 -readonly '/Users/peter.vandehaar/Library/Application Support/Microsoft Edge/Default/History'`
+# Note: prompt_prompt.sh doesn't write to ~/.full_history until a command finishes.  So `ssh` is often an hour late.
 
-
-import datetime, argparse, glob, os, re, time, shutil
+import datetime, argparse, glob, os, re, time, shutil, sqlite3, subprocess as sub
 
 
 term_width = shutil.get_terminal_size().columns
@@ -13,8 +12,8 @@ machine_aliases = {
 }
 
 pv_fh_path = '/tmp/pv_full_history'
-age_minutes = (time.time() - os.stat(pv_fh_path).st_mtime) / 60
-if age_minutes > 60:
+age_hours = (time.time() - os.stat(pv_fh_path).st_mtime) / 3600
+if age_hours > 10:
     print(f'''Run: scp "pv:~/.full_history" {pv_fh_path}'''); input('Hit ENTER>')
 
 def parse_args():
@@ -28,7 +27,7 @@ def parse_args():
     return day_str_filter
 day_str_filter = parse_args()
 
-def get_lines():
+def get_rows():
     paths = [os.path.expanduser('~/.full_history')] + glob.glob('/tmp/*_full_history')
     for path in paths:
         print(f'=> Parsing {path}')
@@ -51,21 +50,62 @@ def get_lines():
                 # Handle machine
                 machine = machine_aliases.get(machine, machine)
                 ## Handle PWD
+                pwd = pwd.strip()
                 pwd = pwd.replace('/Users/peter.vandehaar', '~')
                 pwd = pwd.replace('/home/s.peter.vandehaar', '~')
+                yield (time_str, machine, pwd, cmd)
 
-                line = f'{time_str}  {machine}  {pwd}  {cmd}'
-                yield line[:term_width-1]
+def get_browser_history_rows():
+    print('=> Parsing Edge')
+    edge_history_path = '/Users/peter.vandehaar/Library/Application Support/Microsoft Edge/Default/History'
+    db = sqlite3.connect(f'file:{edge_history_path}?immutable=1')
+    db.row_factory = sqlite3.Row
+    def dict_from_row(row: sqlite3.Row) -> dict: return {k: row[k] for k in row.keys()}
+    query = 'SELECT visits.visit_time, urls.url, urls.title FROM urls, visits WHERE urls.id = visits.url'
+    for row in db.execute(query):
+        dt = datetime.datetime(1601, 1, 1) + datetime.timedelta(seconds=row['visit_time']/1e6) # lol, µs since 1601??
+        dt -= datetime.timedelta(hours=4)  # Convert UTC -> EDT in summer
+        time_str = dt.strftime('%Y-%m-%d__%H:%M:%S')
+        if time_str.startswith(day_str_filter):
+            yield (time_str, 'Edge', row['url'])
+
+def get_pmset_rows():
+    print('=> Parsing `pmset -g log`')
+    lines = sub.check_output('pmset -g log'.split()).decode().split('\n')
+    lines = [line.rstrip() for line in lines]
+    for line in lines:
+        if line.startswith('Total Sleep/Wakes since'): break
+        if not line.startswith('2022-'): continue
+        pattern = r'^(2022-##-## ##:##:##) -0400 ([a-zA-Z].*)$'.replace('#','[0-9]')
+        m = re.match(pattern, line)
+        assert m, repr(line)
+        time_str, info = m.groups()
+        time_str = time_str.replace(' ', '__')
+        if not time_str.startswith(day_str_filter): continue
+        info = re.sub(r'\s+', ' ', info)
+        if info == 'Notification Display is turned on':
+            yield (time_str, 'pmset', 'lid opened')
+        if info == 'Notification Display is turned off':
+            yield (time_str, 'pmset', 'lid shut')
 
 
-lines = sorted(get_lines())
+rows = list(get_rows()) + list(get_browser_history_rows()) + list(get_pmset_rows())
+rows.sort()
 print()
-def get_time(line): return datetime.datetime.strptime(line.split()[0], '%Y-%m-%d__%H:%M:%S')
-times = [get_time(line) for line in lines]
-for idx, line in enumerate(lines):
+def get_time(time_str): return datetime.datetime.strptime(time_str, '%Y-%m-%d__%H:%M:%S')
+times = [get_time(row[0]) for row in rows]
+for idx, row in enumerate(rows):
+    row = list(row)
+    dt = times[idx]
     if idx > 0:
-        dt = times[idx]
-        prev_dt = times[idx-1]
-        delta_minutes = (dt - prev_dt).total_seconds() / 60
-        if delta_minutes > 15: print()
-    print(line)
+        delta_minutes = (dt - times[idx-1]).total_seconds() / 60
+        if delta_minutes > 15:
+            print()
+        else:
+            prev_row, next_row = rows[idx-1], (rows[idx+1] if idx+1<len(rows) else ('','','',''))
+            if row[1] == prev_row[1]:
+                row[1] = ('│' if row[1] == next_row[1] else '╵')*len(row[1])
+                if row[2] == prev_row[2]:
+                    row[2] = ('│' if row[2] == next_row[2] else '╵')*len(row[2])
+    row[0] = dt.strftime('%b %d %I:%M%p').replace(' 0', '  ').replace('AM','am').replace('PM','pm')
+    print('   '.join(row)[:term_width-1])
