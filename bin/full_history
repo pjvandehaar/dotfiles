@@ -11,10 +11,13 @@ machine_aliases = {
     'rgc-024082248.regeneron.regn.com': 'pv',
 }
 
-pv_fh_path = '/tmp/pv_full_history'
-age_hours = (time.time() - os.stat(pv_fh_path).st_mtime) / 3600
-if age_hours > 10:
-    print(f'''Run: scp "pv:~/.full_history" {pv_fh_path}'''); input('Hit ENTER>')
+def get_file_age_minutes(path): return (time.time() - os.stat(path).st_mtime) / 60
+pv_fullhist_path = '/tmp/pv_full_history'
+if not os.path.exists(pv_fullhist_path) or get_file_age_minutes(pv_fullhist_path) > 60*10:
+    cmd = f'scp pv:~/.full_history {pv_fullhist_path}'
+    print(f'=> Running: {cmd}')
+    sub.run(cmd.split(), check=True)
+    print('=> Done')
 
 def parse_args():
     parser = argparse.ArgumentParser()
