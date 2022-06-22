@@ -87,14 +87,14 @@ alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
 glq() {
-    # &%<> marks the right-edge of the graph
+    # &%<> marks the right-edge of the graph, for swapping / and \
     if [[ $# -ge 1 ]]; then
         local _target="$*"
     else
         local _target="--all"
     fi
-    git log --graph --decorate --oneline --max-count=$((LINES-2)) --color=always $_target |
-    perl -pale 's{([0-9a-f]{6})}{&%<>\1}' |
+    git log --graph --pretty='%C(auto)%h  %as %d  %s' --max-count=$((LINES-4)) --color $_target |
+    perl -pale 's{([0-9a-f]{5,})}{&%<>\1}' |
     perl -pale '$_ .= "&%<>" if (!m{&%<>})' |
     perl -pale 's{(/)(?=.*&%<>)}{%}g' |
     perl -pale 's{(\\)(?=.*&%<>)}{/}g' |

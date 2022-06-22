@@ -56,6 +56,7 @@ def get_rows():
                 pwd = pwd.strip()
                 pwd = pwd.replace('/Users/peter.vandehaar', '~')
                 pwd = pwd.replace('/home/s.peter.vandehaar', '~')
+                pwd = pwd.replace('/mnt/efs_v2/agds_cgad/users/peter.vandehaar', 'efs')
                 yield (time_str, machine, pwd, cmd)
 
 def get_browser_history_rows():
@@ -111,4 +112,5 @@ for idx, row in enumerate(rows):
                 if row[2] == prev_row[2]:
                     row[2] = ('│' if row[2] == next_row[2] else '╵')*len(row[2])
     row[0] = dt.strftime('%b %d %I:%M%p').replace(' 0', '  ').replace('AM','am').replace('PM','pm')
+    if len(row)>=3: row[2] = f'{row[2]:<10}'
     print('   '.join(row)[:term_width-1])
