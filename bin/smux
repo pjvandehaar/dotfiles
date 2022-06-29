@@ -9,21 +9,21 @@ if [[ "${1:-}" = "sudo" ]]; then
 fi
 
 # If host isn't specified, use the first host in ~/.ssh/config
-if [[ "${1:-}" = "" ]] && [[ -e "$HOME/.ssh/config" ]]; then
-    host="$(cat "$HOME/.ssh/config" | head -1 | cut -d' ' -f2)"
+if [[ ${1:-} = "" ]] && [[ -e ~/.ssh/config ]]; then
+    host=$(cat ~/.ssh/config |perl -nale 'print $1 if m{Host\s+(\S+)}'|head -1)
     echo "[ssh $host]"
     set "$host"
 fi
 
-if [[ "$1" = "" ]]; then
+if [[ $1 = "" ]]; then
     echo "usage: `basename $0` <host>"
     exit 1
 fi
 
 
-echo -ne "\033]0;$1\007"  # Writes to terminal title, but seems to get overridden.
+echo -ne "\033]0;$1\007"  # Writes to terminal title, but may get overridden by tmux &c
 
-if [[ "$SSH_AUTH_SOCK" = "" ]]; then
+if [[ $SSH_AUTH_SOCK = "" ]]; then
     eval `ssh-agent -s`
     ssh-add $HOME/.ssh/id_rsa
 fi
@@ -39,7 +39,7 @@ export AUTOSSH_POLL AUTOSSH_LOGFILE AUTOSSH_DEBUG AUTOSSH_PATH AUTOSSH_GATETIME 
 #autossh -t $@; exit  # Debugging
 
 # -t is the ssh option to force a pseudo terminal (pty)
-if [[ -n "$use_sudo" ]]; then
+if [[ -n $use_sudo ]]; then
     autossh -t $@ "sudo tmux new -As0"
 else
     autossh -t $@ "tmux new -As0"
