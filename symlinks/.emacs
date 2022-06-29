@@ -14,16 +14,12 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages '(rust-mode expand-region))
  '(safe-local-variable-values '((comment-start . %))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
 
 ;; Put backups in ~/.emacs-saves/ instead of literring all over.
 (setq backup-directory-alist `(("." . "~/.emacs-saves")))
 (setq backup-by-copying t)
+
+(setq split-width-threshold 200) ;; Split side-by-side if >200 cols, else above-and-below.  Default=160.
 
 ;; Packaging:
 ;; when first installing this .emacs, do `M-x package-install <return> <package-name>`

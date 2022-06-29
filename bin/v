@@ -4,11 +4,13 @@
 ##       That can be surprising, because this handles all s3 buckets you can access, including buckets that aren't mounted in /mnt/s3/.
 ##       But I prefer `/mnt/s3/` over `s3://`.
 
-# TODO: Support `v /path/to/chr#range#-#.tsv`.  If multiple files match, list them.  If only one, show it.  #=\d+  %=.*
+# TODO: Support `v /path/to/chr#range#-#.tsv`.  If multiple files match, list them.  If only one, show it.  #=[0-9]+  %=.*
 
 # TODO: Add custom bash_completion using <https://github.com/kislyuk/argcomplete>
 
 # TODO: Add `--less` which does `less -S`
+
+# TODO: Support `v dx://file-G91fPzj09z5J8Jfj5pGk4jj5`
 
 import sys, os, functools, json, datetime, itertools, re, shutil, io, argparse, textwrap, math
 from pprint import pprint
@@ -190,7 +192,7 @@ def show_table(table:List[List[str]]):
         df = get_df(table)
         visidata.vd.view_pandas(df)
     else:
-        ## Truncate if too wide
+        ## Truncate if too wide, or bail out if too short
         if len(table[0]) > 100:
             colnames = table[0]
             print(f'   {len(table):,} rows * {len(colnames):,} columns.  Truncating.')
@@ -201,7 +203,13 @@ def show_table(table:List[List[str]]):
                 print('=> Too many columns to show, but they match these patterns:')
                 # TODO: Indent this:
                 print('  ', [numless_colnames[nc] if count==1 else nc for nc,count in numless_colname_counts.items()])
-            table = [row[:15] for row in table]
+            table = [row[:10]+row[-10:] for row in table]
+        elif len(table) <= 1:
+            print(f'   {len(table):,} rows * {len(table[0]):,} columns')
+            print(table)
+            return
+        else:
+            print(f'   {len(table):,} rows * {len(table[0]):,} columns')
         print()
 
         # Gather info about columns
@@ -230,7 +238,7 @@ def show_table(table:List[List[str]]):
             const_uniq_str = 'CONST' if is_const else ('uniq' if is_uniq else '')
             line = f'  - {const_uniq_str:5} {coltype:5} {colname:{p80_colname_len+3}}   '
             if is_const:
-                line += f'{short_repr(series.iloc[1], 60)}'
+                line += f'{short_repr(series.iloc[0], 60)}'
             elif coltype == 'float' and biggest_count < 5:
                 min_val, max_val = series.min(), series.max()
                 # TODO: Round 0.1001 to 0.100 not 0.1
@@ -281,7 +289,7 @@ def show_table(table:List[List[str]]):
                 info = info_for_colidx[colidx]
                 width = info['colwidth']
                 if width == 0: continue
-                r = f'{cell[:width]:{width}} '
+                r = f'{cell[:width//2]}…{cell[-(width-width//2-1):]} ' if len(cell)>width else f'{cell:{width}} '
                 if rowidx == 0 and len(table)>1 and r.endswith('  ') and len(r.rstrip()) < len(str(table[1][colidx])):
                     r = ' ' + r[:-1]
                 elif r.startswith('0.0') or r.startswith('-0.0'):
