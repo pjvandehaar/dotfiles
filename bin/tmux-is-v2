@@ -1,0 +1,7 @@
+#!/bin/bash
+set -euo pipefail
+# Returns status 0 if we're on tmux v2.  Otherwise, returns status 1.
+# Use this in ~/.tmux.conf
+
+TMUX_VERSION=$(tmux -V 2>/dev/null | sed -En "s/^tmux[^0-9]*([.0-9]+).*/\1/p")
+[[ $TMUX_VERSION = 2.* ]]

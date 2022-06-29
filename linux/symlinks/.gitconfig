@@ -43,3 +43,5 @@
 	ff = only
 [url "git@github.com:"]
 	pushInsteadOf = "https://github.com"
+[include]
+	path = ~/.gitconfig.custom
