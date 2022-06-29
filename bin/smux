@@ -9,29 +9,34 @@ if [[ "${1:-}" = "sudo" ]]; then
 fi
 
 # If host isn't specified, use the first host in ~/.ssh/config
-if [ "X${1:-}" = "X" ] &&  [[ -e "$HOME/.ssh/config" ]]; then
+if [[ "${1:-}" = "" ]] && [[ -e "$HOME/.ssh/config" ]]; then
     host="$(cat "$HOME/.ssh/config" | head -1 | cut -d' ' -f2)"
     echo "[ssh $host]"
     set "$host"
 fi
 
-if [ "X$1" = "X" ]; then
+if [[ "$1" = "" ]]; then
     echo "usage: `basename $0` <host>"
     exit 1
 fi
 
-if [ "X$SSH_AUTH_SOCK" = "X" ]; then
-        eval `ssh-agent -s`
-        ssh-add $HOME/.ssh/id_rsa
+
+echo -ne "\033]0;$1\007"  # Writes to terminal title, but seems to get overridden.
+
+if [[ "$SSH_AUTH_SOCK" = "" ]]; then
+    eval `ssh-agent -s`
+    ssh-add $HOME/.ssh/id_rsa
 fi
 
 AUTOSSH_POLL=20
-AUTOSSH_PORT=$(awk 'BEGIN { srand(); do r = rand()*32000; while ( r < 20000 ); printf("%d\n",r)  }' < /dev/null)
+AUTOSSH_PORT=$(awk 'BEGIN { srand(); printf("%d\n", 20000+12000*rand()) }' < /dev/null)
 #AUTOSSH_GATETIME=30
 #AUTOSSH_LOGFILE=$HOST.log
 #AUTOSSH_DEBUG=yes
 #AUTOSSH_PATH=/usr/local/bin/ssh
 export AUTOSSH_POLL AUTOSSH_LOGFILE AUTOSSH_DEBUG AUTOSSH_PATH AUTOSSH_GATETIME AUTOSSH_PORT
+
+#autossh -t $@; exit  # Debugging
 
 # -t is the ssh option to force a pseudo terminal (pty)
 if [[ -n "$use_sudo" ]]; then
