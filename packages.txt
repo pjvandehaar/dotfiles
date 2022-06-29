@@ -1,3 +1,4 @@
+
 ## brew: Mac and Linux (via `brew leaves`)
 bash-completion  # @2 has bugs, so stick with v1
 brotli
@@ -21,13 +22,16 @@ tig
 wget
 zstd
 
+
 ## brew: Linux
 tmux
+
 
 ## brew: Mac
 bash
 coreutils
 gnu-sed
+
 
 ## brew-cask: Mac
 alfred
@@ -50,6 +54,10 @@ vlc
 wireshark
 
 
+## conda
+conda install -c conda-forge tmux
+
+
 ## pip3
 boltons
 bs4
@@ -65,6 +73,8 @@ tqdm
 twine
 visidata
 
+
 ## cargo
 broot
 hexyl
+
