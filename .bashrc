@@ -123,7 +123,7 @@ ptrgh() {
     done
 }
 h() { if [[ -n "${1:-}" ]]; then head -n $((LINES-2)) "$1"; else head -n $((LINES-2)); fi; }
-if exists icdiff; then alias ptrdiff=icdiff; else alias ptrdiff='diff -dyb -W$COLUMNS'; fi
+if exists icdiff; then alias ptrdiff='icdiff -WtH'; else alias ptrdiff='diff -dyb -W$COLUMNS'; fi
 
 cdl() { cd "$1" && l; }
 mcd() { mkdir -p "$1" && cd "$1"; }
