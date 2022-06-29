@@ -4,6 +4,12 @@
 ##       That can be surprising, because this handles all s3 buckets you can access, including buckets that aren't mounted in /mnt/s3/.
 ##       But I prefer `/mnt/s3/` over `s3://`.
 
+## Note: On s3, with bkt='rgc-ag-data':
+##      get_s3().get_object(Bucket=bkt, Key='app_data/') exists, but
+##      get_s3().get_object(Bucket=bkt, Key='') doesn't exist.
+
+## Note: On s3, when I don't have permission to access a subfolder, s3.get_object() just says "NoSuchKey".  But it still shows up in list_objects_v2!
+
 # TODO: Support `v /path/to/chr#range#-#.tsv`.  If multiple files match, list them.  If only one, show it.  #=[0-9]+  %=.*
 
 # TODO: Add custom bash_completion using <https://github.com/kislyuk/argcomplete>
@@ -11,6 +17,8 @@
 # TODO: Add `--less` which does `less -S`
 
 # TODO: Support `v dx://file-G91fPzj09z5J8Jfj5pGk4jj5`
+
+# TODO: When writing to pipe, don't color text
 
 import sys, os, functools, json, datetime, itertools, re, shutil, io, argparse, textwrap, math
 from pprint import pprint
@@ -91,6 +99,7 @@ def parse_args(argv: List[str] = None) -> argparse.Namespace:
 
 def show_path(path:str):
     path = get_absolute_path(path); assert not path.endswith('/')
+    # TODO: support `v /mnt/s3/rgc-`
     if path == '/mnt/s3': [print(f' - /mnt/s3/{bucket}/') for bucket in s3_list_all_buckets()]
     elif path.startswith('/mnt/s3/'): show_s3_path(path)
     elif os.path.isfile(path): show_file(path)
@@ -120,12 +129,19 @@ def show_s3_file(bucket:str, key:str):
 def show_s3_dir(bucket:str, key:str):
     print(f'=> Dir /mnt/s3/{bucket}/{key}')
     s3_obj = s3_get_object_if_exists(bucket, key)  # Some dirs don't exist as s3 keys!
-    if s3_obj: print(' => mtime =', datetime.datetime.fromtimestamp(int(s3_obj['Metadata']['mtime'])).strftime('%Y-%m-%d_%H:%M:%S'))
+    ctime = s3_get_object(bucket, key).get('Metadata',{}).get('ctime','') if s3_obj else None
+    print(' => ctime =' + datetime.datetime.fromtimestamp(int(ctime)).strftime('%Y-%m-%d_%H:%M:%S') if ctime else ' => ctime unavailable')
     show_pathlist(s3_list_dir(bucket, key, output_trailing_slash=True), shared_prefix=f'/mnt/s3/{bucket}/{key}')
 
 def show_s3_completions(bucket:str, key:str):
-    print(f'=> Completions of /mnt/s3/{bucket}/{key}')
-    show_pathlist(s3_list_dir(bucket, key, output_trailing_slash=True, partial_filename=True), shared_prefix=f'/mnt/s3/{bucket}/{key}')
+    if key:
+        print(f'=> Completions of /mnt/s3/{bucket}/{key}')
+        show_pathlist(s3_list_dir(bucket, key, output_trailing_slash=True, partial_filename=True), shared_prefix=f'/mnt/s3/{bucket}/{key}')
+    else:
+        print(f'=> Completions of /mnt/s3/{bucket}')
+        try: show_pathlist(s3_list_dir(bucket, '', output_trailing_slash=True), shared_prefix=f'/mnt/s3/{bucket}/')
+        except:
+            show_pathlist([f'/mnt/s3/{bkt}' for bkt in s3_list_all_buckets() if bkt.startswith(bucket)], shared_prefix=f'/mnt/s3/{bucket}')
 
 def show_file(path:str):
     try:
@@ -151,6 +167,7 @@ def show_completions(path:str):
 def show_lines(lines:List[str]):
     ## Try to make a table:
     for delim in '\t, ;|':
+        # TODO: Support delim=\s+
         # TODO: Find cols that are all int/float, and use them to determine what's data, what's colnames, and what's metadata
         # TODO: Guess whether lines[0] is a header or just a row.  If it has int everywhere lines[1] does, it's a row.
         # TODO: Handle quotes?
@@ -330,7 +347,7 @@ def show_pathlist(pathlist:List[str], shared_prefix:str = ''):
             ## Try replacing numbers with #.
             numless_suffix_counts = Counter(re.subn(r'[0-9]+', '#', suf)[0] for suf in suffixes)
             numless_suffixes = {re.subn(r'[0-9]+', '#', suf)[0]:suf for suf in suffixes}
-            if len(numless_suffixes) < 40 and len(numless_suffixes) < len(suffixes)/2:
+            if 4 <= len(numless_suffixes) < 40 and len(numless_suffixes)/len(suffixes) < .5:
                 for nsuf,suf in numless_suffixes.items():
                     if nsuf != suf:
                         example = re.search(r'[0-9].*[0-9]', suf).group(0)
@@ -339,6 +356,7 @@ def show_pathlist(pathlist:List[str], shared_prefix:str = ''):
                     else:
                         print(f' - {deemphasize(shared_prefix)}{suf}')
             else:
+                # TODO: Try group by prefix, with the biggest i>5 such that 2<=len(set(suf[:i] for suf in suffixes))<30
                 # TODO: Handle `*.gz(.tbi)?`
                 #       eg, /mnt/s3/rgc-ag-data/app_data/pheweb/UKB/UKB_Freeze_450/ALL/generated-by-pheweb/pheno_gz/
                 #       Just try collapsing each file into its prefix.  If that cuts dirsize by >40%, show it.
@@ -356,7 +374,6 @@ def deemphasize(text:str) -> str:
 
 def get_absolute_path(path:str):
     '''Like os.path.abspath(), but handles `s3://`'''
-    ## TODO: support dx_proj:/dx_path
     if path.startswith('s3://'): path = '/mnt/s3/' + removeprefix(path, 's3://')
     path = os.path.abspath(path)  # Note: This strips trailing /.
     assert path.startswith('/')
@@ -364,18 +381,21 @@ def get_absolute_path(path:str):
     return path
 
 def s3_exists(bucket:str, key:str) -> bool:
+    # Note: s3.get_object() returns the exact same "NoSuchKey" whether a file doesn't exist or I don't have permission.
     import boto3, botocore
+    if not key: return False
     try: s3_get_object(bucket, key); return True
     except botocore.exceptions.ClientError: pass
     if key.endswith('/'):
-        # Note: Sometimes a directory doesn't exist on s3 as a key.  But it still has contents.
-        #       Eg, s3://rgc-ag-data/app_data/pheweb/UKB/UKB_Freeze_450/ALL/generated-by-pheweb/
-        return get_s3().list_objects_v2(Bucket=bucket, Prefix=key, MaxKeys=1)['KeyCount'] > 0
+        # Handle directories that don't exist on s3 as a key, but still have contents
+        # Eg: s3://rgc-ag-data/app_data/pheweb/UKB/UKB_Freeze_450/ALL/generated-by-pheweb/
+        try: return get_s3().list_objects_v2(Bucket=bucket, Prefix=key, MaxKeys=1)['KeyCount'] > 0
+        except botocore.exceptions.ClientError: pass
     return False
 
 def s3_list_dir(bucket:str, key:str, output_trailing_slash=False, partial_filename=False) -> List[str]:
     '''
-    Returns ["{bucket}/{key}", ...].
+    Returns ["/mnt/s3/{bucket}/{key}", ...].
     If `output_trailing_slash`, then directories will have a trailing slash.
     That trailing slash is needed for `s3.get_object()`.
     But a normal filesystem doesn't include trailing slashes, so it's off by default.
@@ -401,6 +421,7 @@ def s3_paginate(s3_command:str, **kwargs):
     paginator = get_s3().get_paginator(s3_command)
     return paginator.paginate(**kwargs)
 
+@functools.lru_cache(None)
 def s3_list_all_buckets() -> List[str]:
     return [bucket['Name'] for bucket in get_s3().list_buckets()['Buckets']]
 
