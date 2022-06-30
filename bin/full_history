@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 
 # Note: prompt_prompt.sh doesn't write to ~/.full_history until a command finishes.  So `ssh` is often an hour late.
 
@@ -7,14 +7,22 @@ import datetime, argparse, glob, os, re, time, shutil, sqlite3, subprocess as su
 
 term_width = shutil.get_terminal_size().columns
 machine_aliases = {
+    'W25F6VW6VC': 'MBP',
     'C02TQ1DGG8WN': 'MBP',
     'rgc-024082248.regeneron.regn.com': 'pv',
+    'rgc-024083017.regeneron.regn.com': 'pwpv',
 }
 
 def get_file_age_minutes(path): return (time.time() - os.stat(path).st_mtime) / 60
 pv_fullhist_path = '/tmp/pv_full_history'
 if not os.path.exists(pv_fullhist_path) or get_file_age_minutes(pv_fullhist_path) > 60*10:
     cmd = f'scp pv:~/.full_history {pv_fullhist_path}'
+    print(f'=> Running: {cmd}')
+    sub.run(cmd.split(), check=True)
+    print('=> Done')
+pwpv_fullhist_path = '/tmp/pwpv_full_history'
+if not os.path.exists(pwpv_fullhist_path) or get_file_age_minutes(pwpv_fullhist_path) > 60*10:
+    cmd = f'scp pw-pv:~/.full_history {pwpv_fullhist_path}'
     print(f'=> Running: {cmd}')
     sub.run(cmd.split(), check=True)
     print('=> Done')
@@ -41,28 +49,42 @@ def get_rows():
                 time_str = line.split()[0]
                 if not time_str.startswith(day_str_filter): continue
 
-                m = re.match(r'^(\S+) (\S+) ([/~].*)  \d+  (.*)$', line)
+                time_str, machine, pwd, cmd, rest = '', '', '', '', ''
+                m = re.match(r'^(\S+) (\S+) (.*)$', line)  # time_str, machine, rest
                 assert m, repr(line)
-                time_str, machine, pwd, cmd = m.groups()
+                time_str, machine, rest = m.groups()
+                if (m := re.match(r'^(\S+) (\S+) ([/~].*)  \d+\*?  ?(.*)$', line)):  # time_str, machine, pwd, cmd
+                    time_str, machine, pwd, cmd = m.groups()
+
                 # Handle time
                 time_pattern = r'^(202#-##-##)(?:_|__|--)(##[-:]##[-:]##)(.*)'.replace('#','[0-9]')
                 m = re.match(time_pattern, time_str)
                 assert m, repr(time_str)
                 assert m.group(3) in ['', '_-0400', '-0400'], repr(m.group(3))
                 time_str = f"{m.group(1)}__{m.group(2).replace('-',':')}"
+
                 # Handle machine
                 machine = machine_aliases.get(machine, machine)
+
                 ## Handle PWD
-                pwd = pwd.strip()
-                pwd = pwd.replace('/Users/peter.vandehaar', '~')
-                pwd = pwd.replace('/home/s.peter.vandehaar', '~')
-                pwd = pwd.replace('/mnt/efs_v2/agds_cgad/users/peter.vandehaar', 'efs')
-                yield (time_str, machine, pwd, cmd)
+                if pwd:
+                    pwd = pwd.strip()
+                    pwd = pwd.replace('/Users/peter.vandehaar', '~')
+                    pwd = pwd.replace('/home/s.peter.vandehaar', '~')
+                    pwd = pwd.replace('/mnt/efs_v2/agds_cgad/users/peter.vandehaar', 'efs')
+
+                if pwd or cmd:
+                    yield (time_str, machine, pwd, cmd)
+                else:
+                    yield (time_str, machine, rest+'  [failed_match]')
+
 
 def get_browser_history_rows():
     print('=> Parsing Edge')
     edge_history_path = '/Users/peter.vandehaar/Library/Application Support/Microsoft Edge/Default/History'
-    db = sqlite3.connect(f'file:{edge_history_path}?immutable=1')
+    edge_history_sqlite_path = f'file:{edge_history_path}?immutable=1'
+    try: db = sqlite3.connect(edge_history_sqlite_path)
+    except sqlite3.OperationalError as exc: raise Exception(edge_history_sqlite_path)
     db.row_factory = sqlite3.Row
     def dict_from_row(row: sqlite3.Row) -> dict: return {k: row[k] for k in row.keys()}
     query = 'SELECT visits.visit_time, urls.url, urls.title FROM urls, visits WHERE urls.id = visits.url'
