@@ -8,6 +8,15 @@ It uses a directory .ksys/ (in the spirit of .git/) which stores config used in 
 
 # TODO: add `ksys test`, which restarts, sends some example requests, and shows logs if failed
 
+# TODO: Write a custom `ksys -h` usage section
+#       ksys conf      View or modify config for systemd, nginx, etc
+
+# TODO: Create `ksys skeleton flask`
+# TODO: Create `ksys skeleton gitlab`
+
+# TODO: Add `ksys conf` which prints out all `.ksys/*`, including a quick yes-no diff
+# TODO: Move `ksys conf-*` to `ksys conf *` and make `ksys conf` give an overview of options
+
 
 if __name__ == '__main__':
     try: import kpa.dev_utils
