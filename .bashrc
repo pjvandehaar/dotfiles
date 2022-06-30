@@ -62,8 +62,9 @@ unalias path glq h cdl mcd ew se 2>/dev/null
 
 alias py="python3"
 alias ipy="ipython3"
+alias pw="pheweb"
 path() { echo "$PATH" | tr : "\n"; }
-alias paths=path
+alias paths="path"
 alias e="\$EDITOR"
 ew() { "$EDITOR" "$(which "$1")"; }
 se() {
