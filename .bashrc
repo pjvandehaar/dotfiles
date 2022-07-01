@@ -225,6 +225,8 @@ alias egrep='grep -E --color=auto'
 
 alias df="BLOCKSIZE=G df" # works on mac and linux
 
+z() { if [ -t 1 ]; then zless -S "$@"; else zcat "$@"; fi; }
+
 man() {
     # from http://boredzo.org/blog/archives/2016-08-15/colorized-man-pages-understood-and-customized
     LESS_TERMCAP_md=$'\e[1;36m' \
