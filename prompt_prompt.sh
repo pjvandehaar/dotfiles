@@ -26,59 +26,60 @@ fi
 
 PROMPT_COMMAND=_PP_prompt
 _PP_prompt() {
+    # Set _err first, to avoid overwriting "$?"
     local _err="$?"
-    [[ "$_err" -eq 0 ]] && _err='' || _err="${_PP_RED} ${_err} "
-
-    # Log last command to ~/.full_history like <https://www.jefftk.com/p/you-should-be-logging-shell-history>
-    # TODO: strip the line number from $(history 1)
-    # TODO: this gets re-run (and re-appended) when I hit enter on a blank line, but shouldn't.
-    echo "$(date +%Y-%m-%d_%H:%M:%S%z) $(hostname) $PWD $(history 1)" >> ~/.full_history
-
-    local _runtime=''
-    if [[ "$_PP_runtime_seconds" -ge 5 ]]; then
-        [[ "$_PP_runtime_seconds" -ge 86400 ]] && _runtime+="$((_PP_runtime_seconds / 86400))d"
-        [[ "$_PP_runtime_seconds" -ge 3600 ]] && _runtime+="$((_PP_runtime_seconds % 86400 / 3600))h"
-        [[ "$_PP_runtime_seconds" -ge 60 ]] && _runtime+="$((_PP_runtime_seconds % 3600 / 60))m"
-        _runtime+="$((_PP_runtime_seconds % 60))s"
-        _runtime="${_PP_PIN} ${_runtime} "
+    if [[ "$_err" -eq 0 ]] || [[ $_PP_blank_command ]]; then
+        _err=''
+    else
+        _err="${_PP_RED} ${_err} "
     fi
 
-    local _git='' # This variable stores the result of all this.
-    if ! [[ $PWD/ = /mnt/* ]]; then
+    local _tilde=\~ # bash3 vs bash4
+
+    # Log last command to ~/.full_history like <https://www.jefftk.com/p/you-should-be-logging-shell-history>
+    if [[ $_PP_prompt_has_run ]] && ! [[ $_PP_blank_command ]]; then
+        local _last_cmd=$(history 1 | perl -pale 's{^\s*\d+\*?\s+}{}')
+        echo "$(date +%Y-%m-%d_%H:%M:%S%z)  $(hostname)  $PWD  ${_PP_user_command_runtime}s  $_last_cmd" >> ~/.full_history
+    fi
+    _PP_prompt_has_run=1
+
+    local _git=''
+    # TODO: Show git branch if we're on /mnt/* (except /mnt/s3/)
+    if ! [[ $PWD/ = /mnt/* ]] && ! [[ $PWD/ = /Volumes/* ]]; then
     local _gitexe="$(which git)" # avoid problems with aliases/functions
     local _git_branch; _git_branch="$($_PP_timeout 0.1 "$_gitexe" rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
     if [[ $_rs == 124 ]]; then
-        _git="${_PP_RED} looking for .git timedout ${_PP_NONE}"
+        _git="${_PP_RED} looking for .git timedout "
     elif [[ "$_git_branch" != true ]]; then
         _git=''
     elif [[ $_rs != 0 ]]; then
-        _git="${_PP_RED} AAHHHH why was the return status $_rs ???? ${_PP_NONE}"
+        _git="${_PP_RED} AAHHHH why was the return status $_rs ???? "
     else
 
         # Check that the repo has a HEAD
         $_PP_timeout 0.2 "$_gitexe" show-ref --head --quiet; local _rs=$?
         if [[ $_rs == 124 ]]; then
-            _git="${_PP_RED} looking up HEAD timedout ${_PP_NONE}"
+            _git="${_PP_RED} looking up HEAD timedout "
         elif [[ $_rs == 1 ]]; then
-            _git="${_PP_RED} no HEAD ${_PP_NONE}"
+            _git="${_PP_RED} no HEAD "
         elif [[ $_rs != 0 ]]; then
-            _git="${_PP_RED} AAHHHHG why was the return status $_rs ???? ${_PP_NONE}"
+            _git="${_PP_RED} AAHHHHG why was the return status $_rs ???? "
         else
 
             # Check that the repo has a commit
             $_PP_timeout 0.2 "$_gitexe" rev-parse --short -q HEAD &>/dev/null; local _rs=$?
             if [[ $_rs == 124 ]]; then
-                _git="${_PP_RED} checking for commits timedout ${_PP_NONE}"
+                _git="${_PP_RED} checking for commits timedout "
             elif [[ $_rs == 1 ]]; then
-                _git="${_PP_RED} no commits ${_PP_NONE}"
+                _git="${_PP_RED} no commits "
             elif [[ $_rs != 0 ]]; then
-                _git="${_PP_RED} AAHHRG why was the return status $_rs ???? ${_PP_NONE}"
+                _git="${_PP_RED} AAHHRG why was the return status $_rs ???? "
             else
 
                 # Get the current branch
                 local _git_head_ref; _git_head_ref="$($_PP_timeout 0.2 "$_gitexe" symbolic-ref -q --short HEAD)"; local _rs=$?
                 if [[ $_rs == 124 ]]; then
-                    _git="${_PP_RED} checking the branch timedout ${_PP_NONE}"
+                    _git="${_PP_RED} checking the branch timedout "
                 elif [[ $_rs -ge 2 ]]; then # $_rs=1 happens if we checkout a tag.
                     _git=" AH why was the return status $_rs ??"
                 else
@@ -144,52 +145,86 @@ _PP_prompt() {
                     fi
 
                     [[ -n "$_git_state" ]] && _git_state="($(echo "$_git_state" | perl -ple 's{ +}{ }g; s{^ | \z}{}g'))"
-                    _git="${_PP_YEL} ${_git_branch}${_git_state} ${_PP_NONE}"
+                    _git="${_PP_YEL} ${_git_branch}${_git_state} "
                 fi
             fi
         fi
     fi
     fi
 
-    PS1="${_git}${_runtime}${_err}${_PP_NONE}"
-    local _tilde=\~ # bash3 vs bash4
+    local _root=''
+    if [[ $USER = root ]]; then
+        _root="${_PP_RED} ROOT"
+    fi
 
+    local _machine="";
+    if [[ -n ${PP_MACHINE_LABEL:-} ]]; then
+        _machine="${_PP_PIN}${PP_MACHINE_LABEL}"
+    fi
+
+    local _time="${_PP_GRE} \t "
+
+    local _venv=""
     if [[ -n ${VIRTUAL_ENV:-} ]]; then
-        local _venv="[${VIRTUAL_ENV/#$HOME/$_tilde}]"
-    else
-        local _venv=" "
+        _venv="${_PP_PIN} [${VIRTUAL_ENV/#$HOME/$_tilde}] "
     fi
 
-    # newline-or-not depends on width of the terminal to keep it consistent
-    if [[ -z $COLUMNS ]] || [[ $COLUMNS -ge 115 ]]; then
-        local -i _max_len=$(( ${COLUMNS:-80} / 3 ))
-        local _ending=" "
-    else
-        local -i _max_len=$(( COLUMNS - ${#PS1} - ${#_venv} - 5 ))
-        local _ending="\n$ "
-    fi
-
-    local _pwd; _pwd="${PWD/#$HOME/$_tilde}"
-    (( ${#_pwd} > _max_len )) && _pwd=" … ${_pwd:${#_pwd}-${_max_len}}"
+    local _pwd="${PWD/#$HOME/$_tilde}"
+    local -i _pwd_maxlen=$(( ${COLUMNS:-80} / 3 ))
+    if (( ${#_pwd} > _pwd_maxlen )); then _pwd=" …${_pwd:${#_pwd}-${_pwd_maxlen}}"; fi
     _pwd=$(echo "$_pwd" | sed -e 's_\\_\\\\_g' -e 's_\$_\\\$_g')
-    [[ -w "$PWD" ]] || _pwd="(ro) ${_pwd}" # read-only
+    if ! [[ -w "$PWD" ]]; then _pwd="(ro) ${_pwd}"; fi # read-only
+    _pwd="${_PP_BLU} ${_pwd} "
 
-    PS1="${_PP_NONE}${_PP_GRE} \t${_venv}${_PP_BLU} ${_pwd} ${PS1}${_ending}"
-    if [[ $USER == root ]]; then
-        PS1="${_PP_RED} ROOT ${PS1}"
+    local _runtime=''
+    if [[ "$_PP_user_command_runtime" -ge 5 ]]; then
+        [[ "$_PP_user_command_runtime" -ge 86400 ]] && _runtime+="$((_PP_user_command_runtime / 86400))days"
+        [[ "$_PP_user_command_runtime" -ge 3600 ]] && _runtime+="$((_PP_user_command_runtime % 86400 / 3600))hours"
+        [[ "$_PP_user_command_runtime" -ge 60 ]] && _runtime+="$((_PP_user_command_runtime % 3600 / 60))min"
+        _runtime+="$((_PP_user_command_runtime % 60))s"
+        _runtime="${_PP_PIN} ${_runtime} "
     fi
+
+    # Set ending based only on terminal width, so that it doesn't suddenly change
+    local _ending=" "
+    if [[ -n $COLUMNS ]] && [[ $COLUMNS -lt 115 ]]; then
+        _ending="\n$ "
+    fi
+
+    PS1="${_PP_NONE}${_root}${_machine}${_time}${_venv}${_pwd}${_git}${_runtime}${_err}${_PP_NONE}${_ending}"
 }
 
-_PP_runtime_last_seconds=$SECONDS
-_PP_reset_runtime() {
-    # I don't understand how this handles pipes.  `$BASH_COMMAND` never reveals anything but the final command.
-    if [[ -n "$_PP_prompt_just_ran" ]]; then
-        _PP_runtime_last_seconds=$SECONDS
-        _PP_runtime_seconds=0
+## Use a trap to supply ${_PP_user_command_runtime} and ${_PP_blank_command}:
+_PP_user_command_runtime=0
+_PP_blank_command=
+_PP_debug() {
+    # Note: BASH_COMMAND is the command that is just starting right now.
+    #       Bash updates $BASH_COMMAND the moment it starts parsing a command, including a command in a script or function.
+    #       But bash doesn't modify BASH_COMMAND while inside a trap (like this function)
+
+    if [[ "$BASH_COMMAND" != _PP_prompt ]] && [[ "$_PP_prompt_just_ran" ]]; then
+        # User just typed a command and hit <enter>
+        _PP_blank_command=''
+        _PP_user_command_start_time=$SECONDS
+    elif [[ "$BASH_COMMAND" = _PP_prompt ]] && ! [[ "$_PP_prompt_just_ran" ]]; then
+        # User's command just finished (or was killed) and we're back to a command prompt
+        _PP_user_command_runtime=$((SECONDS - _PP_user_command_start_time))
+    elif [[ "$BASH_COMMAND" = _PP_prompt ]] && [[ "$_PP_prompt_just_ran" ]]; then
+        # User just hit <enter> without typing anything.
+        _PP_blank_command=1
+        _PP_user_command_runtime=0
+    elif [[ "$BASH_COMMAND" != _PP_prompt ]] && ! [[ "$_PP_prompt_just_ran" ]]; then
+        # One of the users's commands just finished and another is starting (eg, `echo|tail;echo`)
+        :
+    fi
+
+    if [[ "$BASH_COMMAND" = _PP_prompt ]]; then
+        _PP_prompt_just_ran=1
     else
-        _PP_runtime_seconds=$((SECONDS - _PP_runtime_last_seconds))
+        _PP_prompt_just_ran=''
     fi
-
-    [[ "$BASH_COMMAND" = _PP_prompt ]] && _PP_prompt_just_ran=1 || _PP_prompt_just_ran=''
 }
-trap '_PP_reset_runtime' DEBUG # This gets run just before any bash command.
+# Note: This trap runs _PP_debug everytime a top-of-stack bash command runs.
+#       So if you run `echo|head;ls`, each of the three triggers this trap, and each gets its own BASH_COMMAND.
+#       This trap also runs for _PP_prompt (b/c it is PROMPT_COMMAND=_PP_prompt)
+trap '_PP_debug' DEBUG # This gets run just before any bash command.
