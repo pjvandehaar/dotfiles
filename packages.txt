@@ -55,7 +55,8 @@ wireshark
 
 
 ## conda
-conda install -c conda-forge tmux
+conda install -c conda-forge tmux htop
+conda install jq
 
 
 ## pip3
