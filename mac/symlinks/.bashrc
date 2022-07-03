@@ -6,8 +6,6 @@ if type -t ptrcut >/dev/null; then
     echo "BTW, .bashrc has already been sourced once."
 fi
 
-export BASH_SILENCE_DEPRECATION_WARNING=1  # Silence OSX zsh warning.
-
 _readlinkf() { perl -MCwd -le 'print Cwd::abs_path shift' "$1"; }
 local dotfiles_path; dotfiles_path="$(cd "$(dirname "$(_readlinkf "${BASH_SOURCE[0]}")")/../.." && echo "$PWD")"
 
@@ -90,7 +88,6 @@ petervh() {
     sshfs kpa@petervh.com:/home/kpa ~/mount/petervh && cd ~/mount/petervh
 }
 
-export BASH_SILENCE_DEPRECATION_WARNING=1  # Silence OSX zsh warning.
 
 
 # source common

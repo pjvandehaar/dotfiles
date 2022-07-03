@@ -14,29 +14,11 @@ exists_else() {
 }
 
 
-
-# bash config
-# ===========
-
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion.rb>
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion@2.rb>
 if exists brew; then
     v="$(brew --prefix)/etc/profile.d/bash_completion.sh" && [[ -r "$v" ]] && . "$v" # bash-completion
 fi
-
-EDITOR="$(exists_else emacs mg nvim vim vi nano)"; export EDITOR
-
-shopt -s checkwinsize # update LINES/COLUMNS afer each command
-if [[ $BASH_VERSINFO -ge 4 ]]; then
-    shopt -s autocd
-fi
-
-v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"
-
-# Only for ctrl-r because real history is ~/.full_history via prompt_prompt.sh
-export HISTFILESIZE=10000000
-export HISTSIZE=100000
-export HISTIGNORE="ls:l"
 
 
 # program config
@@ -254,8 +236,40 @@ command_not_found_handle() {
 }
 ptrtop() { COLUMNS="$COLUMNS" command ptrtop "$@"; }
 
+
+# bash config
+# ===========
+
+export BASH_SILENCE_DEPRECATION_WARNING=1
+
+# Set terminal title
+if [[ -n ${MACHINE_LABEL:-} ]]; then
+    echo -ne "\033]0;[${PP_MACHINE_LABEL}]\007"
+fi
+
+EDITOR="$(exists_else emacs mg nvim vim vi nano)"; export EDITOR
+
+shopt -s checkwinsize # update LINES/COLUMNS afer each command
+if [[ $BASH_VERSINFO -ge 4 ]]; then
+    shopt -s autocd
+fi
+
+export HISTIGNORE=
+
+v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"  # Run near the end, b/c this installs `trap _PP_reset_runtime DEBUG`
+
+
+# etc
+# ===
+
+if [[ -e ~/.bash_custom ]]; then source ~/.bash_custom; fi
+
+# Set terminal title
+if [[ -n ${MACHINE_LABEL} ]]; then
+    echo -ne "\033]0;[[${MACHINE_LABEL}]]\007"
+fi
+
+
 }
 __fdsjlkrex
 unset __fdsjlkrex
-
-if [[ -e "$HOME/.bash_custom" ]]; then source "$HOME/.bash_custom"; fi
