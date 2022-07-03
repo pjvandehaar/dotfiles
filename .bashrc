@@ -1,4 +1,6 @@
-__fdsjlkrex() { # don't pollute global namespace
+# Note: This `dotfiles/.bashrc` is shared between macOS and Linux.  It's sourced by the OS-specific `.bashrc`.
+
+__fdsjlkrex() {  # Wrapping everything in a function lets us use `local var=val` to keep temp vars out of global namespace
 
 local v
 exists() { type -t "$1" >/dev/null; }

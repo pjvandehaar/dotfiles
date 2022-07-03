@@ -1,3 +1,5 @@
+# Note: This is the Linux .bashrc.  It sources the shared `dotfiles/.bashrc`.
+
 __fdsjlkrew() { # don't pollute global namespace
 
 if type -t ptrcut >/dev/null; then
@@ -52,7 +54,6 @@ fi
 
 # OS-specific features
 # ====================
-alias gotcloud='echo dont use the system gotcloud! #'
 if ! type -t r >/dev/null; then alias r=R; fi
 if type -t dircolors >/dev/null; then eval "$(dircolors -b)"; fi
 

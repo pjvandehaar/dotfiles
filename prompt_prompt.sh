@@ -1,10 +1,9 @@
-
-# Note: if I run into trouble with this, consider switching to Starship (with "plain text symbols")
+# Note: If I get tired of this, consider switching to Starship.  Use "plain text symbols".  Starship has a x86 linux binary that I could just include in dotfiles or download in `install.sh`.
 
 if [[ -z $TERM || $TERM = dumb || $- != *i* ]]; then
     unset PROMPT_COMMAND
     PS1="\w $ "
-    return
+    return  # Ends this script
 fi
 
 # tput takes dozens of ms, so run it only once, even though it pollutes the namespace

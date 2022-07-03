@@ -1,3 +1,5 @@
+# Note: This is the macOS .bashrc.  It sources the shared `dotfiles/.bashrc`.
+
 __fdsjlkrew() { # don't pollute global namespace
 
 if type -t ptrcut >/dev/null; then
