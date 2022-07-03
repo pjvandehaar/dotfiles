@@ -242,11 +242,6 @@ ptrtop() { COLUMNS="$COLUMNS" command ptrtop "$@"; }
 
 export BASH_SILENCE_DEPRECATION_WARNING=1
 
-# Set terminal title
-if [[ -n ${MACHINE_LABEL:-} ]]; then
-    echo -ne "\033]0;[${PP_MACHINE_LABEL}]\007"
-fi
-
 EDITOR="$(exists_else emacs mg nvim vim vi nano)"; export EDITOR
 
 shopt -s checkwinsize # update LINES/COLUMNS afer each command

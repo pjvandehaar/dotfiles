@@ -158,8 +158,8 @@ _PP_prompt() {
     fi
 
     local _machine="";
-    if [[ -n ${PP_MACHINE_LABEL:-} ]]; then
-        _machine="${_PP_PIN}${PP_MACHINE_LABEL}"
+    if [[ -n ${MACHINE_LABEL:-} ]]; then
+        _machine="${_PP_PIN}${MACHINE_LABEL}"
     fi
 
     local _time="${_PP_GRE} \t "
