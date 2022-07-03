@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+# Note: This script breaks with /opt/homebrew/Cellar/python@3.9/3.9.13_1/Frameworks/Python.framework/Versions/3.9/bin/python3.9, so I use /usr/bin/python3
+
 # Note: prompt_prompt.sh doesn't write to ~/.full_history until a command finishes.  So `ssh` is often an hour late.
 
 import datetime, argparse, glob, os, re, time, shutil, sqlite3, subprocess as sub
@@ -14,18 +16,15 @@ machine_aliases = {
 }
 
 def get_file_age_minutes(path): return (time.time() - os.stat(path).st_mtime) / 60
-pv_fullhist_path = '/tmp/pv_full_history'
-if not os.path.exists(pv_fullhist_path) or get_file_age_minutes(pv_fullhist_path) > 60*10:
-    cmd = f'scp pv:~/.full_history {pv_fullhist_path}'
+def file_missing_or_old(path): return not os.path.exists(path) or get_file_age_minutes(path) > 60*10
+def try_run_cmd(cmd:str):
     print(f'=> Running: {cmd}')
-    sub.run(cmd.split(), check=True)
-    print('=> Done')
-pwpv_fullhist_path = '/tmp/pwpv_full_history'
-if not os.path.exists(pwpv_fullhist_path) or get_file_age_minutes(pwpv_fullhist_path) > 60*10:
-    cmd = f'scp pw-pv:~/.full_history {pwpv_fullhist_path}'
-    print(f'=> Running: {cmd}')
-    sub.run(cmd.split(), check=True)
-    print('=> Done')
+    try: sub.run(cmd.split(), check=True)
+    except sub.subprocess.CalledProcessError: print('=> FAILED!\n\n'); time.sleep(1)
+    else: print('=> Done\n')
+for server in ['pv', 'pw-pv']:
+    if file_missing_or_old(f'/tmp/{server}_full_history'):
+        try_run_cmd(f'scp {server}:~/.full_history /tmp/{server}_full_history')
 
 def parse_args():
     parser = argparse.ArgumentParser()
