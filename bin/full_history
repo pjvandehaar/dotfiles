@@ -4,7 +4,7 @@
 
 # Note: prompt_prompt.sh doesn't write to ~/.full_history until a command finishes.  So `ssh` is often an hour late.
 
-import datetime, argparse, glob, os, re, time, shutil, sqlite3, copy, subprocess as sub
+import datetime, argparse, glob, os, re, time, shutil, sqlite3, copy, sys, subprocess as sub
 import boltons.iterutils
 
 
@@ -29,9 +29,13 @@ for server in ['pv', 'pw-pv']:
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--days', action='store_true', help='Show which days have history')
     parser.add_argument('--all', action='store_true', help='Show all history, rather than just today')
     parser.add_argument('day', nargs='?', help='What day to show.  eg: 2022-06-20.  If unspecified, shows today.')
     args = parser.parse_args()
+    if args.days:
+        sub.run('cat /tmp/*full_history ~/.full_history | grep "^20" | cut -c1-10 | sort -u', shell=True)
+        sys.exit(0)
     if args.all: day_str_filter = ''
     elif args.day:
         day_str_filter = args.day
@@ -168,4 +172,4 @@ for idx, row in enumerate(rows):
 ## Print
 for row in rows:
     if len(row)>=3: row[2] = f'{row[2]:<10}' # Make `pwd` 10+ chars wide
-    print('   '.join(row)[:term_width-1])
+    print('    '.join(row)[:term_width-1])
