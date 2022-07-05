@@ -6,16 +6,17 @@ ksys is a command line utility for managing systemd services and connecting them
 It uses a directory .ksys/ (in the spirit of .git/) which stores config used in /etc/.
 """
 
-# TODO: add `ksys test`, which restarts, sends some example requests, and shows logs if failed
+# TODO: Improve `ksys -h`
+# TODO: Make `ksys conf` explain how to use those subcommands
 
-# TODO: Write a custom `ksys -h` usage section
-#       ksys conf      View or modify config for systemd, nginx, etc
-
-# TODO: Create `ksys skeleton flask`
-# TODO: Create `ksys skeleton gitlab`
+# TODO: Create `ksys skel-flask`
+# TODO: Rename `skel` (skeleton) to `qs` (quickstart) or `bp` (boilerplate)
+# TODO: Consider unifying `venv` with `skel`
 
 # TODO: Add `ksys conf` which prints out all `.ksys/*`, including a quick yes-no diff
 # TODO: Move `ksys conf-*` to `ksys conf *` and make `ksys conf` give an overview of options
+
+# TODO: Add `ksys test`, which restarts, sends some example requests, and shows logs if failed
 
 
 if __name__ == '__main__':
@@ -279,21 +280,49 @@ def conf_diff(args:argparse.Namespace) -> None:
         print()
 
 
+def skel_gitlab(args:argparse.Namespace) -> None:
+    """Initialize a skeleton of a local git repo and a remote gitlab repo."""
+    if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
+    if dotksys_path.parent != Path().absolute(): raise Exception(f'Please `cd ..` first to project root containing {dotksys_path}')
+    name = get_unit_name()
+    print('=> Run `git init`')
+    print('=> Run `git stage .ksys *.py *.txt`')
+    print('=> Run `git commit -m "init"`')
+    print('=> Open https://gitlab.com/projects/new#blank_project')
+    print(f'    Use name = {name}')
+    print('    Uncheck "Add README"')
+    print('    Hit <Create!>')
+    print(f'=> Run `git remote add origin git@gitlab.com:pjvandehaar/{name}.git`')
+    print('=> Run `git push`')
+
+
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    usage = '''
+    ksys stat          See status of your service
+    ksys log           See logs
+    ksys restart       Restart your service, and then show logs
+    ksys watch $path   Watch for changes to $path and restart your service
+
+    ksys skel-*        Create boilerplate
+    ksys venv          Create virtualenv
+    ksys conf-*        Create boilerplate config in .ksys/, and install it into /etc/
+    '''
+
+    parser = argparse.ArgumentParser(usage=usage)
     commands = parser.add_subparsers(dest='command')
 
-    log_parser = commands.add_parser('log', aliases=['l'])
+    log_parser = commands.add_parser('log', aliases=['l'], help='See logs')
     log_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
     log_parser.add_argument('-a', '--all', action='store_true', help='Show all logs rather than only the latest run')
     log_parser.add_argument('--follow', action='store_true', help='Follow the end (Ctrl-C to stop)')
     log_parser.set_defaults(func=log)
 
-    stat_parser = commands.add_parser('stat', aliases=['s'])
+    stat_parser = commands.add_parser('stat', aliases=['s'], help='See status')
     stat_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
     stat_parser.set_defaults(func=stat)
 
-    restart_parser = commands.add_parser('restart', aliases=['r'])
+    restart_parser = commands.add_parser('restart', aliases=['r'], help='Restart')
     restart_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
     restart_parser.add_argument('-t', '--timeout', type=int, default=None, help='How long to watch logs.  Has no effect on oneshots.')
     restart_parser.set_defaults(func=restart)
@@ -304,7 +333,7 @@ if __name__ == '__main__':
     watch_parser.add_argument('path', type=str, help='What path (file or directory) to watch')
     watch_parser.set_defaults(func=watch)
 
-    venv_parser = commands.add_parser('venv')
+    venv_parser = commands.add_parser('venv', help='Create a virtualenv')
     venv_parser.add_argument('-f', '--force', action='store_true', help='Overwrite any existing `./venv/`')
     venv_parser.add_argument('-r', '--requirement', type=str, default=[], action='append', help='an extra requirements.txt file to install from using `pip install -r` (./requirements.txt is always installed from if it exists)')
     venv_parser.add_argument('-e', '--editable', type=str, default=[], action='append', help='an editable package to install using `pip install -e`')
@@ -326,6 +355,9 @@ if __name__ == '__main__':
 
     conf_diff_parser = commands.add_parser('conf-diff')
     conf_diff_parser.set_defaults(func=conf_diff)
+
+    skel_gitlab_parser = commands.add_parser('skel-gitlab')
+    skel_gitlab_parser.set_defaults(func=skel_gitlab)
 
     args = parser.parse_args() if sys.argv[1:] else parser.parse_args(['stat'])
     args.func(args)
