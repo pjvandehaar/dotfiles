@@ -43,22 +43,23 @@ _PP_prompt() {
     fi
     _PP_prompt_has_run=1
 
-    ## Consider making $_git in its own script.  In bash?  C++?  Or what?  It could be faster, by finding .git/ and then reading .git/HEAD
+    ## Consider making $_git in its own script? Bash, C++, what?
     local _git=''
-    local _rs=''
     if [[ $PWD/ = /mnt/efs* ]]; then  # Show only branch, b/c EFS is slow
         local _gitexe="$(which git)" # avoid problems with aliases/functions, in a way that always works with `timeout`
-        local _git_head_ref="$($_PP_timeout 0.2 "$_gitexe" symbolic-ref -q --short HEAD 2>/dev/null)"; _rs=$?
+        local _rs=''
+        # TODO: Only look for .git/ 3 dirs deep.
+        local _gitdir=$("$_PP_timeout" 0.2 "$_gitexe" rev-parse --show-toplevel 2>/dev/null); _rs=$?
         if [[ $_rs == 124 ]]; then  # timeout
-            _git="${_PP_RED} git timeout "
+            _git="${_PP_RED} .git/ timeout "
         elif [[ $_rs -ge 2 ]]; then  # $_rs=1 happens if we checkout a tag ("non-symbolic ref")
-            _git="${_PP_RED} git status $_rs "
-        elif [[ -n $_git_head_ref ]]; then  # We're on a branch
-            _git="${_PP_YEL} $(printf %q "$_git_head_ref"). "  # `printf %q` shell-escapes output
-        else  # Either we're on a branch, or no .git
-            _git_head_ref="$($_PP_timeout 0.2 "$_gitexe" rev-parse --short -q HEAD 2>/dev/null)"; _rs=$?
-            if [[ -n $_git_head_ref ]]; then
-                _git="${_PP_YEL} $(printf %q "$_git_head_ref"). "
+            _git="${_PP_RED} .git/ status $_rs "
+        elif [[ -n $_gitdir ]]; then
+            local _git_head=$(head -c500 "$_gitdir/.git/HEAD"); _rs=$?
+            if [[ $_rs == 0 ]] && [[ -n $_git_head ]]; then
+                _git_head=${_git_head#ref: }
+                _git_head=${_git_head#refs/heads/}
+                _git="${_PP_YEL} $(printf %q "$_git_head") "
             fi
         fi
 
