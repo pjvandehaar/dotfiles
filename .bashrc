@@ -259,8 +259,9 @@ v="$dotfiles_path/prompt_prompt.sh"; [[ -e "$v" ]] && . "$v"  # Run near the end
 
 if [[ -e ~/.bash_custom ]]; then source ~/.bash_custom; fi
 
-# Set terminal title
-if [[ -n ${MACHINE_LABEL} ]]; then
+# Set terminal title if we're an interactive shell
+# Setting it when non-interactive would break `scp`
+if [[ $- == *i* ]] && [[ -n ${MACHINE_LABEL} ]]; then
     echo -ne "\033]0;[[${MACHINE_LABEL}]]\007"
 fi
 
