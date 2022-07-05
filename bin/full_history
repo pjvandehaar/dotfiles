@@ -4,7 +4,8 @@
 
 # Note: prompt_prompt.sh doesn't write to ~/.full_history until a command finishes.  So `ssh` is often an hour late.
 
-import datetime, argparse, glob, os, re, time, shutil, sqlite3, subprocess as sub
+import datetime, argparse, glob, os, re, time, shutil, sqlite3, copy, subprocess as sub
+import boltons.iterutils
 
 
 term_width = shutil.get_terminal_size().columns
@@ -20,7 +21,7 @@ def file_missing_or_old(path): return not os.path.exists(path) or get_file_age_m
 def try_run_cmd(cmd:str):
     print(f'=> Running: {cmd}')
     try: sub.run(cmd.split(), check=True)
-    except sub.subprocess.CalledProcessError: print('=> FAILED!\n\n'); time.sleep(1)
+    except sub.CalledProcessError: print('=> FAILED!\n\n'); time.sleep(1)
     else: print('=> Done\n')
 for server in ['pv', 'pw-pv']:
     if file_missing_or_old(f'/tmp/{server}_full_history'):
@@ -32,7 +33,9 @@ def parse_args():
     parser.add_argument('day', nargs='?', help='What day to show.  eg: 2022-06-20.  If unspecified, shows today.')
     args = parser.parse_args()
     if args.all: day_str_filter = ''
-    elif args.day: day_str_filter = args.day
+    elif args.day:
+        day_str_filter = args.day
+        if re.match(r'^\d\d-\d\d$', day_str_filter): day_str_filter = f'2022-{day_str_filter}'
     else: day_str_filter = datetime.datetime.today().strftime('%Y-%m-%d')
     return day_str_filter
 day_str_filter = parse_args()
@@ -48,34 +51,45 @@ def get_rows():
                 time_str = line.split()[0]
                 if not time_str.startswith(day_str_filter): continue
 
-                time_str, machine, pwd, cmd, rest = '', '', '', '', ''
-                m = re.match(r'^(\S+) (\S+) (.*)$', line)  # time_str, machine, rest
-                assert m, repr(line)
-                time_str, machine, rest = m.groups()
-                if (m := re.match(r'^(\S+) (\S+) ([/~].*)  \d+\*?  ?(.*)$', line)):  # time_str, machine, pwd, cmd
+                # TODO: Consider using `(?P<time_str>\S+)` and `rowdata = cleanup(m.groupdict())`
+                if (m := re.match(r'^(\S+)  (\S+)  ([/~].*)  (\d+)s  ?(.*)$', line)):
+                    # TODO: Set time_str -= runtime_seconds
+                    time_str, machine, pwd, runtime, cmd = m.groups()
+                    time_str = _clean_time(time_str)
+                    machine = _clean_machine(machine)
+                    pwd = _clean_pwd(pwd)
+                    runtime_seconds = int(runtime)
+                    runtime = f'({runtime_seconds//60}min)  ' if runtime_seconds>60*10 else ''
+                    yield (time_str, machine, pwd, f'{runtime}{cmd}')
+
+                elif (m := re.match(r'^(\S+) {1,2}(\S+) {1,2}([/~].*)  \d+\*?  ?(.*)$', line)):
                     time_str, machine, pwd, cmd = m.groups()
-
-                # Handle time
-                time_pattern = r'^(202#-##-##)(?:_|__|--)(##[-:]##[-:]##)(.*)'.replace('#','[0-9]')
-                m = re.match(time_pattern, time_str)
-                assert m, repr(time_str)
-                assert m.group(3) in ['', '_-0400', '-0400'], repr(m.group(3))
-                time_str = f"{m.group(1)}__{m.group(2).replace('-',':')}"
-
-                # Handle machine
-                machine = machine_aliases.get(machine, machine)
-
-                ## Handle PWD
-                if pwd:
-                    pwd = pwd.strip()
-                    pwd = pwd.replace('/Users/peter.vandehaar', '~')
-                    pwd = pwd.replace('/home/s.peter.vandehaar', '~')
-                    pwd = pwd.replace('/mnt/efs_v2/agds_cgad/users/peter.vandehaar', 'efs')
-
-                if pwd or cmd:
+                    time_str = _clean_time(time_str)
+                    machine = _clean_machine(machine)
+                    pwd = _clean_pwd(pwd)
                     yield (time_str, machine, pwd, cmd)
-                else:
+
+                elif (m := re.match(r'^(\S+) {1,2}(\S+) {1,2}(.*)$', line)):
+                    time_str, machine, rest = m.groups()
+                    time_str = _clean_time(time_str)
+                    machine = _clean_machine(machine)
                     yield (time_str, machine, rest+'  [failed_match]')
+
+                else:
+                    raise Exception(line)
+
+def _clean_time(time_str:str) -> str:
+    time_pattern = r'^(202#-##-##)(?:_|__|--)(##[-:]##[-:]##)(.*)'.replace('#','[0-9]')
+    m = re.match(time_pattern, time_str)
+    assert m, repr(time_str)
+    assert m.group(3) in ['', '_-0400', '-0400'], repr(m.group(3))
+    return f"{m.group(1)}__{m.group(2).replace('-',':')}"
+def _clean_machine(machine:str) -> str: return machine_aliases.get(machine, machine)
+def _clean_pwd(pwd:str) -> str:
+    pwd = pwd.strip()
+    pwd = pwd.replace('/Users/peter.vandehaar', '~')
+    pwd = pwd.replace('/home/s.peter.vandehaar', '~')
+    return pwd.replace('/mnt/efs_v2/agds_cgad/users/peter.vandehaar', 'efs')
 
 
 def get_browser_history_rows():
@@ -83,7 +97,7 @@ def get_browser_history_rows():
     edge_history_path = '/Users/peter.vandehaar/Library/Application Support/Microsoft Edge/Default/History'
     edge_history_sqlite_path = f'file:{edge_history_path}?immutable=1'
     try: db = sqlite3.connect(edge_history_sqlite_path)
-    except sqlite3.OperationalError as exc: raise Exception(edge_history_sqlite_path)
+    except sqlite3.OperationalError: raise Exception(edge_history_sqlite_path)
     db.row_factory = sqlite3.Row
     def dict_from_row(row: sqlite3.Row) -> dict: return {k: row[k] for k in row.keys()}
     query = 'SELECT visits.visit_time, urls.url, urls.title FROM urls, visits WHERE urls.id = visits.url'
@@ -114,24 +128,44 @@ def get_pmset_rows():
             yield (time_str, 'pmset', 'lid shut')
 
 
+## Collect & Sort
 rows = list(get_rows()) + list(get_browser_history_rows()) + list(get_pmset_rows())
-rows.sort()
 print()
+rows = [list(row) for row in rows]  # Make mutable, for convenience
+rows.sort()
+
+## Add blanklines in 15-min pauses
 def get_time(time_str): return datetime.datetime.strptime(time_str, '%Y-%m-%d__%H:%M:%S')
-times = [get_time(row[0]) for row in rows]
+rows_with_blanks = [rows[0]]
+for row1, row2 in boltons.iterutils.pairwise_iter(rows):
+    time1, time2 = get_time(row1[0]), get_time(row2[0])
+    delta_minutes = (time2 - time1).total_seconds() / 60
+    if delta_minutes > 15:
+        rows_with_blanks.append([])
+    rows_with_blanks.append(row2)
+rows = rows_with_blanks
+
+## Re-format time
+for row in rows:
+    if row:
+        dt = get_time(row[0])
+        row[0] = dt.strftime('%b %d %I:%M%p').replace(' 0', '  ').replace('AM','am').replace('PM','pm')
+
+## Dedup
+rows = boltons.iterutils.unique(rows, key=tuple)
+
+## Replace repeats with |||
+rows_backup = copy.deepcopy(rows)
 for idx, row in enumerate(rows):
-    row = list(row)
-    dt = times[idx]
-    if idx > 0:
-        delta_minutes = (dt - times[idx-1]).total_seconds() / 60
-        if delta_minutes > 15:
-            print()
-        else:
-            prev_row, next_row = rows[idx-1], (rows[idx+1] if idx+1<len(rows) else ('','','',''))
-            if row[1] == prev_row[1]:
-                row[1] = ('│' if row[1] == next_row[1] else '╵')*len(row[1])
-                if row[2] == prev_row[2]:
-                    row[2] = ('│' if row[2] == next_row[2] else '╵')*len(row[2])
-    row[0] = dt.strftime('%b %d %I:%M%p').replace(' 0', '  ').replace('AM','am').replace('PM','pm')
-    if len(row)>=3: row[2] = f'{row[2]:<10}'
+    if idx > 0 and len(row) >= 3:
+        prev_row = rows_backup[idx-1] + ['','','','']
+        next_row = (rows[idx+1] if idx+1<len(rows) else []) + ['','','','']
+        if row[1] == prev_row[1]:
+            row[1] = ('│' if row[1] == next_row[1] else '╵')*len(row[1])
+            if row[2] == prev_row[2]:
+                row[2] = ('│' if row[2] == next_row[2] else '╵')*len(row[2])
+
+## Print
+for row in rows:
+    if len(row)>=3: row[2] = f'{row[2]:<10}' # Make `pwd` 10+ chars wide
     print('   '.join(row)[:term_width-1])
