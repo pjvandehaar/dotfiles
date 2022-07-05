@@ -43,15 +43,35 @@ _PP_prompt() {
     fi
     _PP_prompt_has_run=1
 
+    ## Consider making $_git in its own script.  In bash?  C++?  Or what?  It could be faster, by finding .git/ and then reading .git/HEAD
     local _git=''
-    # TODO: Show git branch if we're on /mnt/* (except /mnt/s3/)
-    if ! [[ $PWD/ = /mnt/* ]] && ! [[ $PWD/ = /Volumes/* ]]; then
+    local _rs=''
+    if [[ $PWD/ = /mnt/efs* ]]; then  # Show only branch, b/c EFS is slow
+        local _gitexe="$(which git)" # avoid problems with aliases/functions, in a way that always works with `timeout`
+        local _git_head_ref="$($_PP_timeout 0.2 "$_gitexe" symbolic-ref -q --short HEAD 2>/dev/null)"; _rs=$?
+        if [[ $_rs == 124 ]]; then  # timeout
+            _git="${_PP_RED} git timeout "
+        elif [[ $_rs -ge 2 ]]; then  # $_rs=1 happens if we checkout a tag ("non-symbolic ref")
+            _git="${_PP_RED} git status $_rs "
+        elif [[ -n $_git_head_ref ]]; then  # We're on a branch
+            _git="${_PP_YEL} $(printf %q "$_git_head_ref"). "  # `printf %q` shell-escapes output
+        else  # Either we're on a branch, or no .git
+            _git_head_ref="$($_PP_timeout 0.2 "$_gitexe" rev-parse --short -q HEAD 2>/dev/null)"; _rs=$?
+            if [[ -n $_git_head_ref ]]; then
+                _git="${_PP_YEL} $(printf %q "$_git_head_ref"). "
+            fi
+        fi
+
+    elif [[ $PWD/ = /mnt/* ]] || [[ $PWD/ = /Volumes/* ]]; then  # Show nothing, b/c /mnt/ is slow
+        :  # Do nothing
+
+    else
     local _gitexe="$(which git)" # avoid problems with aliases/functions
-    local _git_branch; _git_branch="$($_PP_timeout 0.1 "$_gitexe" rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
+    local _in_git_repo; _in_git_repo="$($_PP_timeout 0.1 "$_gitexe" rev-parse --is-inside-work-tree 2>/dev/null)"; local _rs=$?
     if [[ $_rs == 124 ]]; then
         _git="${_PP_RED} looking for .git timedout "
-    elif [[ "$_git_branch" != true ]]; then
-        _git=''
+    elif [[ "$_in_git_repo" != true ]]; then
+        :  # No .git, so show nothing
     elif [[ $_rs != 0 ]]; then
         _git="${_PP_RED} AAHHHH why was the return status $_rs ???? "
     else
