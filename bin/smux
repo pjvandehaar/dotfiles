@@ -2,6 +2,7 @@
 set -euo pipefail
 # This script auto-reconnects to a tmux session
 
+
 use_sudo=''
 if [[ "${1:-}" = "sudo" ]]; then
     use_sudo=yes
@@ -14,20 +15,22 @@ if [[ ${1:-} = "" ]] && [[ -e ~/.ssh/config ]]; then
     echo "[ssh $host]"
     set "$host"
 fi
-
-if [[ $1 = "" ]]; then
+# Error if host still isn't specified
+if [[ ${1:-} = "" ]]; then
     echo "usage: `basename $0` <host>"
     exit 1
 fi
 
 
-echo -ne "\033]0;$1\007"  # Writes to terminal title, but may get overridden by tmux &c
+# Write terminal title.  May get overridden by tmux etc.
+echo -ne "\033]0;$1\007"
 
+
+# Set up ssh/autossh config
 if [[ $SSH_AUTH_SOCK = "" ]]; then
     eval `ssh-agent -s`
     ssh-add $HOME/.ssh/id_rsa
 fi
-
 AUTOSSH_POLL=20
 AUTOSSH_PORT=$(awk 'BEGIN { srand(); printf("%d\n", 20000+12000*rand()) }' < /dev/null)
 #AUTOSSH_GATETIME=30
@@ -38,7 +41,8 @@ export AUTOSSH_POLL AUTOSSH_LOGFILE AUTOSSH_DEBUG AUTOSSH_PATH AUTOSSH_GATETIME 
 
 #autossh -t $@; exit  # Debugging
 
-# -t is the ssh option to force a pseudo terminal (pty)
+
+# `ssh -t` starts a terminal, rather than just executing a command and exiting
 if [[ -n $use_sudo ]]; then
     autossh -t $@ "sudo tmux new -As0"
 else
