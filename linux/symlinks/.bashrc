@@ -43,11 +43,11 @@ unalias l 2>/dev/null  # aliases mask functions
 if type -t exa >/dev/null; then
     alias l="exa -laF --git --time-style=long-iso --bytes --sort=modified --ignore-glob='.DS_Store|*~|*#*'"
 else
+    # TODO: Drop hardlinks/user/group like `l | cut -d' ' -f 1,5-99`
     function l { # `l() { ... }` causes problems sometimes
         # BLOCK_SIZE adds thousands-commas
         BLOCK_SIZE="'1" TIME_STYLE=long-iso ls --color -lhFBAtr "$@" |
-        grep -E --color=never -v '(~|#|\.DS_Store)$' |
-        more
+        grep -E --color=never -v '(~|#|\.DS_Store)$'
     }
 fi
 

@@ -4,30 +4,30 @@ set -euo pipefail
 
 
 use_sudo=''
-if [[ "${1:-}" = "sudo" ]]; then
+if [[ $1 = "sudo" ]]; then
     use_sudo=yes
     shift
 fi
 
 # If host isn't specified, use the first host in ~/.ssh/config
-if [[ ${1:-} = "" ]] && [[ -e ~/.ssh/config ]]; then
+if ! [[ $1 ]] && [[ -e ~/.ssh/config ]]; then
     host=$(cat ~/.ssh/config |perl -nale 'print $1 if m{Host\s+(\S+)}'|head -1)
     echo "[ssh $host]"
     set "$host"
 fi
 # Error if host still isn't specified
-if [[ ${1:-} = "" ]]; then
+if ! [[ $1 ]]; then
     echo "usage: `basename $0` <host>"
     exit 1
 fi
 
 
-# Write terminal title.  May get overridden by tmux etc.
+# Write terminal title.  May get overridden by remote tmux or bashrc
 echo -ne "\033]0;$1\007"
 
 
 # Set up ssh/autossh config
-if [[ $SSH_AUTH_SOCK = "" ]]; then
+if ! [[ $SSH_AUTH_SOCK ]]; then
     eval `ssh-agent -s`
     ssh-add $HOME/.ssh/id_rsa
 fi
@@ -43,8 +43,14 @@ export AUTOSSH_POLL AUTOSSH_LOGFILE AUTOSSH_DEBUG AUTOSSH_PATH AUTOSSH_GATETIME 
 
 
 # `ssh -t` starts a terminal, rather than just executing a command and exiting
-if [[ -n $use_sudo ]]; then
+if [[ $use_sudo ]]; then
     autossh -t $@ "sudo tmux new -As0"
 else
     autossh -t $@ "tmux new -As0"
+fi
+
+
+# Re-write terminal title.
+if [[ $MACHINE_LABEL ]]; then
+    echo -ne "\033]0;$MACHINE_LABEL\007"
 fi
