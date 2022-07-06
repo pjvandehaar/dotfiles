@@ -16,8 +16,9 @@ exists_else() {
 
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion.rb>
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion@2.rb>
+# Note: This is slow!
 if exists brew; then
-    v="$(brew --prefix)/etc/profile.d/bash_completion.sh" && [[ -r "$v" ]] && . "$v" # bash-completion
+    v="$(brew --prefix)/etc/profile.d/bash_completion.sh" && [[ -r "$v" ]] && source "$v"
 fi
 
 
