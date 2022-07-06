@@ -51,7 +51,7 @@ alias pw="pheweb"
 path() { echo "$PATH" | tr : "\n"; }
 alias paths="path"
 alias e="\$EDITOR"
-ew() { "$EDITOR" "$(which "$1")"; }
+ew() { "$EDITOR" "$(which "$1")"; }  # TODO: `complete ew command`
 se() {
     args=()
     for a in "$@"; do

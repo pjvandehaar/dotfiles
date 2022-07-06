@@ -1,6 +1,7 @@
 #!/bin/bash
-# This script shows a quick, colored summary of the current git state (if you're in a git repo).
+# This script shows a quick summary of the current git state (if you're in a git repo).
 # It's called by prompt_prompt.sh
+# You can also use a 200ms version in `prompt_git_timeout.sh`.
 
 
 
@@ -111,7 +112,6 @@ show_all() {
     fi
     echo " ${_git_branch}${_git_state} "
 }
-
 
 
 if [[ $PWD/ = /mnt/efs* ]]; then  # Show only branch, b/c EFS is slow

@@ -1,15 +1,18 @@
+# Source this script to set PS1 dynamically.
+
 # Note: This prompt has two problems:
-#       (1) The git code could be faster
-#       (2) It uses `trap f DEBUG`, which conflicts with other uses of `trap`, and is odd with C-x C-e
+#       (1) It uses `trap f DEBUG`, which conflicts with other uses of `trap`, and is odd with C-x C-e.  But that's the only way to get runtime in bash.
+#       (2) The git code could be faster.  But that would require a long bash script, or something compiled (and thus less portable).
 
 
-if [[ -z $TERM || $TERM = dumb || $- != *i* ]]; then
+if [[ -z $TERM || $TERM = dumb || $- != *i* ]]; then  # Abort if we're not in a real terminal
     unset PROMPT_COMMAND
     PS1="\w $ "
     return  # Ends this script
 fi
 
-# tput takes dozens of ms, so run it only once, even though it pollutes the namespace
+
+# Run tput only once, even though it pollutes the namespace, because it takes dozens of ms
 _PP_RED="\[$(tput setab 1; tput setaf 7)\]"
 _PP_GRE="\[$(tput setab 2; tput setaf 7)\]"
 _PP_YEL="\[$(tput setab 3; tput setaf 0)\]"
@@ -17,24 +20,10 @@ _PP_BLU="\[$(tput setab 4; tput setaf 7)\]"
 _PP_PIN="\[$(tput setab 5; tput setaf 7)\]"
 _PP_NONE="\[$(tput sgr0)\]"
 
-_PP_timeout=''
-if which timeout >/dev/null; then
-    _PP_timeout=timeout
-elif which gtimeout >/dev/null; then
-    _PP_timeout=gtimeout
-else
-    _PP_timeout=timeout
-    timeout() { shift; "$@"; }
-fi
 
 PROMPT_COMMAND=_PP_prompt
 _PP_prompt() {
-    # Set _errnum first, to avoid overwriting "$?"
-    local _errnum="$?"
-    local _err=''
-    if [[ "$_errnum" != 0 ]] && ! [[ $_PP_blank_command ]]; then
-        _err="${_PP_RED} ${_errnum} "
-    fi
+    local _errnum="$?"  # Set _errnum first b/c later commands overwrite "$?"
 
     # Log last command to ~/.full_history like <https://www.jefftk.com/p/you-should-be-logging-shell-history>
     if [[ $_PP_prompt_has_run ]] && ! [[ $_PP_blank_command ]]; then
@@ -42,9 +31,6 @@ _PP_prompt() {
         echo "$(date +%Y-%m-%d_%H:%M:%S%z)  $(hostname)  $PWD  ${_PP_user_command_runtime}s  $_last_cmd" >> ~/.full_history
     fi
     _PP_prompt_has_run=1
-
-    local _git=''
-    _git=${_PP_YEL}$($_PP_timeout 0.2 prompt_git.sh 2>/dev/null)
 
     local _root=''
     if [[ $USER = root ]]; then
@@ -71,6 +57,8 @@ _PP_prompt() {
     if ! [[ -w "$PWD" ]]; then _pwd="(ro) ${_pwd}"; fi # read-only
     _pwd="${_PP_BLU} ${_pwd} "
 
+    local _git="${_PP_YEL}$(prompt_git_timeout.sh)"
+
     local _runtime=''
     if [[ "$_PP_user_command_runtime" -ge 5 ]]; then
         [[ "$_PP_user_command_runtime" -ge 86400 ]] && _runtime+="$((_PP_user_command_runtime / 86400))days"
@@ -78,6 +66,11 @@ _PP_prompt() {
         [[ "$_PP_user_command_runtime" -ge 60 ]] && _runtime+="$((_PP_user_command_runtime % 3600 / 60))min"
         _runtime+="$((_PP_user_command_runtime % 60))s"
         _runtime="${_PP_PIN} ${_runtime} "
+    fi
+
+    local _err=''
+    if [[ "$_errnum" != 0 ]] && ! [[ $_PP_blank_command ]]; then
+        _err="${_PP_RED} ${_errnum} "
     fi
 
     # Set ending based only on terminal width, so that it doesn't suddenly change
