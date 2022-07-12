@@ -4,8 +4,11 @@
 
 # Note: prompt_prompt.sh doesn't write to ~/.full_history until a command finishes.  So `ssh` is often an hour late.
 
+if __name__=='__main__': import kpa.dev_utils; kpa.dev_utils.run(__file__)
+
 import datetime, argparse, glob, os, re, time, shutil, sqlite3, copy, sys, subprocess as sub
 import boltons.iterutils
+from typing import Optional, Iterator, Sequence
 
 
 term_width = shutil.get_terminal_size().columns
@@ -15,7 +18,13 @@ machine_aliases = {
     'rgc-024082248.regeneron.regn.com': 'pv',
     'rgc-024083017.regeneron.regn.com': 'pwpv',
 }
+now = datetime.datetime.now()
 
+def fullmatch(pattern:str, text:str) -> Optional[re.Match]:
+    pattern = pattern.replace(r'\d', '#')
+    return re.fullmatch(pattern, text)
+
+# Download *_full_history
 def get_file_age_minutes(path): return (time.time() - os.stat(path).st_mtime) / 60
 def file_missing_or_old(path): return not os.path.exists(path) or get_file_age_minutes(path) > 60*10
 def try_run_cmd(cmd:str):
@@ -34,18 +43,23 @@ def parse_args():
     parser.add_argument('day', nargs='?', help='What day to show.  eg: 2022-06-20.  If unspecified, shows today.')
     args = parser.parse_args()
     if args.days:
+        # TODO: Don't branch out in the middle of parse_args()...
         sub.run('cat /tmp/*full_history ~/.full_history | grep "^20" | cut -c1-10 | sort -u', shell=True)
         sys.exit(0)
     if args.all: day_str_filter = ''
     elif args.day:
-        day_str_filter = args.day
-        if re.match(r'^\d\d$', day_str_filter): day_str_filter = f'07-{day_str_filter}'
-        if re.match(r'^\d\d-\d\d$', day_str_filter): day_str_filter = f'2022-{day_str_filter}'
-    else: day_str_filter = datetime.datetime.today().strftime('%Y-%m-%d')
-    return day_str_filter
+        if re.fullmatch(r'\d\d', args.day):
+            day_str_filter = f'{now.year}-{now.month:02}-{args.day}'
+        elif re.fullmatch(r'\d\d-\d\d', args.day):
+            day_str_filter = f'{now.year}-{args.day}'
+        else:
+            day_str_filter = args.day
+    else: day_str_filter = now.strftime('%Y-%m-%d')
+    return day_str_filter  # TODO: Don't return `day_str_filter` from `def parse_args()`...
 day_str_filter = parse_args()
 
-def get_rows():
+
+def get_shell_rows() -> Iterator[Sequence[str]]:
     paths = [os.path.expanduser('~/.full_history')] + glob.glob('/tmp/*_full_history')
     for path in paths:
         print(f'=> Parsing {path}')
@@ -57,7 +71,7 @@ def get_rows():
                 if not time_str.startswith(day_str_filter): continue
 
                 # TODO: Consider using `(?P<time_str>\S+)` and `rowdata = cleanup(m.groupdict())`
-                if (m := re.match(r'^(\S+)  (\S+)  ([/~].*)  (\d+)s  ?(.*)$', line)):
+                if (m := re.fullmatch(r'(\S+)  (\S+)  ([/~].*)  (\d+)s  ?(.*)', line)):
                     # TODO: Set time_str -= runtime_seconds
                     time_str, machine, pwd, runtime, cmd = m.groups()
                     time_str = _clean_time(time_str)
@@ -67,14 +81,14 @@ def get_rows():
                     runtime = f'({runtime_seconds//60}min)  ' if runtime_seconds>60*10 else ''
                     yield (time_str, machine, pwd, f'{runtime}{cmd}')
 
-                elif (m := re.match(r'^(\S+) {1,2}(\S+) {1,2}([/~].*)  \d+\*?  ?(.*)$', line)):
+                elif (m := re.fullmatch(r'(\S+) {1,2}(\S+) {1,2}([/~].*)  \d+\*?  ?(.*)', line)):
                     time_str, machine, pwd, cmd = m.groups()
                     time_str = _clean_time(time_str)
                     machine = _clean_machine(machine)
                     pwd = _clean_pwd(pwd)
                     yield (time_str, machine, pwd, cmd)
 
-                elif (m := re.match(r'^(\S+) {1,2}(\S+) {1,2}(.*)$', line)):
+                elif (m := re.fullmatch(r'(\S+) {1,2}(\S+) {1,2}(.*)', line)):
                     time_str, machine, rest = m.groups()
                     time_str = _clean_time(time_str)
                     machine = _clean_machine(machine)
@@ -84,8 +98,8 @@ def get_rows():
                     raise Exception(line)
 
 def _clean_time(time_str:str) -> str:
-    time_pattern = r'^(202#-##-##)(?:_|__|--)(##[-:]##[-:]##)(.*)'.replace('#','[0-9]')
-    m = re.match(time_pattern, time_str)
+    time_pattern = r'(202#-##-##)(?:_|__|--)(##[-:]##[-:]##)(.*)'.replace('#','[0-9]')
+    m = re.fullmatch(time_pattern, time_str)
     assert m, repr(time_str)
     assert m.group(3) in ['', '_-0400', '-0400'], repr(m.group(3))
     return f"{m.group(1)}__{m.group(2).replace('-',':')}"
@@ -97,7 +111,7 @@ def _clean_pwd(pwd:str) -> str:
     return pwd.replace('/mnt/efs_v2/agds_cgad/users/peter.vandehaar', 'efs')
 
 
-def get_browser_history_rows():
+def get_browser_history_rows() -> Iterator[Sequence[str]]:
     print('=> Parsing Edge')
     edge_history_path = '/Users/peter.vandehaar/Library/Application Support/Microsoft Edge/Default/History'
     edge_history_sqlite_path = f'file:{edge_history_path}?immutable=1'
@@ -113,15 +127,15 @@ def get_browser_history_rows():
         if time_str.startswith(day_str_filter):
             yield (time_str, 'Edge', row['url'])
 
-def get_pmset_rows():
+def get_pmset_rows() -> Iterator[Sequence[str]]:
     print('=> Parsing `pmset -g log`')
     lines = sub.check_output('pmset -g log'.split()).decode().split('\n')
     lines = [line.rstrip() for line in lines]
     for line in lines:
         if line.startswith('Total Sleep/Wakes since'): break
         if not line.startswith('2022-'): continue
-        pattern = r'^(2022-##-## ##:##:##) -0400 ([a-zA-Z].*)$'.replace('#','[0-9]')
-        m = re.match(pattern, line)
+        pattern = r'(2022-##-## ##:##:##) -0400 ([a-zA-Z].*)'.replace('#','[0-9]')
+        m = re.fullmatch(pattern, line)
         assert m, repr(line)
         time_str, info = m.groups()
         time_str = time_str.replace(' ', '__')
@@ -134,10 +148,10 @@ def get_pmset_rows():
 
 
 ## Collect & Sort
-rows = list(get_rows()) + list(get_browser_history_rows()) + list(get_pmset_rows())
-print()
-rows = [list(row) for row in rows]  # Make mutable, for convenience
+row_getters = [get_shell_rows, get_browser_history_rows, get_pmset_rows]
+rows = [list(row) for row_getter in row_getters for row in row_getter()]  # Make mutable, for convenience
 rows.sort()
+print()  # b/c get_*_rows() prints
 
 ## Add blanklines in 15-min pauses
 def get_time(time_str): return datetime.datetime.strptime(time_str, '%Y-%m-%d__%H:%M:%S')
@@ -150,18 +164,13 @@ for row1, row2 in boltons.iterutils.pairwise_iter(rows):
     rows_with_blanks.append(row2)
 rows = rows_with_blanks
 
-## Re-format time
+## Re-format time, dropping seconds
 for row in rows:
     if row:
-        dt = get_time(row[0])
-        row[0] = dt.strftime('%b %d %I:%M%p').replace(' 0', '  ').replace('AM','am').replace('PM','pm')
+        row[0] = get_time(row[0]).strftime('%b %d %I:%M%p').replace(' 0', '  ').replace('AM','am').replace('PM','pm')
 
 ## Dedup
-rows_dedup = [rows[0]]
-for row1, row2 in boltons.iterutils.pairwise_iter(rows):
-    if row1 != row2:
-        rows_dedup.append(row2)
-rows = rows_dedup
+rows = [row for prev_row,row in boltons.iterutils.pairwise_iter([['']]+rows) if row!=prev_row]
 
 ## Replace repeats with |||
 rows_backup = copy.deepcopy(rows)
