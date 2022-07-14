@@ -4,7 +4,10 @@ import signal; signal.signal(signal.SIGPIPE, signal.SIG_DFL) # No error on close
 import shelve, json, sys
 
 def jsonify(obj, indent=None):
-    return json.dumps(obj, default=_jsonify_default, indent=indent)
+    try:
+        return json.dumps(obj, default=_jsonify_default, indent=indent)
+    except TypeError:
+        return repr(obj)
 def _jsonify_default(obj):
     try:
         import pandas as pd

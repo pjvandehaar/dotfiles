@@ -44,6 +44,7 @@ if type -t exa >/dev/null; then
     alias l="exa -laF --git --time-style=long-iso --bytes --sort=modified --ignore-glob='.DS_Store|*~|*#*'"
 else
     # TODO: Drop hardlinks/user/group like `l | cut -d' ' -f 1,5-99`
+    # TODO: If `ls` is slow, and there are lots of files, don't do `-l` output which calls `stat()` (eg in big EFS dir)
     function l { # `l() { ... }` causes problems sometimes
         # BLOCK_SIZE adds thousands-commas
         BLOCK_SIZE="'1" TIME_STYLE=long-iso ls --color -lhFBAtr "$@" |
