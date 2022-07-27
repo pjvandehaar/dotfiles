@@ -19,10 +19,15 @@ machine_aliases = {
     'rgc-024083017.regeneron.regn.com': 'pwpv',
 }
 now = datetime.datetime.now()
+internal_time_fmt = '%Y-%m-%d__%H:%M:%S'
 
 def fullmatch(pattern:str, text:str) -> Optional[re.Match]:
-    pattern = pattern.replace(r'\d', '#')
+    pattern = pattern.replace(r'\d', '#')  # TODO: replace \d -> # everywhere
     return re.fullmatch(pattern, text)
+def get_time(time_str:str) -> datetime.datetime:  # TODO: Use ISO strings internally
+    return datetime.datetime.strptime(time_str, internal_time_fmt)
+def prettify_time_without_seconds(dt:datetime.datetime) -> str:
+    return dt.strftime('%b %d %I:%M%p').replace(' 0', '  ').replace('AM','am').replace('PM','pm')
 
 # Download *_full_history
 def get_file_age_minutes(path): return (time.time() - os.stat(path).st_mtime) / 60
@@ -68,18 +73,26 @@ def get_shell_rows() -> Iterator[Sequence[str]]:
                 line = line.rstrip()
                 if len(line)<5 or not line.startswith('20') or line.count(' ')<3: continue
                 time_str = line.split()[0]
-                if not time_str.startswith(day_str_filter): continue
+                if not time_str.startswith(day_str_filter): continue  # TODO: runtime_seconds makes this slightly wrong.
 
                 # TODO: Consider using `(?P<time_str>\S+)` and `rowdata = cleanup(m.groupdict())`
                 if (m := re.fullmatch(r'(\S+)  (\S+)  ([/~].*)  (\d+)s  ?(.*)', line)):
-                    # TODO: Set time_str -= runtime_seconds
+                    # Note: time_str is when the command FINISHES.  time_str_start is when it STARTS.
                     time_str, machine, pwd, runtime, cmd = m.groups()
                     time_str = _clean_time(time_str)
                     machine = _clean_machine(machine)
                     pwd = _clean_pwd(pwd)
                     runtime_seconds = int(runtime)
-                    runtime = f'({runtime_seconds//60}min)  ' if runtime_seconds>60*10 else ''
-                    yield (time_str, machine, pwd, f'{runtime}{cmd}')
+                    runtime_str = ''
+                    if runtime_seconds > 3600*3: runtime_str = f'{runtime_seconds//3600}hr'
+                    elif runtime_seconds > 60*10: runtime_str = f'{runtime_seconds//60}min'
+                    assert 0 <= runtime_seconds < 3600*24, (runtime_seconds, runtime)
+                    time_str_start = (get_time(time_str) - datetime.timedelta(seconds=runtime_seconds)).strftime(internal_time_fmt)
+                    if runtime_str:
+                        yield (time_str_start, machine, pwd, f'{cmd}   ({runtime_str})')
+                        yield (time_str, machine, pwd, f'{cmd}   (finished_after_{runtime_str})')
+                    else:
+                        yield (time_str_start, machine, pwd, f'{cmd}')
 
                 elif (m := re.fullmatch(r'(\S+) {1,2}(\S+) {1,2}([/~].*)  \d+\*?  ?(.*)', line)):
                     time_str, machine, pwd, cmd = m.groups()
@@ -123,7 +136,7 @@ def get_browser_history_rows() -> Iterator[Sequence[str]]:
     for row in db.execute(query):
         dt = datetime.datetime(1601, 1, 1) + datetime.timedelta(seconds=row['visit_time']/1e6) # lol, µs since 1601??
         dt -= datetime.timedelta(hours=4)  # Convert UTC -> EDT in summer
-        time_str = dt.strftime('%Y-%m-%d__%H:%M:%S')
+        time_str = dt.strftime(internal_time_fmt)
         if time_str.startswith(day_str_filter):
             yield (time_str, 'Edge', row['url'])
 
@@ -154,7 +167,6 @@ rows.sort()
 print()  # b/c get_*_rows() prints
 
 ## Add blanklines in 15-min pauses
-def get_time(time_str): return datetime.datetime.strptime(time_str, '%Y-%m-%d__%H:%M:%S')
 rows_with_blanks = [rows[0]]
 for row1, row2 in boltons.iterutils.pairwise_iter(rows):
     time1, time2 = get_time(row1[0]), get_time(row2[0])
@@ -166,8 +178,7 @@ rows = rows_with_blanks
 
 ## Re-format time, dropping seconds
 for row in rows:
-    if row:
-        row[0] = get_time(row[0]).strftime('%b %d %I:%M%p').replace(' 0', '  ').replace('AM','am').replace('PM','pm')
+    if row: row[0] = prettify_time_without_seconds(get_time(row[0]))
 
 ## Dedup
 rows = [row for prev_row,row in boltons.iterutils.pairwise_iter([['']]+rows) if row!=prev_row]

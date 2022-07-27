@@ -80,7 +80,7 @@ glq() {
     else
         local _target="--all"
     fi
-    git log --graph --pretty='%C(auto)%h  %as %d  %s' --max-count=$((LINES-4)) --color $_target |
+    git log --graph --pretty='%C(auto)%h  %ad %d  %s' --date="%Y-%m-%d" --max-count=$((LINES-4)) --color $_target |
     perl -pale 's{([0-9a-f]{5,})}{&%<>\1}' |
     perl -pale '$_ .= "&%<>" if (!m{&%<>})' |
     perl -pale 's{(/)(?=.*&%<>)}{%}g' |
