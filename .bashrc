@@ -140,6 +140,7 @@ wt() {
     fi
 }
 ptrwatchmem() { while free -m|grep Mem|awk '{print $3}'; do sleep 4; done; }
+ptrwaitpid() { python3 -c "import psutil; psutil.Process($1).wait()"; }
 
 ptrjup() {
     local fname="$1"
