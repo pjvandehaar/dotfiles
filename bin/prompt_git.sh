@@ -3,6 +3,7 @@
 # It's called by prompt_prompt.sh
 # You can also use a 200ms version in `prompt_git_timeout.sh`.
 
+# TODO: Compare to https://github.com/git/git/blob/master/contrib/completion/git-prompt.sh
 
 
 show_branch() {

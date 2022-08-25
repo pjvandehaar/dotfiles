@@ -2,7 +2,9 @@
 
 __fdsjlkrew() { # don't pollute global namespace
 
-if type -t ptrcut >/dev/null; then
+exists() { type -t "$1" >/dev/null; }
+
+if exists ptrcut; then
     echo "BTW, .bashrc has already been sourced once."
 fi
 
@@ -22,25 +24,28 @@ PATH="$HOME/.linuxbrew/bin:$PATH"
 PATH="$HOME/.linuxbrew/sbin:$PATH"
 PATH="$PATH:/net/mario/cluster/bin"
 PATH="$PATH:$HOME/perl5/bin"
-PATH="$(perl -e'@p=split(":",$ENV{"PATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
+PATH="$(perl -e'@p=split(":",$ENV{"PATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')"  # dedup & drop missing
 
 export MANPATH
 MANPATH="$MANPATH:$(env -u MANPATH man -w)" # gets defaults from /etc/manpath.config (see `man -dw`).  This seems gross, but `man man` breaks without this.
-if type -t brew >/dev/null; then MANPATH="$(brew --prefix)/share/man:$MANPATH"; fi
+if exists brew; then MANPATH="$(brew --prefix)/share/man:$MANPATH"; fi
 MANPATH="$HOME/.npm-packages/share/man:$MANPATH"
 MANPATH="$(perl -e'@p=split(":",$ENV{"MANPATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
 
-## these become really slow when NFS slows down and I don't know a workaround
-# local v
-# v="/etc/bash_completion"; [[ -e "$v" ]] && . "$v"
-# v="/usr/share/bash-completion/bash_completion"; [[ -e "$v" ]] && . "$v"
+## These become really slow when NFS slows down and I don't know a workaround.
+## I'm using homebrew's bash-completion(@2), which should cover most commands I want.
+# if [[ -e /etc/bash_completion ]]; then
+#     source /etc/bash_completion
+# elif [[ -e /usr/share/bash-completion/bash_completion ]]; then
+#     source /usr/share/bash-completion/bash_completion
+# fi
 
 
 # OS-specific impl
 # ================
 
 unalias l 2>/dev/null  # aliases mask functions
-if type -t exa >/dev/null; then
+if exists exa; then
     #alias l="exa -laF --git --time-style=long-iso --bytes --sort=modified --ignore-glob='.DS_Store|*~|*#*'"
     alias l="exa -laF --git --time-style=long-iso --sort=modified --ignore-glob='.DS_Store|*~|*#*'"
 else
@@ -56,8 +61,8 @@ fi
 
 # OS-specific features
 # ====================
-if ! type -t r >/dev/null; then alias r=R; fi
-if type -t dircolors >/dev/null; then eval "$(dircolors -b)"; fi
+if ! exists r; then alias r=R; fi
+if exists dircolors; then eval "$(dircolors -b)"; fi
 
 
 # source common
