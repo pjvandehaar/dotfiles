@@ -47,7 +47,7 @@ MANPATH="$(perl -e'@p=split(":",$ENV{"MANPATH"}); @p=grep(-e,@p); for($i=0;$i<$#
 unalias l 2>/dev/null  # aliases mask functions
 if exists exa; then
     #alias l="exa -laF --git --time-style=long-iso --bytes --sort=modified --ignore-glob='.DS_Store|*~|*#*'"
-    alias l="exa -laF --git --time-style=long-iso --sort=modified --ignore-glob='.DS_Store|*~|*#*'"
+    alias l="exa -laF --time-style=long-iso --sort=modified --ignore-glob='.DS_Store|*~|*#*'"
 else
     # TODO: Drop hardlinks/user/group like `l | cut -d' ' -f 1,5-99`
     # TODO: If `ls` is slow, and there are lots of files, don't do `-l` output which calls `stat()` (eg in big EFS dir)
