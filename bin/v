@@ -10,6 +10,8 @@
 
 ## Note: On s3, when I don't have permission to access a subfolder, s3.get_object() just says "NoSuchKey".  But it still shows up in list_objects_v2!
 
+# TODO: Replace `get_object` with `head_object`.
+
 # TODO: Support `v /path/to/chr#range#-#.tsv`.  If multiple files match, list them.  If only one, show it.  #=[0-9]+  %=.*
 
 # TODO: Add custom bash_completion using <https://github.com/kislyuk/argcomplete>
@@ -31,15 +33,17 @@ term_width = shutil.get_terminal_size().columns
 OPEN_IN_IPYTHON = False  # This is easier than passing args down thru functions
 OPEN_IN_VISIDATA = False
 MAX_NUM_LINES = None
+CAT = False
 
 def run(argv: List[str] = None):
     if argv is None: argv = sys.argv
     args = parse_args(argv)
-    global OPEN_IN_IPYTHON, OPEN_IN_VISIDATA, MAX_NUM_LINES
+    global OPEN_IN_IPYTHON, OPEN_IN_VISIDATA, MAX_NUM_LINES, CAT
     if args.py: OPEN_IN_IPYTHON = True
     if args.vd: OPEN_IN_VISIDATA = True
     if args.num_lines: MAX_NUM_LINES = args.num_lines
     if args.all: MAX_NUM_LINES = sys.maxsize
+    if args.cat: CAT = True
     if not args.path and not sys.stdin.isatty(): show_lines(read_stdin_lines_and_switch_to_tty())
     else: show_path(args.path or '.')
 
@@ -71,7 +75,6 @@ def parse_args(argv: List[str] = None) -> argparse.Namespace:
               - CONST       status        'success'
               -       float PIP           0.0128 - 0.01944
               - CONST float CS1(median|ld|=0.900834157239296)   nan
-
             => Head:
               rsid          position allele allele  maf        beta      se        PIP
              9:518755:G:A   518755   G      A      0.4970     0.00011   0.00842   0.0128
@@ -88,10 +91,11 @@ def parse_args(argv: List[str] = None) -> argparse.Namespace:
         '''),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument('-a', '--all', action='store_true', help='Output all lines, without truncating or summarizing to fit your terminal.  Sets `-n` to infinity.`')
+    parser.add_argument('-a', '--all', action='store_true', help='Output all lines, without truncating or summarizing to fit your terminal.  Sets `-n` to infinity.')
     parser.add_argument('-n', dest='num_lines', type=int, default=None, help='Maximum number of lines to show from file or pathlist.')
     parser.add_argument('--py', action='store_true', help='Open the result in IPython.')
     parser.add_argument('--vd', action='store_true', help='Open the result in VisiData.')
+    parser.add_argument('--cat', action='store_true', help='Just print the file, like `zcat`.')
     parser.add_argument('path', nargs='?', help=argparse.SUPPRESS)
     return parser.parse_args()
 
@@ -144,6 +148,10 @@ def show_s3_completions(bucket:str, key:str):
             show_pathlist([f'/mnt/s3/{bkt}' for bkt in s3_list_all_buckets() if bkt.startswith(bucket)], shared_prefix=f'/mnt/s3/{bucket}')
 
 def show_file(path:str):
+    if CAT:
+        with smarter_open(path, 'rb') as f:
+            for line in f: sys.stdout.buffer.write(line)
+            return
     try:
         with smarter_open(path, 'rt') as f:
             lines = list(itertools.islice(f, 0, MAX_NUM_LINES or 1000))  # TODO: Read the first 1MB?
@@ -330,42 +338,49 @@ def get_df(table:List[List[str]]) -> "pd.DataFrame":
     df = pd.DataFrame(table[1:], columns=table[0])
     return pd.read_csv(io.StringIO(df.to_csv(index=False)))  # TODO: Don't make two dataframes!
 
+
 def show_pathlist(pathlist:List[str], shared_prefix:str = ''):
     if not pathlist: print(' - Nothing matched!'); return
+    _show_pathlist(pathlist, shared_prefix)
+    if OPEN_IN_IPYTHON:
+        print('=> Saved to variable `pathlist`.\n')
+        import IPython
+        IPython.start_ipython(argv=['--no-confirm-exit'], display_banner=False, user_ns={'pathlist':pathlist})  # TODO: import os, pathlib, etc
+
+def _show_pathlist(pathlist:List[str], shared_prefix:str = ''):
+    # TODO: Try grouping by prefix, with the biggest i>5 such that 2<=len(set(suf[:i] for suf in suffixes))<30
+    # TODO: Try stripping off a filetype, `.[^.]+$` (eg, s3://rgc-ag-data/app_data/pheweb/UKB/UKB_Freeze_450/ALL/generated-by-pheweb/pheno_gz/*.gz{,.tbi})
     suffixes = [remove_required_prefix(path, shared_prefix) for path in pathlist]
     assert len(suffixes) == len(set(suffixes))
+    ## If MAX_NUM_LINES, just print that many lines:
     if MAX_NUM_LINES:
         if len(suffixes) <= MAX_NUM_LINES:
             for suf in suffixes: print(f' - {deemphasize(shared_prefix)}{suf}')
         else:
             for suf in suffixes[:MAX_NUM_LINES]: print(f' - {deemphasize(shared_prefix)}{suf}')
             print(f' => {len(suffixes)} total')
-    else:
-        if len(suffixes) < 50:
-            for suf in suffixes: print(f' - {deemphasize(shared_prefix)}{suf}')
-        else:
-            ## Try replacing numbers with #.
-            numless_suffix_counts = Counter(re.subn(r'[0-9]+', '#', suf)[0] for suf in suffixes)
-            numless_suffixes = {re.subn(r'[0-9]+', '#', suf)[0]:suf for suf in suffixes}
-            if 4 <= len(numless_suffixes) < 40 and len(numless_suffixes)/len(suffixes) < .5:
-                for nsuf,suf in numless_suffixes.items():
-                    if nsuf != suf:
-                        example = re.search(r'[0-9].*[0-9]', suf).group(0)
-                        spaces = ' '*(8 - (len(nsuf) % 4))  # Align to a grid, to hopefully align some lines
-                        print(f' - {deemphasize(shared_prefix)}{nsuf}{spaces}({numless_suffix_counts[nsuf]}, eg: {example})')
-                    else:
-                        print(f' - {deemphasize(shared_prefix)}{suf}')
-            else:
-                # TODO: Try group by prefix, with the biggest i>5 such that 2<=len(set(suf[:i] for suf in suffixes))<30
-                # TODO: Handle `*.gz(.tbi)?`
-                #       eg, /mnt/s3/rgc-ag-data/app_data/pheweb/UKB/UKB_Freeze_450/ALL/generated-by-pheweb/pheno_gz/
-                #       Just try collapsing each file into its prefix.  If that cuts dirsize by >40%, show it.
-                for suf in suffixes[:20]: print(f' - {deemphasize(shared_prefix)}{suf}')
-                print(f' => {len(suffixes)} total')
-    if OPEN_IN_IPYTHON:
-        print('=> Saved to variable `pathlist`.\n')
-        import IPython
-        IPython.start_ipython(argv=['--no-confirm-exit'], display_banner=False, user_ns={'pathlist':pathlist})  # TODO: import os, pathlib, etc
+        return
+    ## If <50 suffixes, just print them.
+    if len(suffixes) < 50:
+        for suf in suffixes: print(f' - {deemphasize(shared_prefix)}{suf}')
+        return
+    ## Try replacing numbers with #:
+    numless_suffix_counts = Counter(re.subn(r'[0-9]+', '#', suf)[0] for suf in suffixes)
+    numless_suffixes = {re.subn(r'[0-9]+', '#', suf)[0]:suf for suf in suffixes}
+    if 4 <= len(numless_suffixes) < 40 and len(numless_suffixes)/len(suffixes) < .5:
+        for nsuf,suf in numless_suffixes.items():
+            if nsuf != suf:
+                m = re.search(r'[0-9].*[0-9]', suf)
+                if m:
+                    example = m.group(0)
+                    spaces = ' '*(8 - (len(nsuf) % 4))  # Align to a grid, to hopefully align some lines
+                    print(f' - {deemphasize(shared_prefix)}{nsuf}{spaces}({numless_suffix_counts[nsuf]}, eg: {example})')
+                    continue
+            print(f' - {deemphasize(shared_prefix)}{suf}')
+        return
+    # Just print the first 20:
+    for suf in suffixes[:20]: print(f' - {deemphasize(shared_prefix)}{suf}')
+    print(f' => {len(suffixes)} total')
 
 def emphasize(text:str) -> str:
     return '\x1B[1;34m' + text + '\x1B[0m'
@@ -425,7 +440,7 @@ def s3_paginate(s3_command:str, **kwargs):
 def s3_list_all_buckets() -> List[str]:
     return [bucket['Name'] for bucket in get_s3().list_buckets()['Buckets']]
 
-def s3_get_head(bucket:str, key:str, bytes:int = 500) -> bytes:
+def s3_get_head_bytes(bucket:str, key:str, bytes:int = 500) -> bytes:
     import botocore
     try:
         return get_s3().get_object(Bucket=bucket, Key=key, Range=f'bytes=0-{bytes}')['Body'].read()
