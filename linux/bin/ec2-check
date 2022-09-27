@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+## TODO: Parse `--region`
+
+if __name__ == '__main__': import kpa.dev_utils; kpa.dev_utils.run(__file__)
+
+from dataclasses import dataclass
+from pathlib import Path
+import subprocess as sub
+import os, json, sys, pprint, textwrap
+from typing import List
+
+VERBOSE = '-v' in sys.argv
+
+@dataclass
+class Host:
+    label: str
+    # user: str = ''
+    # ip: str = ''
+    instance_id: str = ''
+
+hosts: List[Host] = []
+with open(Path.home() / '.ssh/config') as f:
+    for line in f:
+        line = line.strip()
+        if not line: continue
+        parts = line.split()
+        cmd = parts[0]
+        if cmd == 'Host': hosts.append(Host(label=parts[1]))
+        # elif cmd == 'User': hosts[-1].user = parts[1]
+        # elif cmd == 'HostName': hosts[-1].ip = parts[1]
+        elif cmd == '#aws' and hosts and parts[-1].startswith('i-'): hosts[-1].instance_id = parts[-1]
+
+def is_ok(data):
+    if isinstance(data, list):
+        return all(is_ok(elem) for elem in data)
+    elif isinstance(data, dict):
+        if 'Status' in data:
+            if data['Status'] not in ['ok', 'passed']: return False
+        return all(is_ok(val) for key,val in data.items() if isinstance(val, (list,dict)))
+    raise Exception(f'Why did I call is_ok({repr(data)})')
+
+for host in hosts:
+    if host.instance_id:
+        cmd = f'aws --region us-east-1 ec2 describe-instance-status --include-all-instances --instance-ids {host.instance_id}'
+        raw_output = sub.check_output(cmd.split()).decode()
+        data = json.loads(raw_output)
+        try:
+            assert len(data['InstanceStatuses']) == 1
+            state = data['InstanceStatuses'][0]['InstanceState']['Name']
+            ok = state == 'running' and is_ok(data)
+        except Exception: raise Exception(data)
+        ok_str = '(ok)' if ok else f'[{state}]'
+        print(f'=> {host.label} {ok_str}')
+        print(f'  aws --region us-east-1 ec2 start-instances --instance-ids {host.instance_id}   # START' + (' (suggested)' if not ok and state == 'stopped' else ''))
+        print(f'  aws --region us-east-1 ec2 reboot-instances --instance-ids {host.instance_id}  # REBOOT' + (' (suggested)' if not ok and state == 'running' else ''))
+        print(f'  aws --region us-east-1 ec2 stop-instances --instance-ids {host.instance_id}    # STOP')
+        if VERBOSE or (not ok and state=='running'):
+            print(textwrap.indent(pprint.pformat(data, width=120), '  '))
+        elif not ok:
+            print('- Use `-v` to see raw json')
+        print()
