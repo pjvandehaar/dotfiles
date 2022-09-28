@@ -1,5 +1,5 @@
 set diff-highlight = diff-highlight
-set line-graphics = utf-8  # It's not ideal but hopefully it works everywhere without dropping to "ascii"
+#set line-graphics = utf-8  # It's not ideal but hopefully it works everywhere without dropping to "ascii"  ## utf8 shows like "~H~Y" on this machine.  I tried `sudo apt install libncursesw5-dev`.
 
 set main-view-id-display = true # width set by `~/.gitconfig::core.abbrev`
 color id red black

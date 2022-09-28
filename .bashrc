@@ -212,7 +212,17 @@ alias egrep='grep -E --color=auto'
 
 alias df="BLOCKSIZE=G df" # works on mac and linux
 
-z() { if [ -t 1 ]; then zless -S "$@"; else zcat "$@"; fi; }
+z() {
+    local p
+    if [[ $1 ]]; then p=$(readlink -m "$1"); fi
+    (if [[ $p = /mnt/s3/* ]]; then
+        p=$(echo "$p" | sed 's_/mnt/s3/_s3://_')
+        aws s3 cp "$p" -
+    else
+        zcat "$@"
+    fi) |
+        (if [ -t 1 ]; then less -S; else cat; fi)
+}
 
 man() {
     # from http://boredzo.org/blog/archives/2016-08-15/colorized-man-pages-understood-and-customized
