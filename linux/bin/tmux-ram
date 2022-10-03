@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+# This script prints out memory usage inside the tmux status bar.
+# Add this to `~/.tmux.conf`:
+#    set -g status-right ' #{?client_prefix,#[reverse]<Prefix>#[noreverse] ,} #(tmux-ram) #{=21:pane_title}'
+
+free_mem_line=$(free -m | grep Mem)
+mb_total=$(echo "$free_mem_line" | awk '{print $2}')
+mb_used=$(echo "$free_mem_line" | awk '{print $3}')
+
+if [[ $mb_total -gt 7000 ]]; then
+    usage="$((mb_used / 1000))/$((mb_total / 1000))gb"
+else
+    usage="$mb_used/${mb_total}mb"
+fi
+
+if [[ $((mb_used * 2)) -gt $mb_total ]]; then
+    echo "#[fg=white,bg=orange] ${usage} #[default]"
+else
+    echo "$usage"
+fi
