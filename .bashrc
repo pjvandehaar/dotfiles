@@ -217,7 +217,7 @@ z() {
     if [[ $1 ]]; then p=$(readlink -m "$1"); fi
     (if [[ $p = /mnt/s3/* ]]; then
         p=$(echo "$p" | sed 's_/mnt/s3/_s3://_')
-        aws s3 cp "$p" -
+        aws s3 cp "$p" - | zcat
     else
         zcat "$@"
     fi) |

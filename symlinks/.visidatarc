@@ -1,0 +1,1 @@
+options.default_width = 50  # This is a maxwidth.  Cols are never wider than contents.
