@@ -369,7 +369,7 @@ def _show_pathlist(pathlist:List[str], shared_prefix:str = ''):
     numless_suffixes = {re.subn(r'[0-9]+', '#', suf)[0]:suf for suf in suffixes}
     if 4 <= len(numless_suffixes) < 40 and len(numless_suffixes)/len(suffixes) < .5:
         for nsuf,suf in numless_suffixes.items():
-            if nsuf != suf:
+            if nsuf != suf and numless_suffix_counts[nsuf]>1:
                 m = re.search(r'[0-9].*[0-9]', suf)
                 if m:
                     example = m.group(0)
