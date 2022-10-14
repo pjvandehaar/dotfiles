@@ -2,6 +2,10 @@
 set -euo pipefail
 # This script auto-reconnects to a tmux session
 
+# TODO: Tunnel: autossh -M 0 -o "ServerAliveInterval 30" -L 5000:localhost:3306 pv2
+
+
+
 
 use_sudo=''
 if [[ ${1:-} = "sudo" ]]; then
@@ -22,7 +26,7 @@ if ! [[ ${1:-} ]]; then
 fi
 
 
-# Write terminal title.  May get overridden by remote tmux or bashrc
+# Set terminal title to remote's name.  May get overridden by remote tmux or bashrc
 echo -ne "\033]0;$1\007"
 
 
@@ -31,25 +35,25 @@ if ! [[ ${SSH_AUTH_SOCK:-} ]]; then
     eval `ssh-agent -s`
     ssh-add $HOME/.ssh/id_rsa
 fi
-AUTOSSH_POLL=20
-AUTOSSH_PORT=$(awk 'BEGIN { srand(); printf("%d\n", 20000+12000*rand()) }' < /dev/null)
-#AUTOSSH_GATETIME=30
-#AUTOSSH_LOGFILE=$HOST.log
-#AUTOSSH_DEBUG=yes
-#AUTOSSH_PATH=/usr/local/bin/ssh
-export AUTOSSH_POLL AUTOSSH_LOGFILE AUTOSSH_DEBUG AUTOSSH_PATH AUTOSSH_GATETIME AUTOSSH_PORT
+export AUTOSSH_POLL=30  # On repeated failures, slowly backoff to a maximum wait of 20 seconds.
+export AUTOSSH_PORT=0  # Tell autossh not to ping any ports to monitor the connection
+#export AUTOSSH_PORT=$(awk 'BEGIN { srand(); printf("%d\n", 20000+12000*rand()) }' < /dev/null)
+#export AUTOSSH_GATETIME=30  # ssh is considered successful if it stays connected for 30 seconds.
+export AUTOSSH_LOGFILE=/tmp/autossh.log
+#export AUTOSSH_DEBUG=yes  # Log a lot, and maybe to STDERR
+#export AUTOSSH_PATH=/usr/local/bin/ssh
 
 #autossh -t $@; exit  # Debugging
 
-# `ssh -t` starts a terminal, rather than just executing a command and exiting
+# `ssh -t` starts a terminal, rather than just executing a command and exiting.  I think.  TODO: Try w/o -t.
 if [[ ${use_sudo:-} ]]; then
-    autossh -t $@ "sudo tmux new -As0" || :
+    autossh -t -o "ServerAliveInterval 10" $@ "sudo tmux new -As0" || :
 else
-    autossh -t $@ "tmux new -As0" || :
+    autossh -t -o "ServerAliveInterval 10" $@ "tmux new -As0" || :
 fi
 
 
-# Re-write terminal title.
+# Restore local terminal title.
 if [[ ${MACHINE_LABEL:-} ]]; then
     echo -ne "\033]0;$MACHINE_LABEL\007"
 fi
