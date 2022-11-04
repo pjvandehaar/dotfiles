@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+from jinja2 import Template
+import sys
+
+html_template = Template('''\
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+</head>
+<body><div>
+{% for filename in filenames -%}
+<p><a href="{{filename}}">{{filename}}</a></p>
+{% endfor -%}
+</div></body></html>\n
+''')
+
+filenames = sorted(path.name for path in Path().iterdir() if path.name != 'index.html')
+html = html_template.render(filenames=filenames)
+
+if Path('index.html').exists() and '-f' not in sys.argv:
+    raise Exception("Use -f to overwrite index.html")
+
+Path('index.html').write_text(html)

@@ -58,9 +58,9 @@ def get_unit_name() -> str:
     """Guess the `<name>.service` to use. First look for `.ksys/<name>.service` and then check if we're in `/srv/<name>/` or `/etc/<name>/`."""
     if (dotksys_path := get_dotksys_path()):
         service_names = ['.'.join(path.name.split('%')[-1].split('.')[:-1]) for path in dotksys_path.glob('*.service')]
-        if len(service_names) == 0: raise Exception(f'The directory {str(dotksys_path)} exists but contains no *.service file')
-        if len(service_names) > 1: raise Exception(f'Use `-u` to choose one of: {" ".join(service_names)}')
-        return service_names[0]
+        if service_names:
+            if len(service_names) > 1: raise Exception(f'Use `-u` to choose one of: {" ".join(service_names)}')
+            return service_names[0]
     if (path := Path().absolute()).parts[:2] == ('/', 'srv') and len(path.parts) >= 3:
         return f"kpa-{path.parts[2]}"
     if (path := Path().absolute()).parts[:2] == ('/', 'etc') and len(path.parts) >= 3:
@@ -298,7 +298,9 @@ def skel_gitlab(args:argparse.Namespace) -> None:
 
 
 if __name__ == '__main__':
+    # TODO: Don't let this `usage` override the usage of the subcommands.
     usage = '''
+    -
     ksys stat          See status of your service
     ksys log           See logs
     ksys restart       Restart your service, and then show logs
@@ -309,7 +311,8 @@ if __name__ == '__main__':
     ksys conf-*        Create boilerplate config in .ksys/, and install it into /etc/
     '''
 
-    parser = argparse.ArgumentParser(usage=usage)
+    #parser = argparse.ArgumentParser(usage=usage)
+    parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest='command')
 
     log_parser = commands.add_parser('log', aliases=['l'], help='See logs')
