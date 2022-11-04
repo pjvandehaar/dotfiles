@@ -8,6 +8,8 @@ def h(path: Path) -> str:
     try: return f'~/{path.relative_to(Path.home())}'
     except Exception: return str(path)
 
+def readlink(path: Path) -> Path: return Path(os.readlink(path))
+
 # Gather symlinks and their targets
 os_name = 'linux' if sys.platform.startswith('linux') else 'mac'
 script_dir_path = Path(__file__).absolute().parent
@@ -34,11 +36,11 @@ errors = False
 for tgt, sym in zip(targets, symlinks):
     if not sym.exists():
         sym.symlink_to(tgt)
-        print(f'=> Created: {h(sym):20}  ->  {h(tgt)}')
-    elif sym.is_symlink() and sym.readlink() == tgt:
+        print(f'=> Made:   {h(sym):20}  ->  {h(tgt)}')
+    elif sym.is_symlink() and readlink(sym) == tgt:
         print(f'=> Good:   {h(sym):20}  ->  {h(tgt)}')
     elif sym.is_symlink():
-        print(f'=> Bad link: {h(sym):20}  ->  {h(sym.readlink())}')
+        print(f'=> Bad link: {h(sym):20}  ->  {h(readlink(sym))} instead of {h(tgt)}')
         errors = True
     else:
         print(f'=> Bad file: {h(sym)}')
@@ -46,4 +48,4 @@ for tgt, sym in zip(targets, symlinks):
 print()
 
 if errors:
-    print('Failed!'); sys.exit(1)
+    print('Failed!  Please remove the bad files/links.'); sys.exit(1)
