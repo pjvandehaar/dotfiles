@@ -13,7 +13,8 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages '(rust-mode expand-region))
- '(safe-local-variable-values '((comment-start . %))))
+ '(safe-local-variable-values '((comment-start . %)))
+ '(tab-width 4))
 
 ;; Put backups in ~/.emacs-saves/ instead of literring all over.
 (setq backup-directory-alist `(("." . "~/.emacs-saves")))
@@ -84,7 +85,7 @@
 ;; (global-set-key [mouse-4] (lambda () (interactive) (scroll-down-line) (set-window-point (selected-window) (window-start)))) ;; These move the screen & put the cursor at the beginning/end
 ;; (global-set-key [mouse-5] (lambda () (interactive) (scroll-up-line) (set-window-point (selected-window) (window-end))))
 
-;; go-to-char
+;; "C-t" = go-to-char
 (global-set-key (kbd "C-t") 'go-to-char)
 (global-set-key (kbd "M-t") 'go-back-to-char)
 (setq gtc--dir 1 gtc--char ?\ )

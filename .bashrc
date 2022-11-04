@@ -126,7 +126,7 @@ ds() {
 ptrsu() { sudo su --preserve-environment; }
 ptrwrite() { cp -p "$1" "$1.ptrwrite.tmp"; cat > "$1.ptrwrite.tmp"; mv "$1.ptrwrite.tmp" "$1"; }
 ptr_ipynb() { cat "$1" | jq -r '.cells | .[] | select(.cell_type=="code") | .source | join("")'; }
-alias ptrflake8='flake8 --show-source --ignore=E501,E302,E251,E701,E226,E305,E225,E261,E231,E301,E306,E402,E704,E265,E201,E202,E303,E124,E241,E127,E266,E221,E126,E129,F811,E222,E401,E702,E203,E116,E228,W504,B007,E271,F401,E128,W291,W293,E252'
+alias ptrflake8='flake8 --show-source --ignore=E501,E302,E251,E701,E226,E305,E225,E261,E231,E301,E306,E402,E704,E265,E201,E202,E303,E124,E241,E127,E266,E221,E126,E129,F811,E222,E401,E702,E203,E116,E228,W504,B007,E271,F401,E128,W291,W293,E252,E741'
 alias ptrmypy='mypy --pretty --ignore-missing-imports --cache-dir=/dev/null'
 wt() {
     if [[ $1 = /* ]]; then
@@ -213,15 +213,25 @@ alias egrep='grep -E --color=auto'
 alias df="BLOCKSIZE=G df" # works on mac and linux
 
 z() {
-    local p
-    if [[ $1 ]]; then p=$(readlink -m "$1"); fi
-    (if [[ $p = /mnt/s3/* ]]; then
-        p=$(echo "$p" | sed 's_/mnt/s3/_s3://_')
-        aws s3 cp "$p" - | zcat
+    if [ -t 1 ]; then
+        zcat_s3 "$@" | less -S
     else
-        zcat "$@"
-    fi) |
-        (if [ -t 1 ]; then less -S; else cat; fi)
+        zcat_s3 "$@"
+    fi
+}
+zcat_s3() {
+    local p
+    if [[ $1 = s3://* ]]; then
+        aws s3 cp "$1" - | zcat
+     else
+         if [[ $1 ]]; then p=$(readlink -m "$1"); fi
+         if [[ $p = /mnt/s3/* ]]; then
+             p=$(echo "$p" | sed 's_/mnt/s3/_s3://_')
+             aws s3 cp "$p" - | zcat
+         else
+             zcat "$@"
+         fi
+     fi
 }
 
 man() {
