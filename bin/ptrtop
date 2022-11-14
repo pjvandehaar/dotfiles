@@ -296,10 +296,11 @@ def repr_p(p:ProcDict, tree_prefix_first:str = '', tree_prefix_rest:str = '', p_
                      ' ' + tree_prefix_rest + '├──•')
 
     for i, bigfile in enumerate(p.get('bigfiles', [])):
-        if i==0 and len(lines[0]) + 1 + len(bigfile) < TERM_WIDTH:
+        if i==0 and len(lines[0]) + 1 + len(bigfile) < TERM_WIDTH:  # Print on one line: '{line} {bigfile}'
             lines[0] = lines[0] + bigfile.rjust(TERM_WIDTH - len(lines[0]))
-        else:
+        else:  # Print on separate lines
             prefix = ''.join('│' if char in '│├' else ' ' for char in lines[0]).rstrip()
+            bigfile = f'┌ {bigfile}'
             lines.insert(0, prefix + bigfile.rjust(TERM_WIDTH - len(prefix)))
 
     ret = '\n' + '\n'.join(line[:TERM_WIDTH] for line in lines)
