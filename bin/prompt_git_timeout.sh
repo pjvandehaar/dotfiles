@@ -3,7 +3,12 @@
 # It's called by prompt_prompt.sh
 # In theory, prompt_prompt should be able to run `timeout` itself, but in practice that didn't work for me.
 
-output=$(timeout 0.2 prompt_git.sh); rs=$?
+if type -t timeout &>/dev/null; then
+    output=$(timeout 0.2 prompt_git.sh); rs=$?
+else
+    output=$(prompt_git.sh); rs=0
+fi
+
 if [[ $rs = 124 ]]; then
     echo " git_timeout "
 else
