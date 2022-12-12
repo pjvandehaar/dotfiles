@@ -52,11 +52,11 @@ for host in hosts:
         except Exception: raise Exception(data)
         ok_str = '(ok)' if ok else f'[{state}]'
         print(f'=> {host.label} {ok_str}')
-        print(f'  aws --region us-east-1 ec2 start-instances --instance-ids {host.instance_id}   # START' + (' (suggested)' if not ok and state == 'stopped' else ''))
-        print(f'  aws --region us-east-1 ec2 reboot-instances --instance-ids {host.instance_id}  # REBOOT' + (' (suggested)' if not ok and state == 'running' else ''))
-        print(f'  aws --region us-east-1 ec2 stop-instances --instance-ids {host.instance_id}    # STOP')
+        print(f'     aws --region us-east-1 ec2 start-instances --instance-ids {host.instance_id}   # START' + (' (suggested)' if not ok and state == 'stopped' else ''))
+        print(f'     aws --region us-east-1 ec2 reboot-instances --instance-ids {host.instance_id}  # REBOOT' + (' (suggested)' if not ok and state == 'running' else ''))
+        print(f'     aws --region us-east-1 ec2 stop-instances --instance-ids {host.instance_id}    # STOP')
         if VERBOSE or (not ok and state=='running'):
-            print(textwrap.indent(pprint.pformat(data, width=120), '  '))
+            print(textwrap.indent(pprint.pformat(data, width=120), ' '*5))
         elif not ok:
             print('- Use `-v` to see raw json')
         print()
