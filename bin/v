@@ -4,29 +4,24 @@
 ##       That can be surprising, because this handles all s3 buckets you can access, including buckets that aren't mounted in /mnt/s3/.
 ##       But I prefer `/mnt/s3/` over `s3://`.
 
-## Note: On s3, with bkt='rgc-ag-data':
-##      get_s3().get_object(Bucket=bkt, Key='app_data/') exists, but
-##      get_s3().get_object(Bucket=bkt, Key='') doesn't exist.
+## Note: Empty keys don't exist.  eg: `get_s3().get_object(Bucket='rgc-ag-data', Key='')` fails.
 
-## Note: On s3, when I don't have permission to access a subfolder, s3.get_object() just says "NoSuchKey".  But it still shows up in list_objects_v2!
-
-# TODO: Replace `get_object` with `head_object`.
+## Note: On s3, when I don't have permission to access a subfolder, s3.get_object() throws "NoSuchKey".  But it still shows up in list_objects_v2!  What about head_object()?  Find an example.
 
 # TODO: Support `v /path/to/chr#range#-#.tsv`.  If multiple files match, list them.  If only one, show it.  #=[0-9]+  %=.*
+#       This way, the output of `v` can be fed back into it.
 
 # TODO: Add custom bash_completion using <https://github.com/kislyuk/argcomplete>
 
-# TODO: Add `--less` which does `less -S`
-
 # TODO: Support `v dx://file-G91fPzj09z5J8Jfj5pGk4jj5`
 
-# TODO: When writing to pipe, don't color text
 
 import sys, os, functools, json, datetime, itertools, re, shutil, io, argparse, textwrap, math
 from pprint import pprint
 from collections import Counter
 import signal; signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 from typing import List,Optional,Dict
+if False: import boto3, pandas as pd  # import for mypy, but not at runtime
 
 term_width = shutil.get_terminal_size().columns
 
@@ -34,8 +29,9 @@ OPEN_IN_IPYTHON = False  # This is easier than passing args down thru functions
 OPEN_IN_VISIDATA = False
 MAX_NUM_LINES = None
 CAT = False
+STDOUT_IS_TTY = sys.stdout.isatty()
 
-def run(argv: List[str] = None):
+def run(argv: Optional[List[str]] = None):
     if argv is None: argv = sys.argv
     args = parse_args(argv)
     global OPEN_IN_IPYTHON, OPEN_IN_VISIDATA, MAX_NUM_LINES, CAT
@@ -47,7 +43,7 @@ def run(argv: List[str] = None):
     if not args.path and not sys.stdin.isatty(): show_lines(read_stdin_lines_and_switch_to_tty())
     else: show_path(args.path or '.')
 
-def parse_args(argv: List[str] = None) -> argparse.Namespace:
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     if argv is None: argv = sys.argv
     parser = argparse.ArgumentParser(
         prog='v',
@@ -103,8 +99,7 @@ def parse_args(argv: List[str] = None) -> argparse.Namespace:
 
 def show_path(path:str):
     path = get_absolute_path(path); assert not path.endswith('/')
-    # TODO: support `v /mnt/s3/rgc-`
-    if path == '/mnt/s3': [print(f' - /mnt/s3/{bucket}/') for bucket in s3_list_all_buckets()]
+    if path == '/mnt/s3': [print(f' - {deemphasize("/mnt/s3/")}{bucket}/') for bucket in s3_list_all_buckets()]
     elif path.startswith('/mnt/s3/'): show_s3_path(path)
     elif os.path.isfile(path): show_file(path)
     elif os.path.isdir(path): show_dir(path)
@@ -119,22 +114,28 @@ def show_s3_path(path:str):
 
 def show_s3_file(bucket:str, key:str):
     print(f'=> File /mnt/s3/{bucket}/{key}')
-    mtime_str = s3_get_object(bucket, key)['LastModified'].strftime('%Y-%m-%d_%H:%M:%S')
-    length = int(s3_get_object(bucket, key)['ContentLength'])
+    mtime_str = s3_head_object(bucket, key)['LastModified'].strftime('%Y-%m-%d_%H:%M:%S')
+    length = int(s3_head_object(bucket, key)['ContentLength'])
     if length > 1e9: length_str = f'{int(length/1e9)} GB'
     elif length > 1e6: length_str = f'{int(length/1e6)} MB'
     elif length > 1e3: length_str = f'{int(length/1e3)} KB'
     else: length_str = f'{length} B'
     print(f'   {length_str}      {mtime_str}')
-    #pprint(s3_get_object(bucket, key))
+    #pprint(s3_head_object(bucket, key))
     if length:
         show_file(f'/mnt/s3/{bucket}/{key}')
 
 def show_s3_dir(bucket:str, key:str):
-    print(f'=> Dir /mnt/s3/{bucket}/{key}')
-    s3_obj = s3_get_object_if_exists(bucket, key)  # Some dirs don't exist as s3 keys!
-    ctime = s3_get_object(bucket, key).get('Metadata',{}).get('ctime','') if s3_obj else None
-    print(' => ctime =' + datetime.datetime.fromtimestamp(int(ctime)).strftime('%Y-%m-%d_%H:%M:%S') if ctime else ' => ctime unavailable')
+    if s3_head_object_if_exists(bucket, key):  # Some dirs don't exist as s3 keys!
+        ctimestamp_str: str = s3_head_object(bucket,key).get('Metadata',{}).get('ctime','')  # Should I use LastModified instead?
+        mtime = s3_head_object(bucket, key)['LastModified'].strftime('%Y-%m-%d_%H:%M:%S')
+        if ctimestamp_str:
+            ctime = datetime.datetime.fromtimestamp(int(ctimestamp_str)).strftime('%Y-%m-%d_%H:%M:%S')
+            print(f'=> Dir /mnt/s3/{bucket}/{key}  (ctime={ctime}) (mtime={mtime})')
+        else:
+            print(f'=> Dir /mnt/s3/{bucket}/{key}  (no_ctime!) (mtime={mtime})')
+    else:
+        print(f'=> Dir /mnt/s3/{bucket}/{key}  (fakedir)')
     show_pathlist(s3_list_dir(bucket, key, output_trailing_slash=True), shared_prefix=f'/mnt/s3/{bucket}/{key}')
 
 def show_s3_completions(bucket:str, key:str):
@@ -143,9 +144,11 @@ def show_s3_completions(bucket:str, key:str):
         show_pathlist(s3_list_dir(bucket, key, output_trailing_slash=True, partial_filename=True), shared_prefix=f'/mnt/s3/{bucket}/{key}')
     else:
         print(f'=> Completions of /mnt/s3/{bucket}')
-        try: show_pathlist(s3_list_dir(bucket, '', output_trailing_slash=True), shared_prefix=f'/mnt/s3/{bucket}/')
-        except:
-            show_pathlist([f'/mnt/s3/{bkt}' for bkt in s3_list_all_buckets() if bkt.startswith(bucket)], shared_prefix=f'/mnt/s3/{bucket}')
+        try: show_pathlist(s3_list_dir(bucket, '', output_trailing_slash=True), shared_prefix=f'/mnt/s3/{bucket}/')  # Hande /mnt/s3/rgc-ag-data/
+        except Exception as exc:
+            if 'NoSuchBucket' in str(exc) or 'NoSuchBucket' in str(exc.__cause__):
+                show_pathlist([f'/mnt/s3/{bkt}' for bkt in s3_list_all_buckets() if bkt.startswith(bucket)], shared_prefix=f'/mnt/s3/{bucket}')  # Handle /mnt/s3/rgc-
+            else: raise
 
 def show_file(path:str):
     if CAT:
@@ -242,7 +245,7 @@ def show_table(table:List[List[str]]):
         num_cols = len(colnames)
         p80_colname_len = sorted(len(colname) for colname in colnames)[int(num_cols*.8)]
         df = get_df(table)
-        info_for_colidx = {}
+        info_for_colidx: Dict[int,dict] = {}
         for colidx, colname in enumerate(table[0]):
             info = info_for_colidx.setdefault(colidx, {})
             info['colname'] = colname
@@ -358,7 +361,7 @@ def _show_pathlist(pathlist:List[str], shared_prefix:str = ''):
             for suf in suffixes: print(f' - {deemphasize(shared_prefix)}{suf}')
         else:
             for suf in suffixes[:MAX_NUM_LINES]: print(f' - {deemphasize(shared_prefix)}{suf}')
-            print(f' => {len(suffixes)} total')
+            print(f' => TRUNCATED!  Use `-a` to see all {len(suffixes)}.')
         return
     ## If <50 suffixes, just print them.
     if len(suffixes) < 50:
@@ -380,12 +383,12 @@ def _show_pathlist(pathlist:List[str], shared_prefix:str = ''):
         return
     # Just print the first 20:
     for suf in suffixes[:20]: print(f' - {deemphasize(shared_prefix)}{suf}')
-    print(f' => {len(suffixes)} total')
+    print(f' - TRUNCATED!  Use `-a` to see all {len(suffixes)}.')
 
 def emphasize(text:str) -> str:
-    return '\x1B[1;34m' + text + '\x1B[0m'
+    return ('\x1B[1;34m' + text + '\x1B[0m') if STDOUT_IS_TTY else text
 def deemphasize(text:str) -> str:
-    return '\x1B[1;32m' + text + '\x1B[0m'
+    return ('\x1B[1;32m' + text + '\x1B[0m') if STDOUT_IS_TTY else text
 
 def get_absolute_path(path:str):
     '''Like os.path.abspath(), but handles `s3://`'''
@@ -397,10 +400,9 @@ def get_absolute_path(path:str):
 
 def s3_exists(bucket:str, key:str) -> bool:
     # Note: s3.get_object() returns the exact same "NoSuchKey" whether a file doesn't exist or I don't have permission.
-    import boto3, botocore
+    import botocore
     if not key: return False
-    try: s3_get_object(bucket, key); return True
-    except botocore.exceptions.ClientError: pass
+    if s3_head_object_if_exists(bucket, key): return True
     if key.endswith('/'):
         # Handle directories that don't exist on s3 as a key, but still have contents
         # Eg: s3://rgc-ag-data/app_data/pheweb/UKB/UKB_Freeze_450/ALL/generated-by-pheweb/
@@ -447,13 +449,13 @@ def s3_get_head_bytes(bucket:str, key:str, bytes:int = 500) -> bytes:
     except botocore.exceptions.ClientError as exc:
         raise Exception(f"Failed to get s3://{bucket}/{key}") from exc
 
-def s3_get_object_if_exists(bucket:str, key:str) -> Optional[dict]:
+def s3_head_object_if_exists(bucket:str, key:str) -> Optional[dict]:
     import botocore
-    try: return s3_get_object(bucket, key)
+    try: return s3_head_object(bucket, key)
     except botocore.exceptions.ClientError: return None
 @functools.lru_cache(None)
-def s3_get_object(bucket:str, key:str) -> dict:
-    return get_s3().get_object(Bucket=bucket, Key=key)
+def s3_head_object(bucket:str, key:str) -> dict:
+    return get_s3().head_object(Bucket=bucket, Key=key)
 
 @functools.lru_cache(None)
 def get_s3() -> "boto3.client":
