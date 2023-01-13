@@ -5,7 +5,8 @@ f() {
 if [[ ${1:-} != 1 ]]; then
     echo repeating:
     while bb 1; do
-        echo "- sleep..."
+        # echo "- repeat... $(date)"
+        echo "- sleep... $(date)"
         sleep 3;
     done
 else
