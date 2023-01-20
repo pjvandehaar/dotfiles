@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+import psutil
+
+mem = psutil.virtual_memory()
+print(f'=> RAM usage: {int(mem.used/1e6):,}MB / {int(mem.total/1e6):,}MB = {int(mem.percent)}%')
+
+buf = ' '*int(mem.total * .22)
+
+mem = psutil.virtual_memory()
+print(f'=> RAM usage: {int(mem.used/1e6):,}MB / {int(mem.total/1e6):,}MB = {int(mem.percent)}%')
+
+try: input()
+except: pass
