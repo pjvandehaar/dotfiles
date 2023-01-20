@@ -235,6 +235,8 @@ def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = Fa
     if drop_boring:
         p_for_pid[0]['children'] = [child for child in p_for_pid[0]['children'] if child['family']['cpu']>0.01 or child['family']['mem_rss']>30e6]
         p_for_pid[1]['children'] = [child for child in p_for_pid[1]['children'] if child['family']['cpu']>0.01 or child['family']['mem_rss']>30e6]
+        if p_for_pid.get(2,{}).get('name')=='kthreadd':
+            p_for_pid[2]['children'] = [child for child in p_for_pid[2]['children'] if child['family']['cpu']>0.01 or child['family']['mem_rss']>30e6]
 
     for p in p_for_pid.values(): p.pop('proc', None) # if a process has died, `repr(proc)` raises an Exception? or, ipdb introspection does?
     return p_for_pid[0]
