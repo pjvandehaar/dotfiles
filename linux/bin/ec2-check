@@ -81,12 +81,12 @@ if __name__ == '__main__':
         print_and_run(f'aws --region us-east-1 ec2 start-instances --instance-ids {instance_id}'); print('=> Wait a minute and then try to ssh in.')
 
     elif sys.argv[1:2] == ['start']:
-        instance_id = get_instance_id(sys.argv[2])
-        print_and_run(f'aws --region us-east-1 ec2 start-instances --instance-ids {instance_id}')
+        for arg in sys.argv[2:]:
+            print_and_run(f'aws --region us-east-1 ec2 start-instances --instance-ids {get_instance_id(arg)}')
 
     elif sys.argv[1:2] == ['stop']:
-        instance_id = get_instance_id(sys.argv[2])
-        print_and_run(f'aws --region us-east-1 ec2 stop-instances --instance-ids {instance_id}')
+        for arg in sys.argv[2:]:
+            print_and_run(f'aws --region us-east-1 ec2 stop-instances --instance-ids {get_instance_id(arg)}')
 
     else:  # Fetch all states and print:
         cmd = 'aws --region us-east-1 ec2 describe-instance-status --include-all-instances --instance-ids'.split() + list({host.instance_id for host in hosts})
