@@ -73,9 +73,9 @@ if not hosts: raise Exception("You don't have any lines like \"#aws i-01e8f0\" l
 
 if __name__ == '__main__':
     if sys.argv[1:2] == ['patch']:
-        instance_id = sub.check_output(['ec2metadata', '--instance-id']).decode()
+        instance_id = sub.check_output(['ec2metadata', '--instance-id']).decode().strip()
         assert re.fullmatch(r'i-[0-9a-f]{10,20}', instance_id), instance_id
-        sub.run('''sudo aws ssm start-automation-execution --document-name "arn:aws:ssm:us-east-1:265776368239:document/regn-ec2-patching-automation" --parameters '{"AutomationAssumeRole":["arn:aws:iam::{{global:ACCOUNT_ID}}:role/regn-ssm-patching-automation-role"],"InstanceId":["IID"],"Backup":["false"],"Reboot":["RebootIfNeeded"]}' --region us-east-1'''.replace('IID',instance_id).split())
+        print_and_run('''sudo aws ssm start-automation-execution --document-name arn:aws:ssm:us-east-1:265776368239:document/regn-ec2-patching-automation --parameters {"AutomationAssumeRole":["arn:aws:iam::{{global:ACCOUNT_ID}}:role/regn-ssm-patching-automation-role"],"InstanceId":["IID"],"Backup":["false"],"Reboot":["RebootIfNeeded"]} --region us-east-1'''.replace('IID',instance_id))
 
     elif sys.argv[1:2] == ['restart']:  # `aws ec2 reboot-instances` ignores running-but-unreachable instances, so use this instead.
         instance_id = get_instance_id(sys.argv[2])
