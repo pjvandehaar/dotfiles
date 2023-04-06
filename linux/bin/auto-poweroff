@@ -37,6 +37,12 @@ def get_procs() -> List[dict]:
     return [d for d in procs.values() if 'cpu' in d]
 
 def computer_is_occupied() -> bool:
+    # TODO:
+    #  procs = [Process(pid) for pid in psutil.pids()]
+    #  pw_procs = [p for p in procs if any(part.endswith('pheweb') for part in p.cmdline())]
+    #  for p in pw_procs: p.cpu_percent()  # Save a starting point
+    #  total_cpu_fraction = psutil.cpu_percent(interval=1)
+    #  pheweb_cores = sum(p.cpu_percent() for p in pw_procs)
     procs = get_procs()
     total_cpu_fraction = sum(p['cpu'] for p in procs) / num_cores
     pheweb_cores = sum(p['cpu'] for p in procs if any(part.endswith('pheweb') for part in p['cmdline']))
