@@ -2,16 +2,10 @@
 set -euo pipefail
 # This script auto-reconnects to a tmux session
 
-# TODO: Tunnel: autossh -M 0 -o "ServerAliveInterval 30" -L 5000:localhost:3306 pv2
+# TODO: Tunnel: autossh -M 0 -o "ServerAliveInterval 10" -o "ServerAliveCountMax 2" -L 5000:localhost:3306 pv2
 
 
 
-
-use_sudo=''
-if [[ ${1:-} = "sudo" ]]; then
-    use_sudo=yes
-    shift
-fi
 
 # If host isn't specified, use the first host in ~/.ssh/config
 if ! [[ ${1:-} ]] && [[ -e ~/.ssh/config ]]; then
@@ -30,27 +24,27 @@ fi
 echo -ne "\033]0;$1\007"
 
 
-# Set up ssh/autossh config
-if ! [[ ${SSH_AUTH_SOCK:-} ]]; then
-    eval `ssh-agent -s`
-    ssh-add $HOME/.ssh/id_rsa
-fi
-export AUTOSSH_POLL=30  # On repeated failures, slowly backoff to a maximum wait of 20 seconds.
-export AUTOSSH_PORT=0  # Tell autossh not to ping any ports to monitor the connection
-#export AUTOSSH_PORT=$(awk 'BEGIN { srand(); printf("%d\n", 20000+12000*rand()) }' < /dev/null)
-#export AUTOSSH_GATETIME=30  # ssh is considered successful if it stays connected for 30 seconds.
-export AUTOSSH_LOGFILE=/tmp/autossh.log
-#export AUTOSSH_DEBUG=yes  # Log a lot, and maybe to STDERR
-#export AUTOSSH_PATH=/usr/local/bin/ssh
-
-#autossh -t $@; exit  # Debugging
-
-# `ssh -t` starts a terminal, rather than just executing a command and exiting.  I think.  TODO: Try w/o -t.
-if [[ ${use_sudo:-} ]]; then
-    autossh -t -o "ServerAliveInterval 10" $@ "sudo tmux new -As0" || :
+# Choose start dir
+if [[ $1 = *.* ]]; then  # IP address or .com
+    start_dir=.
+elif [[ $1 = *yoga* ]]; then
+    start_dir=/opt/app/rgc_yoga
+elif [[ $1 = pw ]]; then
+    start_dir=/opt/app
 else
-    autossh -t -o "ServerAliveInterval 10" $@ "tmux new -As0" || :
+    start_dir=/mnt/efs_v2/agds_cgad/users/peter.vandehaar
 fi
+
+
+# Configure autossh
+export AUTOSSH_LOGFILE=/tmp/autossh.log
+#export AUTOSSH_LOGLEVEL=7  # chattiest!
+
+# `autossh -M0` tells autossh not to monitor the connection via a port.
+# `ssh -t` creates a PTY (psuedo-terminal), even if a command is specified (because `tmux` needs a PTY).
+# `-o ServerAliveInterval 10` means that a packet is sent every 10 seconds to remind firewalls that there's a connection.
+# `-o ServerAliveCountMax 2` means that ssh dies if 2 consecutive ServerAlive packets don't get responses.
+autossh -M0 -t -o "ServerAliveInterval 10" -o "ServerAliveCountMax 2" $@ "cd $start_dir; tmux new -As0" || :
 
 
 # Restore local terminal title.
