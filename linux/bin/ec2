@@ -51,7 +51,7 @@ def parse_state(data:dict) -> Tuple[str,bool,bool,dict]:
 
 def prettyprint(d, indent:int = 0) -> None: print(textwrap.indent(pprint.pformat(d, width=120), ' '*indent))
 
-def print_and_run(cmd:str) -> None: print(f'$ {cmd}'); sub.run(cmd.split(), check=True)
+def print_and_run(cmd:str) -> None: print(f'$ {cmd}'); sub.run(cmd.split(), check=True, env=dict(os.environ.copy(), PAGER='', AWS_PAGER=''))
 
 
 ## Parse hosts from `~/.ssh/config`:
@@ -102,7 +102,6 @@ if __name__ == '__main__':
             state, ok, is_zombie, data = parse_state(data_by_iid[host.instance_id])
             status = data['InstanceStatus']['Status']
             print(f'=> {host.label} ' + ('(ok)' if ok else (f'[{state}:{status}]' if is_zombie else f'[{state}]')))
-            cmd1 = 'start' if state=='stopped' else ('restart' if is_zombie else 'stop')
-            print(' '*15+f'ec2 {cmd1} {host.instance_id}')
-            if '-v' in sys.argv or is_zombie: prettyprint(data, indent=5)
-            print()
+            # cmd1 = 'start' if state=='stopped' else ('restart' if is_zombie else 'stop')
+            # print(' '*15+f'ec2 {cmd1} {host.instance_id}')
+            if '-v' in sys.argv or is_zombie: prettyprint(data, indent=5); print()

@@ -16,10 +16,21 @@ def run(args):
 
 
 if __name__ == '__main__':
-    cmd = sys.argv[1:]
-    if os.path.exists(cmd[0]) and not cmd[0].startswith(('/', '.')):
-        cmd[0] = f'./{cmd[0]}'
-    print(f'Watching: {cmd[0]}')
+    if not sys.argv[1:]:
+        print('Usage:')
+        print('  ptrwatch2 ./serve.py --port=8000   # Re-runs when serve.py changes')
+        print('  ptrwatch2 utils.py -- ./lint.sh  # Re-runs when utils.py changes')
+        sys.exit(1)
+    elif '--' in sys.argv and sys.argv[2]=='--':
+        filepath = sys.argv[1]
+        cmd = sys.argv[3:]
+    else:
+        filepath = sys.argv[1]
+        cmd = sys.argv[1:]
+        if os.path.exists(filepath) and not filepath.startswith(('/','./')):
+            cmd[0] = f'./{cmd[0]}'
+
+    print(f'Watching {repr(filepath)} and running {cmd}')
     run(cmd)
-    for changeset in watch(cmd[0]):
+    for changeset in watch(filepath):
         run(cmd)

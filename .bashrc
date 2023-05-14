@@ -68,6 +68,7 @@ se() {
 alias ta="tig --all"
 alias gs='git status'
 alias gg='git grep'
+alias tg='tig grep'
 alias gd='git diff'
 alias gds='git diff --staged'
 alias gl='git lol'
@@ -233,6 +234,7 @@ zcat_s3() {
          fi
      fi
 }
+zt() { z "$@" | less -S +G; }
 
 man() {
     # from http://boredzo.org/blog/archives/2016-08-15/colorized-man-pages-understood-and-customized
