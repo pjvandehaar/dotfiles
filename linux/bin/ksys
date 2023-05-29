@@ -243,7 +243,8 @@ def conf_install(args:argparse.Namespace) -> None:
         dest_path = Path(path.name.replace('%', '/'))
         print_and_run(['sudo', 'cp', '-f', str(path), str(dest_path)])
         if path.name.startswith('%etc%systemd') and path.suffix == '.timer':
-            print_and_run(['sudo', 'systemctl', 'enable', dest_path.name])
+            print_and_run(['sudo', 'systemctl', 'enable', dest_path.name])  # Makes it auto-start on boot
+            print_and_run(['sudo', 'systemctl', 'start', dest_path.name])  # Starts it right now
         elif path.name.startswith('%etc%systemd') and path.suffix == '.service':
             if 'WantedBy' in path.read_text():
                 print_and_run(['sudo', 'systemctl', 'enable', dest_path.name])
