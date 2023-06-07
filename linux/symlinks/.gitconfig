@@ -28,7 +28,7 @@
 [color]
 	ui = true
 [pager]
-	status = true
+	status = false
 	# the interaction of less and diff-highlight causes problems with line-wrapping.
 	# if you want wrapped lines, just pipe into `less`.
 	diff = ~/dotfiles/bin/diff-highlight | less -SR

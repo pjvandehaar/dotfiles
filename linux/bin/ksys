@@ -31,7 +31,7 @@ from pathlib import Path
 
 os.environ['TZ'] = '/usr/share/zoneinfo/America/Detroit'  # Tells `journalctl` to print dates in this timezone.  Maybe move to `.bashrc`?
 
-def print_and_run(argv:List[str], timeout:int = None) -> None:
+def print_and_run(argv:List[str], timeout:Optional[int] = None) -> None:
     print(argv, flush=True)
     if timeout:
         # Normally you can do subprocess.call(argv, timeout=5), but `sudo` ruins that.
@@ -138,8 +138,8 @@ def venv(args:argparse.Namespace) -> None:
         if args.force: shutil.rmtree('venv'); print('rm -rf venv')
         else: raise Exception('`./venv/` already exists.  Use -f to overwrite.')
     print_and_run([args.python, '-m', 'venv', 'venv'])
-    print_and_run(['./venv/bin/pip3', 'install', 'wheel'])
-    print_and_run(['./venv/bin/pip3', 'install', 'pip', 'setuptools'])
+    print_and_run(['./venv/bin/pip3', 'install', '-U', 'wheel'])
+    print_and_run(['./venv/bin/pip3', 'install', '-U', 'pip', 'setuptools'])
 
     req_paths = [Path(p) for p in args.requirement]
     if Path('requirements.txt').exists(): req_paths.append(Path('requirements.txt'))
