@@ -92,7 +92,13 @@ glq() {
     perl -e 'print reverse <>' | # can also use `tac` on GNU or `tail -r` on BSD
     tail -n $((LINES-2)) # fork/merge wastes lines, so we need tail
 }
-gcp() { git commit "$@" && git push; }
+gcp() {
+    if [[ $# == 0 ]]; then
+        git commit -m . && git push
+    else
+        git commit "$@" && git push
+    fi
+}
 if exists __git_complete; then
     __git_complete gs  _git_status
     __git_complete gg  _git_grep
@@ -102,6 +108,7 @@ if exists __git_complete; then
     __git_complete gla _git_log
     __git_complete glb _git_log
     __git_complete glq _git_log
+    __git_complete gcp _git_commit
 fi
 ptrgh() {
     for remote in $(git remote); do

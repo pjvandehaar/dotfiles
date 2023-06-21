@@ -35,6 +35,8 @@
 #        `df`, disk reads/second, disk read latency,
 #        kbps_in, kbps_out, %tcp_retransmission
 
+# TODO: In `ptrtop 349`, show tree of children.
+
 if __name__ == '__main__':
     try: import kpa.dev_utils
     except ImportError: pass
