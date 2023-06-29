@@ -29,6 +29,8 @@ if [[ $1 = *.* ]]; then  # IP address or .com
     start_dir=.
 elif [[ $1 = *yoga* ]]; then
     start_dir=/opt/app/rgc_yoga
+elif [[ $1 = pwpv* ]]; then
+    start_dir=/mnt/efs_v2/agds_cgad/users/peter.vandehaar/pw
 elif [[ $1 = pw ]]; then
     start_dir=/opt/app
 else
