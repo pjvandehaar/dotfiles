@@ -231,14 +231,14 @@ z() {
 zcat_s3() {
     local p
     if [[ $1 = s3://* ]]; then
-        aws s3 cp "$1" - | zcat
+        aws s3 cp "$1" - | gzip -cdfq
      else
          if [[ $1 ]]; then p=$(readlink -m "$1"); fi
          if [[ $p = /mnt/s3/* ]]; then
              p=$(echo "$p" | sed 's_/mnt/s3/_s3://_')
-             aws s3 cp "$p" - | zcat
+             aws s3 cp "$p" - | gzip -cdfq
          else
-             zcat "$@"
+             gzip -cdfq "$@"
          fi
      fi
 }
