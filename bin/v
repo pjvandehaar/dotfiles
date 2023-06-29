@@ -369,15 +369,15 @@ def _show_pathlist(pathlist:List[str], shared_prefix:str = ''):
         return
     ## Try replacing numbers with #:
     numless_suffix_counts = Counter(re.subn(r'[0-9]+', '#', suf)[0] for suf in suffixes)
-    numless_suffixes = {re.subn(r'[0-9]+', '#', suf)[0]:suf for suf in suffixes}
-    if 4 <= len(numless_suffixes) < 40 and len(numless_suffixes)/len(suffixes) < .5:
-        for nsuf,suf in numless_suffixes.items():
+    numless_suffix_examples = {re.subn(r'[0-9]+', '#', suf)[0]:suf for suf in suffixes}
+    if 4 <= len(numless_suffix_examples) < 40 and len(numless_suffix_examples)/len(suffixes) < .5:
+        for nsuf,suf in numless_suffix_examples.items():
             if nsuf != suf and numless_suffix_counts[nsuf]>1:
-                m = re.search(r'[0-9].*[0-9]', suf)
+                m = re.search(r'[0-9](.*[0-9])?', suf)
                 if m:
-                    example = m.group(0)
+                    example_nums = m.group(0)
                     spaces = ' '*(8 - (len(nsuf) % 4))  # Align to a grid, to hopefully align some lines
-                    print(f' - {deemphasize(shared_prefix)}{nsuf}{spaces}({numless_suffix_counts[nsuf]}, eg: {example})')
+                    print(f' - {deemphasize(shared_prefix)}{nsuf}{spaces}({numless_suffix_counts[nsuf]}, eg: {example_nums})')
                     continue
             print(f' - {deemphasize(shared_prefix)}{suf}')
         return
