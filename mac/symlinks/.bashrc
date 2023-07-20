@@ -20,9 +20,7 @@ PATH="$HOME/.cargo/bin:$PATH"
 PATH="$PATH:$HOME/perl5/bin"
 PATH="$(perl -e'@p=split(":",$ENV{"PATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
 
-export MANPATH
-MANPATH="$MANPATH:$(env -u MANPATH man -w)" # gets defaults from /etc/manpath.config (see `man -dw`).  This seems gross, but `man man` breaks without this.
-MANPATH="$(perl -e'@p=split(":",$ENV{"MANPATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')" #dedup
+## `man` does better without MANPATH, by scanning $PATH and /etc/man.conf.  See `man -d $whatever`.
 
 export PERL_MB_OPT="--install_base \"$HOME/perl5\""
 export PERL_MM_OPT="INSTALL_BASE=$HOME/perl5"
@@ -67,26 +65,6 @@ plist_cat() { cp "$1" /tmp/new.plist; plutil -convert xml1 /tmp/new.plist; cat /
 alias macdown='open -a macdown'
 clip() { if [ -t 0 ]; then pbpaste; else pbcopy; fi; }
 notify() { /usr/bin/osascript -e "display notification \"$*\" with title \"FINISHED\""; }
-snowwhite() {
-    mount | grep -q ~/mount/SW && echo unmounting... && umount ~/mount/SW
-    mkdir -p ~/mount/SW
-    sshfs pjvh@snowwhite.sph.umich.edu:/home/pjvh ~/mount/SW/ && cd ~/mount/SW/
-}
-mini() {
-    mount | grep -q ~/mount/mini && echo unmounting... && umount ~/mount/mini
-    mkdir -p ~/mount/mini
-    sshfs cephas@192.168.56.20:/ ~/mount/mini/ && cd ~/mount/mini/
-}
-csgsites() {
-    mount | grep -q ~/mount/CS && echo unmounting... && umount ~/mount/CS
-    mkdir -p ~/mount/CS
-    sshfs pjvh@snowwhite.sph.umich.edu:/net/csgsites/csg/pjvh ~/mount/CS/ && cd ~/mount/CS/
-}
-petervh() {
-    mount | grep -q ~/mount/petervh && echo unmounting... && umount ~/mount/petervh
-    mkdir -p ~/mount/petervh
-    sshfs kpa@petervh.com:/home/kpa ~/mount/petervh && cd ~/mount/petervh
-}
 
 
 
