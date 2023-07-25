@@ -33,8 +33,8 @@
 (column-number-mode) ;; show column in mode-line
 (show-paren-mode) ;; highlights matching paren
 
-(if (require 'whitespace)  ;; see `C-h v whitespace-style`
-  (setq-default whitespace-style '(face trailing indentation::space space-before-tab space-after-tab))
+(when (require 'whitespace)  ;; see `C-h v whitespace-style`
+  (setq-default whitespace-style '(face tabs trailing indentation::space space-before-tab space-after-tab))
   (global-whitespace-mode))
 
 
