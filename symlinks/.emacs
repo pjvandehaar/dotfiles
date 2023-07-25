@@ -56,9 +56,15 @@
 ;;   (global-set-key (kbd "C-]") 'er/expand-region)
 ;;   (message "failed to load expand-region"))
 
-(setq-default indent-tabs-mode nil) ;; <tab> inserts spaces, not \t
 (setq-default tab-width 4) ;; <tab> inserts four spaces, and tabs are displayed four-columns-wide
 (setq-default mode-require-final-newline nil) ;; don't auto-add \n at EOF, b/c it gets annoying.
+(setq-default indent-tabs-mode nil) ;; <tab> inserts spaces, not \t
+(defun infer-indentation-style ()
+  (let ((space-count (how-many "^  " (point-min) (point-max)))
+        (tab-count (how-many "^\t" (point-min) (point-max))))
+    (if (> space-count tab-count) (setq indent-tabs-mode nil))
+    (if (> tab-count space-count) (setq indent-tabs-mode t))))
+(add-hook 'python-mode-hook 'infer-indentation-style)
 
 (setq-default scroll-margin 4)  ;; Move screen when cursor is within 4 lines of top/bottom.  I wish I could set top=1 bottom=6.
 (setq-default scroll-step 2)  ;; When scroll is triggered, move two lines.  If cursor is still out-of-bounds, center cursor.  "1" centers when scrolling fast.
