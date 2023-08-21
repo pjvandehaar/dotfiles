@@ -77,7 +77,7 @@ if __name__ == '__main__':
         assert re.fullmatch(r'i-[0-9a-f]{10,20}', instance_id), instance_id
         print_and_run('''sudo aws ssm start-automation-execution --document-name arn:aws:ssm:us-east-1:265776368239:document/regn-ec2-patching-automation --parameters {"AutomationAssumeRole":["arn:aws:iam::{{global:ACCOUNT_ID}}:role/regn-ssm-patching-automation-role"],"InstanceId":["IID"],"Backup":["false"],"Reboot":["RebootIfNeeded"]} --region us-east-1'''.replace('IID',instance_id))
 
-    elif sys.argv[1:2] == ['restart']:  # `aws ec2 reboot-instances` ignores running-but-unreachable instances, so use this instead.
+    elif sys.argv[1:2]==['restart'] or sys.argv[1:2]==['reboot']:  # `aws ec2 reboot-instances` ignores running-but-unreachable instances, so use this instead.
         instance_id = get_instance_id(sys.argv[2])
         print('=> Stopping...')
         print_and_run(f'aws --region us-east-1 ec2 stop-instances --instance-ids {instance_id}'); print('=> Waiting until it\'s stopped...')
@@ -93,7 +93,7 @@ if __name__ == '__main__':
         for arg in sys.argv[2:]:
             print_and_run(f'aws --region us-east-1 ec2 stop-instances --instance-ids {get_instance_id(arg)}')
 
-    else:  # Fetch all states and print:
+    elif sys.argv[1:] == []:  # Fetch all states and print:
         cmd = 'aws --region us-east-1 ec2 describe-instance-status --include-all-instances --instance-ids'.split() + list({host.instance_id for host in hosts})
         all_data = json.loads(sub.check_output(cmd).decode())
         assert isinstance(all_data, dict) and isinstance(all_data.get('InstanceStatuses'), list), all_data
@@ -105,3 +105,6 @@ if __name__ == '__main__':
             # cmd1 = 'start' if state=='stopped' else ('restart' if is_zombie else 'stop')
             # print(' '*15+f'ec2 {cmd1} {host.instance_id}')
             if '-v' in sys.argv or is_zombie: prettyprint(data, indent=5); print()
+
+    else:
+        print(f"Unknown arg: {sys.argv[1]}")
