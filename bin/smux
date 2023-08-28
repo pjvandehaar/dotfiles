@@ -25,15 +25,12 @@ echo -ne "\033]0;$1\007"
 
 
 # Choose start dir
-if [[ $1 = *.* ]]; then  # IP address or .com
-    start_dir=.
-elif [[ $1 = *yoga* ]]; then
-    start_dir=/opt/app/rgc_yoga
+start_dir=.
+if [[ $1 = yoga* ]] || [[ $1 = fuma* ]] || [[ $1 = pw ]]; then
+    start_dir=/opt/app/
 elif [[ $1 = pwpv* ]]; then
     start_dir=/mnt/efs_v2/agds_cgad/users/peter.vandehaar/pw
-elif [[ $1 = pw ]]; then
-    start_dir=/opt/app
-else
+elif [[ $1 = pv* ]]; then
     start_dir=/mnt/efs_v2/agds_cgad/users/peter.vandehaar
 fi
 
