@@ -22,7 +22,7 @@ filenames = sorted(path.name for path in Path().iterdir() if path.name != 'index
 html = html_template.render(filenames=filenames)
 
 if '--photos' in sys.argv:
-    html = html.replace('<p><a href=', '<img style="max-width:99vw;max-height:90vh;margin-right:1vw;margin-bottom:1vw" src=')
+    html = html.replace('<p><a href=', '<img style="max-width:98vw;max-height:90vh;margin-right:1vw;margin-bottom:1vw" src=')
     html = re.sub(r'>[^<]+</a></p>', '> ', html)
     html = html.replace('<body>', '<body style="margin:0; margin-top:1vw; margin-left:1vw">')
 

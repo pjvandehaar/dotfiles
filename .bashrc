@@ -93,6 +93,10 @@ glq() {
     tail -n $((LINES-2)) # fork/merge wastes lines, so we need tail
 }
 gcp() {
+    if command git diff-index --quiet --cached HEAD; then
+        echo "=> auto-staging!"
+        git stage -u;
+    fi
     if [[ $# == 0 ]]; then
         git commit -m . && git push
     else
