@@ -78,6 +78,7 @@ if __name__ == '__main__':
         print_and_run('''sudo aws ssm start-automation-execution --document-name arn:aws:ssm:us-east-1:265776368239:document/regn-ec2-patching-automation --parameters {"AutomationAssumeRole":["arn:aws:iam::{{global:ACCOUNT_ID}}:role/regn-ssm-patching-automation-role"],"InstanceId":["IID"],"Backup":["false"],"Reboot":["RebootIfNeeded"]} --region us-east-1'''.replace('IID',instance_id))
 
     elif sys.argv[1:2]==['restart'] or sys.argv[1:2]==['reboot']:  # `aws ec2 reboot-instances` ignores running-but-unreachable instances, so use this instead.
+        assert not sys.argv[3:]
         instance_id = get_instance_id(sys.argv[2])
         print('=> Stopping...')
         print_and_run(f'aws --region us-east-1 ec2 stop-instances --instance-ids {instance_id}'); print('=> Waiting until it\'s stopped...')
@@ -86,12 +87,12 @@ if __name__ == '__main__':
         print_and_run(f'aws --region us-east-1 ec2 start-instances --instance-ids {instance_id}'); print('=> Wait a minute and then try to ssh in.')
 
     elif sys.argv[1:2] == ['start']:
-        for arg in sys.argv[2:]:
-            print_and_run(f'aws --region us-east-1 ec2 start-instances --instance-ids {get_instance_id(arg)}')
+        instance_ids = [get_instance_id(arg) for arg in sys.argv[2:]]
+        print_and_run(f'aws --region us-east-1 ec2 start-instances --instance-ids {" ".join(instance_ids)}')
 
     elif sys.argv[1:2] == ['stop']:
-        for arg in sys.argv[2:]:
-            print_and_run(f'aws --region us-east-1 ec2 stop-instances --instance-ids {get_instance_id(arg)}')
+        instance_ids = [get_instance_id(arg) for arg in sys.argv[2:]]
+        print_and_run(f'aws --region us-east-1 ec2 stop-instances --instance-ids {" ".join(instance_ids)}')
 
     elif sys.argv[1:] == []:  # Fetch all states and print:
         cmd = 'aws --region us-east-1 ec2 describe-instance-status --include-all-instances --instance-ids'.split() + list({host.instance_id for host in hosts})
