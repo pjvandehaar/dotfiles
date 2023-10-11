@@ -152,7 +152,20 @@ wt() {
         echo "Cannot find command: $1"
     fi
 }
-ptrwatchmem() { while free -m|grep Mem|awk '{print $3}'; do sleep 4; done; }
+ptr-watch-ram() {
+    while :; do
+        free_mem_line=$(free -m | grep Mem)
+        mb_total=$(echo "$free_mem_line" | awk '{print $2}')
+        mb_used=$(echo "$free_mem_line" | awk '{print $3}')
+        if [[ $mb_total -gt 7000 ]]; then
+            usage="$((mb_used / 1000))/$((mb_total / 1000))gb"
+        else
+            usage="$mb_used/${mb_total}mb"
+        fi
+        echo "$(date)       $usage"
+        sleep "${1:-10}"
+    done
+}
 ptrwaitpid() { python3 -c "import psutil; psutil.Process($1).wait()"; }
 
 ptrjup() {
