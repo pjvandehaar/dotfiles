@@ -3,7 +3,7 @@
 ## Note: An EC2 is either: stopped, zombie (running+unreachable), ok (running+reachable), changing (pending/rebooting/stopping)
 
 
-if __name__ == '__main__': import kpa.dev_utils; kpa.dev_utils.run(__file__, run_rarely=True)
+if __name__ == '__main__': import kpa; kpa.lint(__file__, run_rarely=True)
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -63,15 +63,13 @@ class Host:
 hosts: List[Host] = []
 with open(Path.home() / '.ssh/config') as f:
     for line in f:
-        line = line.strip()
-        if not line: continue
-        parts = line.split()
+        parts = line.strip().split()
+        if not parts: continue
         if parts[0] == 'Host': hosts.append(Host(label=parts[1]))
-        elif parts[0] == '#aws' and hosts and parts[-1].startswith('i-'): hosts[-1].instance_id = parts[-1]; assert 'us-east-1' in line, line
+        elif parts[0] == '#aws' and hosts and parts[-1].startswith('i-'): hosts[-1].instance_id = parts[-1]
         elif parts[0] == 'HostName' and hosts and '.' in parts[-1]: hosts[-1].ip = parts[-1]
 hosts = [host for host in hosts if host.instance_id]
 if not hosts: raise Exception("You don't have any lines like \"#aws i-01e8f0\" lines in your .ssh/config")
-
 
 if __name__ == '__main__':
     command = sys.argv[1] if sys.argv[1:] and not sys.argv[1].startswith('-') else ''

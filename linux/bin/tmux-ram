@@ -1,9 +1,17 @@
 #!/bin/bash
-set -euo pipefail
-
 # This script prints out memory usage inside the tmux status bar.
 # Add this to `~/.tmux.conf`:
 #    set -g status-right ' #{?client_prefix,#[reverse]<Prefix>#[noreverse] ,} #(tmux-ram) #{=21:pane_title}'
+set -euo pipefail
+readlinkf() { perl -MCwd -le 'print Cwd::abs_path shift' "$1"; }
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exists() { type -t "$1" >/dev/null; }
+print_and_run() { echo "=> $@"; "$@"; echo; }
+cd "$SCRIPTDIR"
+
+if exists nproc; then
+    echo -n " $(nproc)cores  "
+fi
 
 free_mem_line=$(free -m | grep Mem)
 mb_total=$(echo "$free_mem_line" | awk '{print $2}')
