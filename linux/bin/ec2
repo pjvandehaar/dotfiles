@@ -74,7 +74,17 @@ if not hosts: raise Exception("You don't have any lines like \"#aws i-01e8f0\" l
 if __name__ == '__main__':
     command = sys.argv[1] if sys.argv[1:] and not sys.argv[1].startswith('-') else ''
 
-    if command == 'patch':
+    if {'-h', '--help', 'help'}.intersection(sys.argv):
+        print('Usage:')
+        print('  ec2 patch')
+        print('  ec2 start $id')
+        print('  ec2 stop $id')
+        print('  ec2 restart $id')
+        print('  ec2 iid $id')
+        print('  ec2 ip $id')
+        print('  ec2')
+
+    elif command == 'patch':
         instance_id = subp.check_output(['ec2metadata', '--instance-id']).decode().strip()
         assert re.fullmatch(r'i-[0-9a-f]{10,20}', instance_id), instance_id
         print_and_run('''sudo aws ssm start-automation-execution --document-name arn:aws:ssm:us-east-1:265776368239:document/regn-ec2-patching-automation --parameters {"AutomationAssumeRole":["arn:aws:iam::{{global:ACCOUNT_ID}}:role/regn-ssm-patching-automation-role"],"InstanceId":["IID"],"Backup":["false"],"Reboot":["RebootIfNeeded"]} --region us-east-1'''.replace('IID',instance_id))

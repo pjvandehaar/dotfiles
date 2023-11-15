@@ -66,8 +66,8 @@
     (if (> tab-count space-count) (setq indent-tabs-mode t))))
 (add-hook 'python-mode-hook 'infer-indentation-style)
 
-(setq-default scroll-margin 2)  ;; Move screen when cursor is within 2 lines of top/bottom.  I wish I could set top=1 bottom=6.
-(setq-default scroll-step 2)  ;; When scroll is triggered, move two lines.  If cursor is still out-of-bounds, center cursor.  "1" centers when scrolling fast.
+(setq-default scroll-margin 1)  ;; Move screen when cursor is within 2 lines of top/bottom.  I wish I could set top=1 bottom=6.
+;;(setq-default scroll-step 2)  ;; When scroll is triggered, move two lines.  If cursor is still out-of-bounds, center cursor.  "1" centers when scrolling fast.
 
 (when (fboundp 'electric-indent-mode) (electric-indent-mode -1))  ;; Disable electric-indent-mode due to pasting problems.  If you want to open a new line that's auto-indented, use C-j.
 

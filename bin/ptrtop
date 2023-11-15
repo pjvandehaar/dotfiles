@@ -289,13 +289,13 @@ def repr_p(p:ProcDict, tree_prefix_first:str = '', tree_prefix_rest:str = '', p_
     '''Print out a process for the process tree'''
     lines = []
     f = p['family']
-    lines.append(f"{p['pid']:6} {p.get('user','?')[:9]:9}" +
+    lines.append(f"{p['pid']:7} {p.get('user','?')[:9]:9}" +
                  repr_fd(f) + repr_con(f) + '  ' + repr_cpu(f) + repr_mem(f) +
                  ' ' + tree_prefix_first + repr_name(p))
     # Sometimes the process deserves its own line:
     if p['children'] and (p.get('mem_rss',0) > MACHINE_RAM/100 or p.get('cpu',0) >= MACHINE_CPU_COUNT/100):
         lines.insert(0,
-                     f"{p['pid']:6} {p.get('user','?')[:9]:9}" +
+                     f"{p['pid']:7} {p.get('user','?')[:9]:9}" +
                      repr_fd(p) + repr_con(p) + '  ' + repr_cpu(p) + repr_mem(p) +
                      ' ' + tree_prefix_rest + '├──•')
 
@@ -304,7 +304,7 @@ def repr_p(p:ProcDict, tree_prefix_first:str = '', tree_prefix_rest:str = '', p_
             lines[0] = lines[0] + bigfile.rjust(TERM_WIDTH - len(lines[0]))
         else:  # Print on separate lines
             prefix = ''.join('│' if char in '│├' else ' ' for char in lines[0]).rstrip()
-            bigfile = f'┌ {bigfile}'
+            bigfile = f'   ┌ {bigfile}'  # TODO: When this is wider than TERM_WIDTH, the end gets truncated.  Ellipsize the middle instead.
             lines.insert(0, prefix + bigfile.rjust(TERM_WIDTH - len(prefix)))
 
     ret = '\n' + '\n'.join(line[:TERM_WIDTH] for line in lines)

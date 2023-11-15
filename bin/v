@@ -16,7 +16,7 @@
 # TODO: Support `v dx://file-G91fPzj09z5J8Jfj5pGk4jj5`
 
 
-import sys, os, functools, json, datetime, itertools, re, shutil, io, argparse, textwrap, math
+import sys, os, functools, json, datetime, itertools, re, shutil, io, argparse, textwrap, math, subprocess as subp
 from pprint import pprint
 from collections import Counter
 import signal; signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -98,6 +98,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
 
 def show_path(path:str):
+    if ':/' in path and not 's3://' in path: show_dx_path(path); return
     path = get_absolute_path(path); assert not path.endswith('/')
     if path == '/mnt/s3': [print(f' - {deemphasize("/mnt/s3/")}{bucket}/') for bucket in s3_list_all_buckets()]
     elif path.startswith('/mnt/s3/'): show_s3_path(path)
@@ -111,6 +112,18 @@ def show_s3_path(path:str):
     if s3_exists(bucket, key): show_s3_file(bucket, key)
     elif s3_exists(bucket, key+'/'): show_s3_dir(bucket, key+'/')
     else: show_s3_completions(bucket, key)
+
+def show_dx_path(path:str):
+    #proj, key = path.split(':/', 1)
+    if path.endswith('/'):
+        names = subp.check_output(['dx','ls', path]).decode().split()
+        paths = [path+name for name in names]
+        show_pathlist(paths, shared_prefix=path)
+    else:
+        num_bytes = 100_000
+        content_head = subp.check_output(f'dx cat {path} | gzip -cd | head -c {num_bytes}', shell=True).decode('utf-8')
+        lines = content_head.split('\n')
+        show_lines(lines)
 
 def show_s3_file(bucket:str, key:str):
     print(f'=> File /mnt/s3/{bucket}/{key}')
@@ -189,7 +202,7 @@ def show_lines(lines:List[str]):
             if not line.startswith('#'): break
             hash_lines.append(line)
         nohash_lines = lines[len(hash_lines):]
-        if delim in nohash_lines[0]:
+        if nohash_lines and delim in nohash_lines[0]:
             num_fields = nohash_lines[0].count(delim)
             if all(line.count(delim) == num_fields for line in nohash_lines):
                 good_hash_lines, bad_hash_lines = [], []
@@ -361,7 +374,7 @@ def _show_pathlist(pathlist:List[str], shared_prefix:str = ''):
             for suf in suffixes: print(f' - {deemphasize(shared_prefix)}{suf}')
         else:
             for suf in suffixes[:MAX_NUM_LINES]: print(f' - {deemphasize(shared_prefix)}{suf}')
-            print(f' => TRUNCATED!  Use `-a` to see all {len(suffixes)}.')
+            print(f' => TRUNCATED!  Use `-a` to see all {len(suffixes)}')
         return
     ## If <50 suffixes, just print them.
     if len(suffixes) < 50:
@@ -370,7 +383,7 @@ def _show_pathlist(pathlist:List[str], shared_prefix:str = ''):
     ## Try replacing numbers with #:
     numless_suffix_counts = Counter(re.subn(r'[0-9]+', '#', suf)[0] for suf in suffixes)
     numless_suffix_examples = {re.subn(r'[0-9]+', '#', suf)[0]:suf for suf in suffixes}
-    if 4 <= len(numless_suffix_examples) < 40 and len(numless_suffix_examples)/len(suffixes) < .5:
+    if 1 <= len(numless_suffix_examples) < 40 and len(numless_suffix_examples)/len(suffixes) < .5:
         for nsuf,suf in numless_suffix_examples.items():
             if nsuf != suf and numless_suffix_counts[nsuf]>1:
                 m = re.search(r'[0-9](.*[0-9])?', suf)
