@@ -12,7 +12,7 @@ exists_else() {
     done
     echo "$cmd"
 }
-
+print_and_run() { echo "=> $@"; "$@"; echo; }
 
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion.rb>
 # see <https://github.com/Homebrew/homebrew-core/blob/master/Formula/bash-completion@2.rb>
@@ -93,15 +93,15 @@ glq() {
     tail -n $((LINES-2)) # fork/merge wastes lines, so we need tail
 }
 gcp() {
-    if command git diff-index --quiet --cached HEAD; then
-        echo "=> auto-staging!"
-        git stage -u;
+    if command git diff-index --quiet --cached HEAD; then  # nothing staged
+        print_and_run git stage -u || return
     fi
-    if [[ $# == 0 ]]; then
-        git commit -m . && git push
+    if [[ $# == 0 ]]; then  # no args passed
+        print_and_run git commit -m . || return
     else
-        git commit "$@" && git push
+        print_and_run git commit "$@" || return
     fi
+    print_and_run git push
 }
 if exists __git_complete; then
     __git_complete gs  _git_status
