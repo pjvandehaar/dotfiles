@@ -74,6 +74,15 @@ alias gds='git diff --staged'
 alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
+gacp() {
+    git stage -u
+    if git ls-files --other --directory --exclude-standard | grep . > /dev/null; then
+        echo "There are untracked files!  Please git stage them or add them to .gitignore."
+        return 1
+    fi
+    git commit -m .
+    git push
+}
 glq() {
     # &%<> marks the right-edge of the graph, for swapping / and \
     if [[ $# -ge 1 ]]; then
@@ -216,13 +225,20 @@ ptrviewspace() {
     (head -n 1000; echo '~FIN~') |
     tabview - --delimiter " "
 }
-spaced_less() {
+spaced-less() {
     if [ -t 0 ]; then cat "$1"; else cat; fi |
     perl -ple 's{$}{\n}' |
     less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
 }
 
-ptr_today() { cat ~/.full_history | grep -a "^$(date +%Y-%m-%d)"; }
+ptr-today() { cat ~/.full_history | grep -a "^$(date +%Y-%m-%d)"; }
+
+ptr-hgrep10k-pattern-file() {
+    local pattern=$1
+    local file=$2
+    z "$file" 2>/dev/null | head -1
+    z "$file" 2>/dev/null | grep -m1 -A10000 "$pattern" | grep "$pattern"
+}
 
 
 # overrides
