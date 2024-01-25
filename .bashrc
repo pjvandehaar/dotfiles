@@ -80,7 +80,7 @@ gacp() {
         echo "There are untracked files!  Please git stage them or add them to .gitignore."
         return 1
     fi
-    git commit -m .
+    git commit -m "${1:-.}"
     git push
 }
 glq() {
