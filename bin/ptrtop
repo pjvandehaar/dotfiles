@@ -383,6 +383,8 @@ def inspect_pid(pid:PID) -> None:
         print('[cannot access bytes read/written]')
     print()
 
+    print(p.memory_info()); print()
+
     print(f'#threads: {p.num_threads()}'); print()
     print(f'ctx switches: {p.num_ctx_switches()}'); print()
     print(p); print()

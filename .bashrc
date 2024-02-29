@@ -138,9 +138,17 @@ cdl() { cd "$1" && l; }
 mcd() { mkdir -p "$1" && cd "$1"; }
 check_repos() { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
 getPass() { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
-ds() {
+ds() { echo "Please run dsm or dsg"; }
+dsm() {
     find -L "${1:-.}" -maxdepth 1 -print0 |
     xargs -0 -L1 "$(exists_else gdu du)" -s -BM --apparent-size 2>/dev/null |
+    "$(exists_else gsort sort)" -h |
+    perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}' | # remove `./`
+    column -t
+}
+dsg() {
+    find -L "${1:-.}" -maxdepth 1 -print0 |
+    xargs -0 -L1 "$(exists_else gdu du)" -s -BG --apparent-size 2>/dev/null |
     "$(exists_else gsort sort)" -h |
     perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}' | # remove `./`
     column -t
@@ -265,15 +273,17 @@ zcat_s3() {
     local p
     if [[ $1 = s3://* ]]; then
         aws s3 cp "$1" - | gzip -cdfq
-     else
-         if [[ $1 ]]; then p=$(readlink -m "$1"); fi
-         if [[ $p = /mnt/s3/* ]]; then
-             p=$(echo "$p" | sed 's_/mnt/s3/_s3://_')
-             aws s3 cp "$p" - | gzip -cdfq
-         else
-             gzip -cdfq "$@"
-         fi
-     fi
+    elif [[ $1 = AG_HTP:/* ]] || [[ $1 = AnT_automated_analysis:/* ]]; then
+        dx cat "$1" | gzip -cdfq
+    else
+        if [[ $1 ]]; then p=$(readlink -m "$1"); fi
+        if [[ $p = /mnt/s3/* ]]; then
+            p=$(echo "$p" | sed 's_/mnt/s3/_s3://_')
+            aws s3 cp "$p" - | gzip -cdfq
+        else
+            gzip -cdfq "$@"
+        fi
+    fi
 }
 zt() { z "$@" | less -S +G; }
 
