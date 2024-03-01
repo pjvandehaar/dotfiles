@@ -76,12 +76,11 @@ alias gla='git lol --all'
 alias glb='git lol --branches'
 gacp() {
     git stage -u
-    if git ls-files --other --directory --exclude-standard | grep . > /dev/null; then
+    if git ls-files --other --exclude-standard | grep . > /dev/null; then
         echo "There are untracked files!  Please git stage them or add them to .gitignore."
         return 1
     fi
-    git commit -m "${1:-.}"
-    git push
+    git commit -m "${1:-.}" && git push
 }
 glq() {
     # &%<> marks the right-edge of the graph, for swapping / and \
