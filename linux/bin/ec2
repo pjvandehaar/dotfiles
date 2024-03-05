@@ -3,7 +3,9 @@
 ## Note: An EC2 is either: stopped, zombie (running+unreachable), ok (running+reachable), changing (pending/rebooting/stopping)
 
 
-if __name__ == '__main__': import kpa; kpa.lint(__file__, run_rarely=True)
+if __name__ == '__main__':
+    try: import kpa; kpa.lint(__file__, run_rarely=True)
+    except ImportError: pass
 
 from dataclasses import dataclass
 from pathlib import Path
