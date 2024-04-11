@@ -185,7 +185,7 @@ ptr-watch-ram() {
 ptrwaitpid() { python3 -c "import psutil; psutil.Process($1).wait()"; }
 
 ptrjup() {
-    local fname="$1"
+    local fname="${1:-a}"
     if [[ $fname = *. ]]; then fname="${fname}ipynb"; fi
     if ! [[ $fname = *.ipynb ]]; then fname="$fname.ipynb"; fi
     echo "=== $fname ==="
