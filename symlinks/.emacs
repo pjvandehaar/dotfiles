@@ -77,6 +77,11 @@
 
 
 ;;;; Emacs custom commands ;;;;
+(global-set-key (kbd "C-x t") 'insert-tab)
+(defun insert-tab ()
+  (interactive)
+  (insert-char 9))
+
 (global-set-key (kbd "C-t") 'go-to-char)
 (global-set-key (kbd "M-t") 'go-back-to-char)
 (setq gtc--direction 1 gtc--char ?\ )
