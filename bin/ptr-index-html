@@ -21,6 +21,8 @@ html_template = Template('''\
 filenames = sorted(path.name for path in Path().iterdir() if path.name != 'index.html')
 html = html_template.render(filenames=filenames)
 
+if set(sys.argv).intersection({'-h','--help'}): print('--photos'); print('-f'); exit(1)
+
 if '--photos' in sys.argv:
     html = html.replace('<p><a href=', '<img style="max-width:98vw;max-height:90vh;margin-right:1vw;margin-bottom:1vw" src=')
     html = re.sub(r'>[^<]+</a></p>', '> ', html)

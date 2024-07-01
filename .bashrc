@@ -82,6 +82,7 @@ gacp() {
     fi
     git commit -m "${1:-.}" && git push
 }
+gcp() { git commit -m . && git push; }
 glq() {
     # &%<> marks the right-edge of the graph, for swapping / and \
     if [[ $# -ge 1 ]]; then
