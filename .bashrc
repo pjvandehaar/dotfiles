@@ -248,6 +248,13 @@ ptr-hgrep10k-pattern-file() {
     z "$file" 2>/dev/null | grep -m1 -A10000 "$pattern" | grep "$pattern"
 }
 
+ptr-htabix() {
+    local file=$1
+    local region=$2
+    z "$file" 2>/dev/null | head -1
+    tabix "$file" "$region" 2>/dev/null
+}
+
 
 # overrides
 # =========
@@ -286,6 +293,14 @@ zcat_s3() {
     fi
 }
 zt() { z "$@" | less -S +G; }
+# Note: `zcat_s3 $local_file | less +G` -> stopped job.
+#       `zcat_s3 $local_file | less` -> ok.
+#       `zcat_s3 $local_file | tail` -> ok.
+#       `gzip -cdfq $local_file | less +G` -> ok.
+#       `zcat2() { gzip -cdfq "$1"; }; zcat2 $local_file | less +G` -> stopped job.
+#       Why does the function call matter?
+#       Why is `less +G` different from `less` and `tail`?
+#       Maybe it's subscribed to input buffer differently, which changes how it gets Ctrl-C?
 
 man() {
     # from http://boredzo.org/blog/archives/2016-08-15/colorized-man-pages-understood-and-customized

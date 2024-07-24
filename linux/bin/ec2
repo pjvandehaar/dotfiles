@@ -17,7 +17,8 @@ from typing import List,Tuple,Union
 def get_instance_id(s:str) -> str:
     if s.startswith('i-'): assert s[2:].isalnum() and 10<len(s)<24, s; return s
     iid_by_name = {host.label:host.instance_id for host in hosts}
-    return iid_by_name[s]
+    try: return iid_by_name[s]
+    except Exception: raise Exception(f"{s} not found among {hosts}")
 
 def is_ok(data:dict) -> bool:
     assert is_ok1(data) == is_ok2(data)
@@ -108,7 +109,7 @@ if __name__ == '__main__':
         instance_ids = [get_instance_id(arg) for arg in sys.argv[2:]]
         print_and_run(f'aws --region us-east-1 ec2 stop-instances --instance-ids {" ".join(instance_ids)}')
 
-    elif command == 'iid':
+    elif command in ['iid','id']:
         for arg in sys.argv[2:]: print(get_instance_id(arg))
 
     elif command == 'ip':
