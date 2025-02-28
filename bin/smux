@@ -9,7 +9,7 @@ set -euo pipefail
 
 # If host isn't specified, use the first host in ~/.ssh/config
 if ! [[ ${1:-} ]] && [[ -e ~/.ssh/config ]]; then
-    host=$(cat ~/.ssh/config |perl -nale 'print $1 if m{Host\s+(\S+)}'|head -1)
+    host=$(cat ~/.ssh/config |perl -nale 'print $1 if m{#DEFAULT\s+(\S+)}'|head -1)
     echo "[ssh $host]"
     set "$host"
 fi

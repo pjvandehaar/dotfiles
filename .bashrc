@@ -45,6 +45,7 @@ alias ffmpeg="ffmpeg -hide_banner"
 # aliases mask functions
 unalias path glq h cdl mcd ew se 2>/dev/null
 
+alias ..="cd .."
 alias rs="source ~/.bashrc"
 alias py="python3"
 alias ipy="ipython3"
@@ -68,6 +69,7 @@ se() {
 alias ta="tig --all"
 alias gs='git status'
 alias gg='git grep'
+alias gb='git branch -avv'
 alias tg='tig grep'
 alias gd='git diff'
 alias gds='git diff --staged'
@@ -134,6 +136,7 @@ ptrgh() {
 h() { if [[ -n "${1:-}" ]]; then head -n $((LINES-2)) "$1"; else head -n $((LINES-2)); fi; }
 if exists icdiff; then alias ptrdiff='icdiff -WtH'; else alias ptrdiff='diff -dyb -W$COLUMNS'; fi
 
+alias pc=pray_content
 cdl() { cd "$1" && l; }
 mcd() { mkdir -p "$1" && cd "$1"; }
 check_repos() { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
@@ -238,8 +241,9 @@ spaced-less() {
     perl -ple 's{$}{\n}' |
     less -XF # X: leave output on screen. F: exit immediately if fitting on the page.
 }
+ptr-double-newlines() { cat | sed 's/$/\n/'; }
 
-ptr-today() { cat ~/.full_history | grep -a "^$(date +%Y-%m-%d)"; }
+ptr-history-today() { cat ~/.full_history | grep -a "^$(date +%Y-%m-%d)"; }
 
 ptr-hgrep10k-pattern-file() {
     local pattern=$1

@@ -9,12 +9,16 @@ fi
 _readlinkf() { perl -MCwd -le 'print Cwd::abs_path shift' "$1"; }
 local dotfiles_path; dotfiles_path="$(cd "$(dirname "$(_readlinkf "${BASH_SOURCE[0]}")")/../.." && echo "$PWD")"
 
+if [[ -e /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
 export PATH
 PATH="$dotfiles_path/mac/bin:$PATH"
 PATH="$dotfiles_path/bin:$PATH"
 PATH="$HOME/bin:$PATH"
-PATH="/opt/homebrew/bin:$PATH"
-PATH="/opt/homebrew/sbin:$PATH"
+PATH="$HOME/.local/bin:$PATH"
+PATH="$HOME/venv/bin:$PATH"
 PATH="/usr/local/sbin:$PATH"
 PATH="$HOME/.cargo/bin:$PATH"
 PATH="$PATH:$HOME/perl5/bin"

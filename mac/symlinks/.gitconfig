@@ -1,12 +1,12 @@
 [user]
 	name = Peter VandeHaar
-	email = pjvandehaar@gmail.com
+	email = peter.vandehaar@pray.com
 [push]
 	default = current # this means `simple` in modern versions
 [fetch]
 	prune = true # delete `origin/branch1` locally if it's gone from the remote
 [core]
-	excludesfile = ~/.gitignore_global
+	excludesfile = /Users/peter/.gitignore_global
 	abbrev = 5 # 5 char hashes
 [alias]
 	cdiff = -c color.diff.new='yellow reverse' -c color.diff.old='red reverse' diff --color-words=.
@@ -43,3 +43,11 @@
 	ff = only
 [url "git@github.com:"]
 	pushInsteadOf = "https://github.com"
+[difftool "sourcetree"]
+	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
+	path = 
+[mergetool "sourcetree"]
+	cmd = /Applications/Sourcetree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
+	trustExitCode = true
+[commit]
+	template = /Users/peter/.stCommitMsg
