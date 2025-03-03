@@ -3,10 +3,12 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(safe-local-variable-values '((comment-start . %))))
+ '(safe-local-variable-values '((comment-start . %)))
+ '(safe-local-variable-values '((select-enable-clipboard nil)))  ;; emacs29 made killring = mac clipboard.  this separates them again.
+)
 
 
-;;;; Emacs third-party packages
+;;; Emacs third-party packages
 (add-to-list 'load-path "~/dotfiles/third-party/emacs")
 ;; Right now I'm not using any packages that aren't built-in.
 ;; When first installing this as `~/.emacs`, do `M-x package-install <return> <package-name>` for each package you want.
@@ -40,8 +42,8 @@
 
 
 ;;;; Emacs filetype-specific ;;;;
-(require 'git)
-(require 'git-blame)
+;;(require 'git)  ;; I don't think I use these anymore, might as well speed up startup
+;;(require 'git-blame)
 
 (autoload 'nginx-mode "nginx-mode" nil t)  ;; load ~/dotfiles/third-party/emacs/nginx-mode.el
 (setq nginx-indent-level 2)
@@ -64,9 +66,9 @@
         (tab-count (how-many "^\t" (point-min) (point-max))))
     (if (> space-count tab-count) (setq indent-tabs-mode nil))
     (if (> tab-count space-count) (setq indent-tabs-mode t))))
-(add-hook 'python-mode-hook 'infer-indentation-style)
+(add-hook 'python-mode-hook 'infer-indentation-style)  ;; in python, check whether to use <tab> or "    "
 
-(setq-default scroll-margin 1)  ;; Move screen when cursor is within 2 lines of top/bottom.  I wish I could set top=1 bottom=6.
+;;(setq-default scroll-margin 1)  ;; Move screen when cursor is within 2 lines of top/bottom.  I wish I could set top=1 bottom=6.
 ;;(setq-default scroll-step 2)  ;; When scroll is triggered, move two lines.  If cursor is still out-of-bounds, center cursor.  "1" centers when scrolling fast.
 
 (when (fboundp 'electric-indent-mode) (electric-indent-mode -1))  ;; Disable electric-indent-mode due to pasting problems.  If you want to open a new line that's auto-indented, use C-j.
@@ -116,9 +118,43 @@
     (if previously-vertical (split-window-horizontally) (split-window-vertically))
     (set-window-buffer (next-window) next-win-buffer)))
 
-;; TODO: I want vim's `ci(` (change-inside-parens, change-inside-quotes, etc).
-;;       Option 1: `M-i delim` selects to prev and next delim, for delim in ({[< '"` space
-;;       Option 2: `M-i` selects the smallest valid area, whichever of ({[<'"` .  This is similar to expand-region but without \b\s delims.
+;; Select inside matching curly braces
+(defun select-region-inside-matching-delims ()
+  "Select text inside the smallest surrounding delims."
+  ;;; TODO: If we start on a quote, and we don't already have a region, then match to the nearest quote (not just the next)
+  (interactive)
+  (let ((start-point (point))
+        (use-region (and (region-active-p) (> (point) (region-beginning)))))
+    (condition-case nil
+        (progn
+          ;; If we have an active region, move to one character before the start
+          (when use-region
+            (goto-char (1- (region-beginning)))
+            (deactivate-mark))
+          
+          ;; Find the start of region by moving up the syntax tree.
+          ;; Emacs says that this depends on the language.  I hope it works ok in all my files!
+          (unless (memq (char-after) '(?\( ?\{ ?\< ?\[ ?\" ?\'))
+            (backward-up-list))
+          (push-mark (point))
+
+          ;; Find end of region.
+          (if (memq (char-after) '(?\" ?'))
+            ;; If we're at a quote (single or double), look forward to the matching quote.
+            (let ((delim (char-after)))
+              (forward-char 1)
+              (search-forward (string delim))
+              (backward-char 1))
+            ;; Otherwise find the closing brace
+            (progn
+              (forward-list)
+              (backward-char 1)))
+          (activate-mark))
+      (error 
+       (message "Failed to select a region.")
+       (goto-char start-point)))))
+(global-set-key (kbd "M-i") 'select-region-inside-matching-delims)
+
 
 ;; mouse-scrolling to move screen & pointer. copied from <https://iterm2.com/faq.html> & modified.
 ;; I can't figure out how to retain my improved scrolling but also keeping click-and-drag selection at terminal level, not emacs.

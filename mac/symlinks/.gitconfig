@@ -42,12 +42,10 @@
 [pull]
 	ff = only
 [url "git@github.com:"]
-	pushInsteadOf = "https://github.com"
+	pushInsteadOf = "https://github.com"  # This way I can clone with HTTPS (no auth) and push with SSH (~/.ssh/id_rsa.pub)
 [difftool "sourcetree"]
 	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
 	path = 
 [mergetool "sourcetree"]
 	cmd = /Applications/Sourcetree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
 	trustExitCode = true
-[commit]
-	template = /Users/peter/.stCommitMsg
