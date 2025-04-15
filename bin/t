@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+
+import subprocess as subp, os, sys, functools
+
+def get_command_output(cmd: str) -> str:
+    """Run a shell command and return its output"""
+    result = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, text=True)
+    if result.returncode != 0:
+        print(f"Error running get_command_output({cmd})")
+        print(result.stderr)
+        sys.exit(1)
+    return result.stdout.strip()
+
+@functools.cache
+def get_all_branches() -> list[str]:
+    """Get all branches from git"""
+    all_branches = []
+    branches = [branch.strip() for branch in get_command_output("git branch -a").split("\n") if branch.strip()]
+    for branch in branches:
+        if ' -> ' in branch:
+            continue
+        branch = branch.removeprefix("* ")
+        branch = branch.removeprefix("remotes/")
+        all_branches.append(branch)
+    return all_branches
+
+@functools.cache
+def get_common_branches() -> list[str]:
+    """Find branches like HEAD, master, main, dev, etc."""
+    common_names = ["master", "main", "production", "prod", "development", "dev", "staging", "stg", "HEAD"]
+    common_branches = []
+    for branch in get_all_branches():            
+        if any(common.lower() in branch.lower() for common in common_names):
+            common_branches.append(branch)
+    return common_branches
+
+@functools.cache
+def get_main_branch() -> str:
+    """Determine the main branch (master or main)"""
+    branches = get_all_branches()
+    for origin_prefix in ['origin/', '']:
+        for b in ['main', 'master', 'production', 'prod', 'development', 'dev']:
+            if origin_prefix + b in branches:
+                return origin_prefix + b
+    raise Exception("No main branch found")
+
+@functools.cache
+def get_my_branches() -> list[str]:
+    """Find my branches"""
+    my_email = get_command_output("git config user.email")
+    if not my_email:
+        print("Warning: Could not determine git user email. Skipping user branch search.")
+        return []
+      
+    ## Approach 1: Look at all commits from origin/master..{branch}
+    # noncommon_branches = [b for b in get_all_branches() if b not in get_common_branches()]
+    # for branch in noncommon_branches:
+    #     my_commits_on_branch = get_command_output(f'git log {main_branch}..{branch} --author="{user_email}" -n 1')
+    #     if my_commits_on_branch:
+    #         my_branches.append(branch)
+    
+    ## Approach 2: Just look at final commit
+    my_branches = []
+    for branch in get_all_branches():
+        last_commit_user = get_commit_author(branch)
+        if my_email in last_commit_user:
+            my_branches.append(branch)
+    return my_branches
+
+def get_commit_author(commit_ref:str) -> str:
+    s = get_command_output(f'git log -1 --pretty=format:"%an <%ae>" {commit_ref}').strip()
+    s = s.removeprefix('Author: ')
+    return s.strip()
+
+def main():
+    # Ensure we're in a git repository
+    if not os.path.exists(".git") and get_command_output("git rev-parse --is-inside-work-tree") != "true":
+        print("Error: Not in a git repository")
+        sys.exit(1)
+    
+    common_branches = get_common_branches()
+    print(f'common_branches = {common_branches}')
+    my_branches = get_my_branches()
+    print(f'my_branches = {my_branches}')
+    local_branches = [b for b in get_all_branches() if not b.startswith('origin/')]
+    print(f'local_branches = {local_branches}')
+    arg_branches = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
+    if arg_branches: print(f'arg_branches = {arg_branches}')
+
+    good_branches = list(set(common_branches + my_branches + local_branches + arg_branches))
+
+    if '--verbose' in sys.argv:
+        for branch in get_all_branches():
+            main = '[main]' if branch == get_main_branch() else ''
+            common = '[common]' if branch in common_branches else ''
+            mine = '[mine]' if branch in my_branches else ''
+            local = '[local]' if branch in local_branches else ''
+            last_commit_user = repr(get_commit_author(branch))
+            print(f" - {main:>6} {common:>8} {mine:>6} {local:>7} {branch:<60} \t {last_commit_user}")
+
+
+    if good_branches:
+        # Format branches properly for tig
+        branches_str = " ".join(good_branches)
+        print(f"\nRunning: tig {branches_str}")
+        if '--no-tig' not in sys.argv:
+            os.system(f"tig {branches_str}")
+    else:
+        print("No good branches!")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+

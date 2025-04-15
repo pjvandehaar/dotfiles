@@ -196,7 +196,7 @@ ptrjup() {
     if ! [[ -e $fname ]]; then echo '{"cells":[],"metadata":{},"nbformat":4,"nbformat_minor":2}' > "$fname"; fi
     jupyter-notebook "$fname"
 }
-ptrupload() { scp $@ kpa@petervh.com:/var/www/html/tmp/ ; }
+ptrupload() { scp $@ kpa@petervh.com:/var/www/html/tmp/; echo https://petervh.com/tmp/$1; }
 
 ptrnybbleswap() { python3 -c $'import sys,signal as g;g.signal(g.SIGPIPE,g.SIG_DFL);x=sys.stdin.buffer.read(10000)\nwhile sys.stdout.buffer.write(bytes([oct//16+(oct%16)*16 for oct in x])):x=sys.stdin.buffer.read(10000)'; }
 ptrbitwiseinverse() { python3 -c $'import sys,signal as g;g.signal(g.SIGPIPE,g.SIG_DFL);x=sys.stdin.buffer.read(10000)\nwhile sys.stdout.buffer.write(bytes([oct^255 for oct in x])):x=sys.stdin.buffer.read(10000)'; }

@@ -5,7 +5,11 @@
  ;; If there is more than one, they won't work right.
  '(safe-local-variable-values '((comment-start . %)))
  '(safe-local-variable-values '((select-enable-clipboard nil)))  ;; emacs29 made killring = mac clipboard.  this separates them again.
+ '(safe-local-variable-values '((x-select-enable-clipboard nil)))  ;; emacs29 made killring = mac clipboard.  this separates them again.
 )
+
+(setq select-enable-clipboard nil)
+(setq x-select-enable-clipboard nil)
 
 
 ;;; Emacs third-party packages
