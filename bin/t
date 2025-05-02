@@ -27,22 +27,12 @@ def get_all_branches() -> list[str]:
 @functools.cache
 def get_common_branches() -> list[str]:
     """Find branches like HEAD, master, main, dev, etc."""
-    common_names = ["master", "main", "production", "prod", "development", "dev", "staging", "stg", "HEAD"]
+    common_names_lower = ["master", "main", "production", "prod", "development", "dev", "staging", "stg", "head"]
     common_branches = []
-    for branch in get_all_branches():            
-        if any(common.lower() in branch.lower() for common in common_names):
+    for branch in get_all_branches():
+        if branch.lower() in common_names_lower or branch.lower().removeprefix('origin/') in common_names_lower:
             common_branches.append(branch)
     return common_branches
-
-@functools.cache
-def get_main_branch() -> str:
-    """Determine the main branch (master or main)"""
-    branches = get_all_branches()
-    for origin_prefix in ['origin/', '']:
-        for b in ['main', 'master', 'production', 'prod', 'development', 'dev']:
-            if origin_prefix + b in branches:
-                return origin_prefix + b
-    raise Exception("No main branch found")
 
 @functools.cache
 def get_my_branches() -> list[str]:
@@ -91,12 +81,11 @@ def main():
 
     if '--verbose' in sys.argv:
         for branch in get_all_branches():
-            main = '[main]' if branch == get_main_branch() else ''
             common = '[common]' if branch in common_branches else ''
             mine = '[mine]' if branch in my_branches else ''
             local = '[local]' if branch in local_branches else ''
             last_commit_user = repr(get_commit_author(branch))
-            print(f" - {main:>6} {common:>8} {mine:>6} {local:>7} {branch:<60} \t {last_commit_user}")
+            print(f" - {common:>8} {mine:>6} {local:>7} {branch:<60} \t {last_commit_user}")
 
 
     if good_branches:

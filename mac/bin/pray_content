@@ -59,6 +59,8 @@ if __name__ == '__main__':
         # Normalize path:
         if arg == '': arg = 's3://pray/'
         elif arg.startswith('s3://'): pass
+        elif arg.startswith('//'): arg = f's3:{arg}'  # double-click-to-copy in iterm split at `:`
+        elif arg.startswith('/'): arg = f's3:/{arg}'  # quad-click-to-copy in iterm splits the `//` in half.
         elif arg.startswith('content/'): arg = f's3://pray/{arg}'
         elif UUID_REGEX.fullmatch(arg): arg = f's3://pray/content/{arg}/'  # needs trailing slash to list
         elif UUID_REGEX.match(arg): arg = f's3://pray/content/{arg}'
