@@ -26,12 +26,8 @@ echo -ne "\033]0;$1\007"
 
 # Choose start dir
 start_dir=.
-if [[ $1 = yoga* ]] || [[ $1 = fuma* ]] || [[ $1 = pw ]]; then
-    start_dir=/opt/app/
-elif [[ $1 = pwpv* ]]; then
-    start_dir=/mnt/efs_v2/agds_cgad/users/peter.vandehaar/pw
-elif [[ $1 = pv* ]]; then
-    start_dir=/mnt/efs_v2/agds_cgad/users/peter.vandehaar
+if [[ $1 = kpa@* ]]; then
+    start_dir=/var/www/html/
 fi
 
 
@@ -39,6 +35,7 @@ fi
 export AUTOSSH_LOGFILE=/tmp/autossh.log
 #export AUTOSSH_LOGLEVEL=7  # chattiest!
 
+# TODO: Use mosh for servers that allow it
 # `autossh -M0` tells autossh not to monitor the connection via a port.
 # `ssh -t` creates a PTY (psuedo-terminal), even if a command is specified (because `tmux` needs a PTY).
 # `-o ServerAliveInterval 10` means that a packet is sent every 10 seconds to remind firewalls that there's a connection.

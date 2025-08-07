@@ -51,6 +51,9 @@ else
     }
 fi
 
+alias ll="ls -lhF --color"
+alias la="ls -lhAF --color"
+
 
 # OS-specific features
 # ====================

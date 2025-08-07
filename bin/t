@@ -2,9 +2,13 @@
 
 import subprocess as subp, os, sys, functools
 
-def get_command_output(cmd: str) -> str:
+def get_command_output(cmd: str|list[str]) -> str:
     """Run a shell command and return its output"""
-    result = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, text=True)
+    if isinstance(cmd, str):
+        result = subp.run(cmd, shell=True, stdout=subp.PIPE, stderr=subp.PIPE, text=True)
+    elif isinstance(cmd, list):
+        result = subp.run(cmd, stdout=subp.PIPE, stderr=subp.PIPE, text=True)
+    else: raise Exception(cmd)
     if result.returncode != 0:
         print(f"Error running get_command_output({cmd})")
         print(result.stderr)
@@ -15,12 +19,16 @@ def get_command_output(cmd: str) -> str:
 def get_all_branches() -> list[str]:
     """Get all branches from git"""
     all_branches = []
-    branches = [branch.strip() for branch in get_command_output("git branch -a").split("\n") if branch.strip()]
+    branches = [branch.strip() for branch in get_command_output(['git', 'branch', '-a', '--format=%(refname:short)']).split("\n") if branch.strip()]
     for branch in branches:
         if ' -> ' in branch:
             continue
         branch = branch.removeprefix("* ")
         branch = branch.removeprefix("remotes/")
+        if branch.startswith('(HEAD detached at'):
+            continue
+        if ' ' in branch:
+            print('WARNING: get_all_branches() saw weird branch name', repr(branch), flush=True)
         all_branches.append(branch)
     return all_branches
 
@@ -37,7 +45,7 @@ def get_common_branches() -> list[str]:
 @functools.cache
 def get_my_branches() -> list[str]:
     """Find my branches"""
-    my_email = get_command_output("git config user.email")
+    my_email = get_command_output("git config user.email".split())
     if not my_email:
         print("Warning: Could not determine git user email. Skipping user branch search.")
         return []
@@ -45,7 +53,7 @@ def get_my_branches() -> list[str]:
     ## Approach 1: Look at all commits from origin/master..{branch}
     # noncommon_branches = [b for b in get_all_branches() if b not in get_common_branches()]
     # for branch in noncommon_branches:
-    #     my_commits_on_branch = get_command_output(f'git log {main_branch}..{branch} --author="{user_email}" -n 1')
+    #     my_commits_on_branch = get_command_output(['git', 'log' f'{main_branch}..{branch}', f'--author={user_email}', '-n','1'])
     #     if my_commits_on_branch:
     #         my_branches.append(branch)
     
@@ -58,13 +66,15 @@ def get_my_branches() -> list[str]:
     return my_branches
 
 def get_commit_author(commit_ref:str) -> str:
-    s = get_command_output(f'git log -1 --pretty=format:"%an <%ae>" {commit_ref}').strip()
+    if commit_ref.startswith('(HEAD detached at '):
+        commit_ref = commit_ref.split()[-1].removesuffix(')')
+    s = get_command_output(['git', 'log', '-1', '--pretty=format:%an <%ae>', commit_ref]).strip()
     s = s.removeprefix('Author: ')
     return s.strip()
 
 def main():
     # Ensure we're in a git repository
-    if not os.path.exists(".git") and get_command_output("git rev-parse --is-inside-work-tree") != "true":
+    if not os.path.exists(".git") and get_command_output("git rev-parse --is-inside-work-tree".split()) != "true":
         print("Error: Not in a git repository")
         sys.exit(1)
     
@@ -77,7 +87,7 @@ def main():
     arg_branches = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
     if arg_branches: print(f'arg_branches = {arg_branches}')
 
-    good_branches = list(set(common_branches + my_branches + local_branches + arg_branches))
+    good_branches = sorted(set(common_branches + my_branches + local_branches + arg_branches + ['HEAD']))
 
     if '--verbose' in sys.argv:
         for branch in get_all_branches():

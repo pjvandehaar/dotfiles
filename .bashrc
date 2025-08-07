@@ -76,6 +76,7 @@ alias gds='git diff --staged'
 alias gl='git lol'
 alias gla='git lol --all'
 alias glb='git lol --branches'
+
 gacp() {
     git stage -u
     if git ls-files --other --exclude-standard | grep . > /dev/null; then
@@ -84,7 +85,8 @@ gacp() {
     fi
     git commit -m "${1:-.}" && git push
 }
-gcp() { git commit -m . && git push; }
+gcp() { git commit -m "${1:-.}" && git push; }
+
 glq() {
     # &%<> marks the right-edge of the graph, for swapping / and \
     if [[ $# -ge 1 ]]; then
@@ -102,17 +104,6 @@ glq() {
     perl -pale 's{&%<>}{}' |
     perl -e 'print reverse <>' | # can also use `tac` on GNU or `tail -r` on BSD
     tail -n $((LINES-2)) # fork/merge wastes lines, so we need tail
-}
-gcp() {
-    if command git diff-index --quiet --cached HEAD; then  # nothing staged
-        print_and_run git stage -u || return
-    fi
-    if [[ $# == 0 ]]; then  # no args passed
-        print_and_run git commit -m . || return
-    else
-        print_and_run git commit "$@" || return
-    fi
-    print_and_run git push
 }
 if exists __git_complete; then
     __git_complete gs  _git_status
@@ -197,6 +188,12 @@ ptrjup() {
     jupyter-notebook "$fname"
 }
 ptrupload() { scp $@ kpa@petervh.com:/var/www/html/tmp/; echo https://petervh.com/tmp/$1; }
+ptrupload_folder() {
+    folder=$1 ; shift
+    scp $@ kpa@petervh.com:/var/www/html/tmp/$folder/
+    echo https://petervh.com/tmp/$folder/
+    echo "=> Now run: ssh kpa@petervh.com ; cd /var/www/html/tmp/$folder/ ; chmod a+x .; ptr-index-html -f"
+}
 
 ptrnybbleswap() { python3 -c $'import sys,signal as g;g.signal(g.SIGPIPE,g.SIG_DFL);x=sys.stdin.buffer.read(10000)\nwhile sys.stdout.buffer.write(bytes([oct//16+(oct%16)*16 for oct in x])):x=sys.stdin.buffer.read(10000)'; }
 ptrbitwiseinverse() { python3 -c $'import sys,signal as g;g.signal(g.SIGPIPE,g.SIG_DFL);x=sys.stdin.buffer.read(10000)\nwhile sys.stdout.buffer.write(bytes([oct^255 for oct in x])):x=sys.stdin.buffer.read(10000)'; }

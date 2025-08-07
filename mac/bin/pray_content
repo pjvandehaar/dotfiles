@@ -1,29 +1,41 @@
 #!/usr/bin/env python3
 
+## TODO: Build tiny interactive TUI for this.
+##       Top half of screen will be browser showing: PWD, list of files, `..`
+##       You hit up/down to highlight a line, and then enter to open it.
+##       Bottom half of screen will show the contents of the file/dir that is highlighted on top.
+##       You hit pageup/pagedown to scroll file contents.
+##       You hit `q` to quit.
+##       Optional: Cache.
+##       Q: Is side-by-side best?  Or if vertical, how many lines of listing vs content?  30+30?
+##       Q: Would a tiny webapp be better?  I doubt I'd use it.  Also I want to try building a TUI.
+
 import subprocess as subp, sys, json, re, random, os, contextlib
 from typing import Optional
 
 @contextlib.contextmanager
-def with_downloaded_file(path:str):
-    assert path.startswith('s3://') and not path.endswith('/'), path
-    basename = os.path.basename(path)
+def with_downloaded_file(s3path:str):
+    assert s3path.startswith('s3://') and not s3path.endswith('/'), s3path
+    basename = os.path.basename(s3path)
     tmp_path = f'/tmp/{random.randint(0, 1000000000)}-{basename}'
     try:
-        subp.run(['aws', 's3', 'cp', path, tmp_path], capture_output=True)
+        subp.run(['aws', 's3', 'cp', s3path, tmp_path], capture_output=True)
+        if not os.path.exists(tmp_path):
+            raise Exception(f'Failed to download {s3path} to {tmp_path}')
         yield tmp_path
     finally:
         os.remove(tmp_path)
 
 UUID_REGEX = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
 
-#def s3_ls(path:str, recursive:bool=False) -> None: subp.run(['aws', 's3', 'ls', '--recursive' if recursive else '--', path])
-def s3_ls(path:str, recursive:bool=False, only_path:bool=False) -> None:
-    assert path.endswith('/'), path
+def s3_ls(s3path:str, recursive:bool=False, only_path:bool=False) -> None:
+    assert s3path.endswith('/'), s3path
     try:
-        lines = [line for line in subp.check_output(['aws', 's3', 'ls', '--recursive' if recursive else '--', path]).decode().split('\n') if line.strip()]
+        lines = [line for line in subp.check_output(['aws', 's3', 'ls', '--recursive' if recursive else '--', s3path]).decode().split('\n') if line.strip()]
     except Exception:
         return print('directory does not exist.')
     for line in lines:
+        ## Q: How does this work?  What is line_prefix?  Do I assume that it starts at beginning of line?
         line_prefix = re.sub(r' [^ ]+$', ' ', line)
         line_suffix = line[len(line_prefix):]
         assert line_suffix and ' ' not in line_suffix, (line, line_suffix)
@@ -31,17 +43,29 @@ def s3_ls(path:str, recursive:bool=False, only_path:bool=False) -> None:
         if recursive:
             print(f'{line_prefix}s3://pray/{line_suffix}')
         else:
-            print(f'{line_prefix}{path}{line_suffix}')
-def s3_cat(path:str) -> None: subp.run(['aws', 's3', 'cp', path, '-'])
-def s3_cat_json(path:str) -> None: text = subp.check_output(['aws', 's3', 'cp', path, '-']); data = json.loads(text); print(json.dumps(data, indent=2))
-def s3_play_audio(path:str) -> None:
-    with with_downloaded_file(path) as tmp_path:
+            print(f'{line_prefix}{s3path}{line_suffix}')
+def s3_ls_prefix(prefix:str) -> None:
+    for line in subp.check_output(['aws', 's3', 'ls', prefix]).decode().split('\n'):
+        if line.strip():
+            print(line.strip())
+def s3_cat(s3path:str) -> None: subp.run(['aws', 's3', 'cp', s3path, '-'])
+def s3_cat_json(s3path:str) -> None: text = subp.check_output(['aws', 's3', 'cp', s3path, '-']); data = json.loads(text); print(json.dumps(data, indent=2))
+def s3_play_audio(s3path:str) -> None:
+    with with_downloaded_file(s3path) as tmp_path:
         subp.run(['vlc', tmp_path])  # also consider using `afplay` or `vlc -I dummy`
-def s3_detect_filetype(path:str) -> str:
-    with with_downloaded_file(path) as tmp_path:
+def s3_detect_filetype(s3path:str) -> str:
+    with with_downloaded_file(s3path) as tmp_path:
         ret = subp.check_output(['file', tmp_path]).decode().strip()
         if ret.startswith(f'{tmp_path}: '): ret = ret[len(tmp_path)+2:]
         return ret
+def s3_file_exists(s3path: str) -> bool:
+    if not s3path.startswith('s3://'): return False
+    bucket, key = s3path.removeprefix('s3://').split('/', 1)
+    try:
+        subp.check_output(['aws', 's3api', 'head-object', '--bucket', bucket, '--key', key], stderr=subp.DEVNULL)
+        return True
+    except Exception:
+        return False
 
 
 if __name__ == '__main__':
@@ -56,7 +80,7 @@ if __name__ == '__main__':
     elif ('--json' in sys.argv): forced_extension = 'json'
 
     for arg in args:
-        # Normalize path:
+        # Normalize s3path:
         if arg == '': arg = 's3://pray/'
         elif arg.startswith('s3://'): pass
         elif arg.startswith('//'): arg = f's3:{arg}'  # double-click-to-copy in iterm split at `:`
@@ -65,7 +89,7 @@ if __name__ == '__main__':
         elif UUID_REGEX.fullmatch(arg): arg = f's3://pray/content/{arg}/'  # needs trailing slash to list
         elif UUID_REGEX.match(arg): arg = f's3://pray/content/{arg}'
         else:
-            print('Invalid path:', arg)
+            print('Invalid s3path:', arg)
             print('Usage:')
             print('  pray_content $UUID')
             print('  pray_content $UUID/en-deepgram-response.json')
@@ -77,16 +101,28 @@ if __name__ == '__main__':
             print('  --detect: Detect the filetype')
             sys.exit(1)
         assert arg.startswith('s3://')
+        s3path = arg
 
         # Output:
         if arg.endswith('/'):
             if not no_header: print(f'=> Listing {arg}')
-            s3_ls(arg, recursive=recursive, only_path=only_path)
+            s3_ls(s3path, recursive=recursive, only_path=only_path)
+        elif not s3_file_exists(s3path):
+            print(f"=> Missing file, so listing as prefix: {s3path}")
+            s3_ls_prefix(s3path)
         else:
-            extension = forced_extension if forced_extension is not None else arg.split('.')[-1] if '.' in arg else ''
-            if extension == '': print('Filetype =', s3_detect_filetype(arg))
-            elif extension == 'json': s3_cat_json(arg)
-            elif extension == 'txt': s3_cat(arg)
-            elif extension == 'mp3': s3_play_audio(arg)
-            else: print(f'Unknown filetype: {extension}')
+            extension = forced_extension if forced_extension is not None else s3path.split('.')[-1] if '.' in s3path else ''
+            try:
+                if extension == '': print('Filetype =', s3_detect_filetype(s3path))
+                elif extension == 'json': s3_cat_json(s3path)
+                elif extension == 'txt': s3_cat(s3path)
+                elif extension in ['mp3','aac']: s3_play_audio(s3path)
+                else: print(f'Unknown filetype: {extension}')
+            except Exception as e:
+                ## Q: What's the best way to add context to an error in python?
+                ##       option1: `raise Exception(f'Failing to handle path {arg} as extension {extension}: {e}') from e` (complex)
+                ##       option2: `print(...); raise` (simple but might miss context)
+                ##       option3: `raise Exception(f'{e}\nFailing to handle path {arg} as extension {extension}')` (loses traceback)
+                print(f'Failing to handle path {s3path} as extension {extension}: {e}')
+                raise
         print()
