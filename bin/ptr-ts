@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+
+
+import sys
+import re
+import pyperclip
+import time
+from datetime import datetime, timezone, timedelta
+from typing import Optional, Tuple
+
+def is_number(s: str) -> bool:
+	try:
+		float(s)
+		return True
+	except ValueError:
+		return False
+
+def convert_timestamp_to_seconds(ts: float) -> Tuple[float, str]:
+	MAX_SECONDS_TIMESTAMP = 10000000000
+	divisors = {'seconds': 1, 'ms': 1e3, 'us': 1e6, 'ns': 1e9}
+	for name, div in divisors.items():
+		if abs(float(ts)) / div < MAX_SECONDS_TIMESTAMP:
+			return float(ts) / div, name
+	return float(ts) / divisors['ns'], 'ns'
+
+def convert_datetime_to_datestr(dt: datetime) -> str:
+	datestr = dt.isoformat()
+	if datestr.endswith('+00:00'):
+		datestr = datestr.replace('+00:00', 'Z')
+	return datestr
+
+def convert_datestr_to_datetime(datetime_str: str) -> datetime:
+	ymd_regex = r'(\d{4}-\d{2}-\d{2})'
+	hms_tz_regex = r'(\d{2}:\d{2}(:\d{2}(\.\d+)?)?)([+-]\d{2}:\d{2}|Z)?'
+	full_regex = f'{ymd_regex}[ T_]{hms_tz_regex}'
+	m = re.fullmatch(ymd_regex, datetime_str)
+	if m:
+		return datetime.strptime(datetime_str, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+	m = re.fullmatch(hms_tz_regex, datetime_str)
+	if m:
+		today = datetime.now(timezone.utc).date()
+		hms = m.group(1)
+		tz_offset = m.groups()[-1]
+		hms_dt = datetime.strptime(hms if '.' in hms else hms + '.0', '%H:%M:%S.%f').time()
+		offset = extract_tz_offset(tz_offset)
+		return datetime.combine(today, hms_dt).replace(tzinfo=timezone(offset))
+	m = re.fullmatch(full_regex, datetime_str)
+	if m:
+		date = datetime.strptime(m.group(1), '%Y-%m-%d')
+		hms = m.group(2)
+		tz_offset = m.groups()[-1]
+		hms_dt = datetime.strptime(hms if '.' in hms else hms + '.0', '%H:%M:%S.%f').time()
+		offset = extract_tz_offset(tz_offset)
+		return datetime.combine(date, hms_dt).replace(tzinfo=timezone(offset))
+	raise Exception(f'Failed to parse datetime_str={repr(datetime_str)}')
+
+def extract_tz_offset(tz_offset_str: Optional[str]) -> timedelta:
+	if tz_offset_str and tz_offset_str != 'Z':
+		sign = tz_offset_str[0]
+		hours = int(tz_offset_str[1:3])
+		minutes = int(tz_offset_str[4:6])
+		return timedelta(hours=hours, minutes=minutes) * (1 if sign == '+' else -1)
+	return timedelta(0)
+
+
+def process_input(input_str: str, label: Optional[str] = None, print_failed_parsing: bool = True) -> Optional[str]:
+	"""Process a timestamp or datetime string, printing its parsed values."""
+	if not input_str:
+		return
+	prefix = f"[{label}] " if label else ""
+	if is_number(input_str):
+		ts = float(input_str)
+		seconds, unit = convert_timestamp_to_seconds(ts)
+		dt_utc = datetime.fromtimestamp(seconds, timezone.utc)
+		dt_local = datetime.fromtimestamp(seconds)
+		print(f"{prefix}Input = {input_str!r} ({unit} after 1970 UTC)")
+		print(f"{prefix}    = {convert_datetime_to_datestr(dt_utc)}  (UTC)")
+		print(f"{prefix}    = {dt_local.isoformat()}  (local)")
+		print()
+		return convert_datetime_to_datestr(dt_utc)
+	else:
+		try:
+			dt = convert_datestr_to_datetime(input_str)
+			ts = dt.timestamp()
+			print(f"{prefix}Input = {input_str!r} (parsed as datetime)")
+			print(f"{prefix}    = {ts}  (seconds after 1970 UTC)")
+			print(f"{prefix}    = {convert_datetime_to_datestr(dt)}  (UTC)")
+			print()
+			return convert_datetime_to_datestr(dt)
+		except Exception as e:
+			if print_failed_parsing:
+				print(f"{prefix}Could not parse input as timestamp or datetime string: {e}")
+
+def main() -> None:
+	args = sys.argv[1:]
+	# Process all command-line arguments
+	clipboard = pyperclip.paste().strip()
+	if clipboard:
+		process_input(clipboard, label='CLIPBOARD', print_failed_parsing=False)
+	args = [a.strip() for a in args if a.strip()]
+	for idx, arg in enumerate(args):
+		process_input(arg, label=f'ARG{idx+1}')
+	# If no input, use current time
+	if not clipboard and not args:
+		ts = time.time()
+		dt = datetime.fromtimestamp(ts, timezone.utc)
+		print(f"[NOW] Current timestamp: {int(ts)}")
+		print(f"[NOW] Current datetime (UTC): {convert_datetime_to_datestr(dt)}")
+
+if __name__ == "__main__":
+	print()
+	main()
+

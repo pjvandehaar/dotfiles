@@ -2,7 +2,7 @@
 
 - Empty dock, hide
 
-- Install homebrew, then `brew install bash emacs alfred hyperkey rectangle-pro uv tig`
+- Install homebrew, then `brew install bash emacs uv tig htop mosh wget zstd jq alfred hyperkey rectangle-pro macdown spotify vlc wireshark-app visual-studio-code`
 
 - HyperKey:
   - Remap physical key to hyperkey = CapsLock
@@ -22,8 +22,10 @@
   - General > Check for updates automatically
   - General > Doubleclick window title bar to maximize/restore
 
-- iTerm: see iterm-config.md
+- iTerm: see [./iterm-config.md]
 
-- python: `uv venv ~/venv/`, new terminal, `uv pip install kpa requests unidecode`
+- python: `uv venv ~/venv/`, new terminal, `uv pip install kpa requests unidecode boltons ipython jupyter numpy pandas psutil tqdm twine visidata`
 
-- Alfred: see alfred-config.md
+- Alfred: see [./alfred-config.md]
+
+- Mac: see [./SystemPreferences-config.sh]
