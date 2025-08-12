@@ -1,8 +1,0 @@
-[
-    { "keys": ["ctrl+tab"], "command": "next_view" },
-    { "keys": ["ctrl+shift+tab"], "command": "prev_view" },
-]
-
-/* This belongs in:
-"~/Library/Application Support/Sublime Text3/Packages/User/Default (OSX).sublime-keymap"
-*/

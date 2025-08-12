@@ -1,1 +1,0 @@
-- Preferences > Editor > Behavior > Ensure newline at end

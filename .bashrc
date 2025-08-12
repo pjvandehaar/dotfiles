@@ -127,7 +127,6 @@ ptrgh() {
 h() { if [[ -n "${1:-}" ]]; then head -n $((LINES-2)) "$1"; else head -n $((LINES-2)); fi; }
 if exists icdiff; then alias ptrdiff='icdiff -WtH'; else alias ptrdiff='diff -dyb -W$COLUMNS'; fi
 
-alias pc=pray_content
 cdl() { cd "$1" && l; }
 mcd() { mkdir -p "$1" && cd "$1"; }
 check_repos() { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
