@@ -29,3 +29,7 @@
 - Alfred: see [./alfred-config.md]
 
 - Mac: see [./SystemPreferences-config.sh]
+
+- Dato (from app store):
+  - SysPrefs > Control Center > Menu Bar > Clock > Style = Analog
+  - Prefs > Menu Bar > Advanced > Custom format = `MMM d (E) HH:mm a`

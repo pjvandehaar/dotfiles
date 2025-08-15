@@ -3,16 +3,8 @@
 # Disable spelling correction (System Preferences > Keyboard > Text > (uncheck) Correct Spelling Automatically)
 defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
 
-# Disable Transparency (System Preferences > Accessibilty > Display > Reduce Transparency)
-defaults write com.apple.universalaccess reduceTransparency -bool true
-
 # Disable Space Rearrangement (System Preferences > Mission Control > (uncheck) Automatically rearrange Spaces based on most recent use)
 defaults write com.apple.dock mru-spaces -bool false
-
-# Add Korean Keyboard
-# - System Preferences > Language & Region > Preferred Languages > [+] > Korean > 2-set
-# - System Preferences > Keyboard > Shortcuts > Input Sources > Select Next Input Source > opt-com-space
-# - System Preferences > Keyboard > Keyboard > Show Keyboard & Character Viewers in menubar
 
 # Change Name on Network
 # - System Preferences > Sharing > Computer Name > (type)
@@ -76,13 +68,9 @@ defaults -currentHost write com.apple.ImageCapture disableHotPlug -bool true
 
 
 
-#### TRANSMISSION
-# Trash original torrent files
-defaults write org.m0k.transmission DeleteOriginalTorrent -bool true
+#### SAFARI
+# Download to Desktop (Prefs > General > File download location = ~/Desktop)
 
-# Hide the donate message and legal disclaimer
-defaults write org.m0k.transmission WarningDonate -bool false
-defaults write org.m0k.transmission WarningLegal -bool false
 
 
 
