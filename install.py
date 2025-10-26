@@ -32,7 +32,7 @@ for sym in symlinks:
         sym.parent.mkdir(parents=True, exist_ok=True)
 
 # Create symlinks (or verify them if they already exist)
-errors = False
+errors = []
 for tgt, sym in zip(targets, symlinks):
     if not sym.exists():
         sym.symlink_to(tgt)
@@ -41,11 +41,23 @@ for tgt, sym in zip(targets, symlinks):
         print(f'=> Good:   {h(sym):20}  ->  {h(tgt)}')
     elif sym.is_symlink():
         print(f'=> Bad link: {h(sym):20}  ->  {h(readlink(sym))} instead of {h(tgt)}')
-        errors = True
+        errors.append((tgt, sym))
     else:
         print(f'=> Bad file: {h(sym)}')
-        errors = True
+        errors.append((tgt, sym))
 print()
 
 if errors:
-    print('Failed!  Please remove the bad files/links.'); sys.exit(1)
+    print('Failed!  Some files already exist.')
+    for (tgt, sym) in errors:
+        sym_bak = sym.with_name(sym.name + '.bak')
+        assert f'{sym_bak}' == f'{sym}.bak', (sym, sym_bak)
+        answer = input(f'> Move {sym} -> {sym_bak} ? [y/N] ')
+        if answer.lower() not in ['y', 'yes']:
+            sys.exit(1)
+        sym.rename(sym_bak)
+        sym.symlink_to(tgt)
+        print(f'=> Made:   {h(sym):20}  ->  {h(tgt)}')
+    print()
+
+print('=> Done!')

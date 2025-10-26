@@ -37,6 +37,9 @@
 
 # TODO: In `ptrtop 349`, show tree of children.
 
+# TODO: With NO_PSUTIL=1 just use `ps -e -o pid,ppid,user,cputimes,rss,wchan,command --sort=-rss` (but how to get %cpu?)
+#       But this only gives cpu time as integer seconds.  I would need to read /proc/$pid/stat to get ms.
+
 if __name__ == '__main__':
     try: import kpa.dev_utils
     except ImportError: pass
