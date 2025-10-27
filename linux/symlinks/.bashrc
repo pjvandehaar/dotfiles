@@ -13,6 +13,7 @@ local dotfiles_path; dotfiles_path="$(cd "$(dirname "$(_readlinkf "${BASH_SOURCE
 
 export PATH
 if uname -m | grep x86 &>/dev/null; then PATH="$dotfiles_path/linux/bin_x86:$PATH"; fi
+if uname -m | grep aarch64 &>/dev/null; then PATH="$dotfiles_path/linux/bin_arm64:$PATH"; fi
 PATH="$dotfiles_path/linux/bin:$PATH"
 PATH="$dotfiles_path/bin:$PATH"
 PATH="$HOME/bin:$PATH"
