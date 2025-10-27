@@ -66,6 +66,8 @@ fi
 if ! exists r; then alias r=R; fi
 if exists dircolors; then eval "$(dircolors -b)"; fi
 
+ptr-update-and-restart() { sudo apt update && sudo apt upgrade -y && echo "Rebooting!" && sleep 30 && sudo reboot; }
+
 
 # source common
 # =============
