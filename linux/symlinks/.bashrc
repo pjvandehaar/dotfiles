@@ -16,14 +16,14 @@ if uname -m | grep x86 &>/dev/null; then PATH="$dotfiles_path/linux/bin_x86:$PAT
 PATH="$dotfiles_path/linux/bin:$PATH"
 PATH="$dotfiles_path/bin:$PATH"
 PATH="$HOME/bin:$PATH"
-PATH="$HOME/.local/bin:$PATH"
+PATH="$HOME/venv/bin:$PATH"  # for uv venv
+PATH="$HOME/.local/bin:$PATH"  # for uv
 PATH="$HOME/.cargo/bin:$PATH"
 PATH="$HOME/.npm-packages/bin:$PATH"
 PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 PATH="/home/linuxbrew/.linuxbrew/sbin:$PATH"
 PATH="$HOME/.linuxbrew/bin:$PATH"
 PATH="$HOME/.linuxbrew/sbin:$PATH"
-PATH="$PATH:/net/mario/cluster/bin"
 PATH="$PATH:$HOME/perl5/bin"
 PATH="$(perl -e'@p=split(":",$ENV{"PATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')"  # dedup & drop missing
 

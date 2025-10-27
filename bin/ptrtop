@@ -210,7 +210,7 @@ def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = Fa
                 except AccessDenied: pass
                 try:
                     p['num_fds'] = proc.num_fds()
-                    p['num_con'] = len(proc.connections())
+                    p['num_con'] = len(proc.net_connections())
                 except AccessDenied: pass
         except psutil.NoSuchProcess: pass # process can die at any time, raising this error when we call its methods
 
@@ -365,7 +365,7 @@ def inspect_pid(pid:PID) -> None:
         try:return f'{"["+a.ip+"]":>15}:{a.port:<6}' if ':' in a.ip else f'{a.ip:>15}:{a.port:<6}'
         except Exception: return repr(a)
     try:
-        conns = p.connections()
+        conns = p.net_connections()
         for i, c in enumerate(conns):
             if i == 0: print('[connections]')
             try:print(' ', f'{c.status:12}  {repr_addr(c.laddr)}  {repr_addr(c.raddr)}  {repr(c.type)}  {repr(c.family)}')

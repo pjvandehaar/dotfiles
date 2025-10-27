@@ -158,12 +158,12 @@ def venv(args:argparse.Namespace) -> None:
 systemd_service_template = '''\
 [Unit]
 Description={name}
-After=network.target
+After=network-online.target
 OnFailure=kpa-failure-telegram@%i.service
 
 [Service]
-User=nobody
-Group=nogroup
+User=kpa
+Group=kpa
 WorkingDirectory={dir}
 ExecStart={exec}
 '''
@@ -211,7 +211,7 @@ def conf_create(args:argparse.Namespace) -> None:
         (dotksys_path / filename).write_text(systemd_scheduled_template.format(
             name=name,
             dir=directory,
-            exec='{exec}',
+            exec=f'{directory}/run.py',
         ))
         filename = f'/etc/systemd/system/{name}.timer'.replace('/', '%')
         (dotksys_path / filename).write_text(systemd_timer_template.format(name=name))
@@ -221,7 +221,7 @@ def conf_create(args:argparse.Namespace) -> None:
         (dotksys_path / filename).write_text(systemd_daemon_template.format(
             name=name,
             dir=directory,
-            exec='{exec}' + f' --port={port}',
+            exec=f'{directory}/serve.py --port={port}',
         ))
         hostname = args.nginx_hostname if len(args.nginx_hostname)>1 else (f'{name[4:]}.petervh.com' if name.startswith('kpa-') else f'{name}.petervh.com')
         filename = f'/etc/nginx/sites-available/{hostname}'.replace('/', '%')
@@ -231,7 +231,7 @@ def conf_create(args:argparse.Namespace) -> None:
         (dotksys_path / filename).write_text(systemd_daemon_template.format(
             name=name,
             dir=directory,
-            exec='{exec}',
+            exec=f'{directory}/run.py',
         ))
     print('Now populate Exec= in .ksys/*.service and run `ksys conf-diff` and `ksys conf-install`')
 

@@ -13,7 +13,7 @@
 
 
 ;;; Emacs third-party packages
-(add-to-list 'load-path "~/dotfiles/third-party/emacs")
+;(add-to-list 'load-path "~/dotfiles/third-party/emacs")
 ;; Right now I'm not using any packages that aren't built-in.
 ;; When first installing this as `~/.emacs`, do `M-x package-install <return> <package-name>` for each package you want.
 ;; Ocasionally run `M-x list-packages` to check for updates
@@ -49,8 +49,8 @@
 ;;(require 'git)  ;; I don't think I use these anymore, might as well speed up startup
 ;;(require 'git-blame)
 
-(autoload 'nginx-mode "nginx-mode" nil t)  ;; load ~/dotfiles/third-party/emacs/nginx-mode.el
-(setq nginx-indent-level 2)
+;(autoload 'nginx-mode "nginx-mode" nil t)  ;; load ~/dotfiles/third-party/emacs/nginx-mode.el
+;(setq nginx-indent-level 2)
 
 (rassq-delete-all 'change-log-mode auto-mode-alist)  ;; Disable change-log-mode for `CHANGELOG.md`
 
