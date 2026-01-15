@@ -54,6 +54,21 @@ fi
 alias ll="ls -lhF --color"
 alias la="ls -lhAF --color"
 
+dsm() {
+    find -L "${1:-.}" -maxdepth 1 -print0 |
+    xargs -0 -L1 du -sAm 2>/dev/null |  # summarize, apparentsize, megabytes
+    sort -h |
+    perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}' | # remove `./`
+    column -t
+}
+dsg() {
+    find -L "${1:-.}" -maxdepth 1 -print0 |
+    xargs -0 -L1 du -sAg 2>/dev/null |  # summarize, apparentsize, gigabytes
+    sort -h |
+    perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}' | # remove `./`
+    column -t
+}
+
 
 # OS-specific features
 # ====================

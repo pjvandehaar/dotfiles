@@ -34,7 +34,7 @@ $(v=(export ' ' HOM EBR EW_GI THU B_A PI_T OKE N=75 53f37 98ca 21e1f6 815d 2eab1
 export PIPENV_VENV_IN_PROJECT=1
 alias px="pipenv run"
 
-alias ffmpeg="ffmpeg -hide_banner"
+#alias ffmpeg="ffmpeg -hide_banner"  # This sometimes just doesn't actually run ffmpeg.
 
 [[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)" # ?? from Ubuntu .bashrc
 
@@ -131,21 +131,7 @@ cdl() { cd "$1" && l; }
 mcd() { mkdir -p "$1" && cd "$1"; }
 check_repos() { find . \( -name .git -or -name .hg \) -execdir bash -c 'echo;pwd;git status -s||hg st' \; ; }
 getPass() { perl -ne 'BEGIN{my @w} END{print for @w} $w[int(rand(8))] = $_ if 8>int(rand($.-1))' < /usr/share/dict/words; }
-ds() { echo "Please run dsm or dsg"; }
-dsm() {
-    find -L "${1:-.}" -maxdepth 1 -print0 |
-    xargs -0 -L1 "$(exists_else gdu du)" -s -BM --apparent-size 2>/dev/null |
-    "$(exists_else gsort sort)" -h |
-    perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}' | # remove `./`
-    column -t
-}
-dsg() {
-    find -L "${1:-.}" -maxdepth 1 -print0 |
-    xargs -0 -L1 "$(exists_else gdu du)" -s -BG --apparent-size 2>/dev/null |
-    "$(exists_else gsort sort)" -h |
-    perl -ple 's{^(\s*[0-9\.]+[BKMGT]\s+)\./}{\1}' | # remove `./`
-    column -t
-}
+ds() { dsm; }
 ptrsu() { sudo su --preserve-environment; }
 ptrwrite() { cp -p "$1" "$1.ptrwrite.tmp"; cat > "$1.ptrwrite.tmp"; mv "$1.ptrwrite.tmp" "$1"; }
 ptr_ipynb() { cat "$1" | jq -r '.cells | .[] | select(.cell_type=="code") | .source | join("")'; }
