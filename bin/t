@@ -17,19 +17,11 @@ def get_command_output(cmd: str|list[str]) -> str:
 
 @functools.cache
 def get_all_branches() -> list[str]:
-    """Get all branches from git"""
-    all_branches = []
-    branches = [branch.strip() for branch in get_command_output(['git', 'branch', '-a', '--format=%(refname:short)']).split("\n") if branch.strip()]
-    for branch in branches:
-        if ' -> ' in branch:
-            continue
-        branch = branch.removeprefix("* ")
-        branch = branch.removeprefix("remotes/")
-        if branch.startswith('(HEAD detached at'):
-            continue
+    """Get all branches from git, both local and remote (eg `origin/main`)"""
+    all_branches = [branch.strip() for branch in get_command_output('git for-each-ref refs/remotes/ refs/heads/ --format=%(refname:short)'.split()).split("\n") if branch.strip()]
+    for branch in all_branches:
         if ' ' in branch:
             print('WARNING: get_all_branches() saw weird branch name', repr(branch), flush=True)
-        all_branches.append(branch)
     return all_branches
 
 @functools.cache
