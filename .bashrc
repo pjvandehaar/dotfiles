@@ -73,9 +73,6 @@ alias gb='git branch -avv'
 alias tg='tig grep'
 alias gd='git diff'
 alias gds='git diff --staged'
-alias gl='git lol'
-alias gla='git lol --all'
-alias glb='git lol --branches'
 
 gacp() {
     git stage -u
@@ -104,6 +101,14 @@ glq() {
     perl -pale 's{&%<>}{}' |
     perl -e 'print reverse <>' | # can also use `tac` on GNU or `tail -r` on BSD
     tail -n $((LINES-2)) # fork/merge wastes lines, so we need tail
+}
+q() {
+    local _num_commits=$(echo "scale=0; $LINES * 0.75" | bc | awk '{printf "%.0f\n", $1}')
+    if [[ $# -ge 1 ]]; then
+        _num_commits=$1
+    fi
+    git-graph -m simple -s bold --no-pager -n "$_num_commits" --format "%h  %as  %an  %d  %s"
+    #git-graph -m simple -s bold --no-pager -n "$_num_commits"
 }
 if exists __git_complete; then
     __git_complete gs  _git_status
