@@ -11,10 +11,11 @@ html_template = Template('''\
 <meta charset="utf8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 </head>
-<body><div>
+<body><div style="padding-left:1em">
 {% for filename in filenames -%}
 <p><a href="{{filename}}">{{filename}}</a></p>
 {% endfor -%}
+<br><br>
 </div></body></html>\n
 ''')
 
