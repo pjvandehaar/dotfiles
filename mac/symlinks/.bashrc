@@ -13,6 +13,10 @@ if [[ -e /opt/homebrew/bin/brew ]]; then
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
+if [[ -e $HOME/venv/bin/activate ]]; then
+    source $HOME/venv/bin/activate  # This sets $VIRTUAL_ENV which lets `uv pip list` work
+fi
+
 export PATH
 PATH="$dotfiles_path/mac/bin:$PATH"
 PATH="$dotfiles_path/bin:$PATH"

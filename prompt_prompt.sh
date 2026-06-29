@@ -46,7 +46,7 @@ _PP_prompt() {
 
     local _venv=""
     local _tilde=\~ # bash3 vs bash4
-    if [[ -n ${VIRTUAL_ENV:-} ]]; then
+    if [[ -n ${VIRTUAL_ENV:-} ]] && [[ $VIRTUAL_ENV != $HOME/venv ]]; then
         _venv="${_PP_PIN} [${VIRTUAL_ENV/#$HOME/$_tilde}] "
     elif [[ -n ${CONDA_DEFAULT_ENV} ]]; then
         _venv="${_PP_PIN} [${CONDA_DEFAULT_ENV}] "
