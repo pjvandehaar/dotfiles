@@ -42,6 +42,10 @@ MANPATH="$(perl -e'@p=split(":",$ENV{"MANPATH"}); @p=grep(-e,@p); for($i=0;$i<$#
 #     source /usr/share/bash-completion/bash_completion
 # fi
 
+if exists uv; then
+    eval "$(uv generate-shell-completion bash)"
+fi
+
 
 # OS-specific impl
 # ================
