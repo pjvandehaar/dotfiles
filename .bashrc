@@ -246,6 +246,8 @@ ptr-htabix() {
     tabix "$file" "$region" 2>/dev/null
 }
 
+alias ptr-duration='ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1'
+
 
 # overrides
 # =========
