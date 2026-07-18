@@ -68,6 +68,7 @@ se() {
 }
 alias ta="tig --all"
 alias gs='git status'
+alias gsi='git status --ignored'
 alias gg='git grep'
 alias gb='git branch -avv'
 alias tg='tig grep'
