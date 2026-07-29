@@ -137,16 +137,23 @@ def venv(args:argparse.Namespace) -> None:
     if Path('venv').exists():
         if args.force: shutil.rmtree('venv'); print('rm -rf venv')
         else: raise Exception('`./venv/` already exists.  Use -f to overwrite.')
-    print_and_run([args.python, '-m', 'venv', 'venv'])
-    print_and_run(['./venv/bin/pip3', 'install', '-U', 'wheel'])
-    print_and_run(['./venv/bin/pip3', 'install', '-U', 'pip', 'setuptools'])
+    USE_UV = bool(shutil.which('uv'))
+    if USE_UV:
+        print_and_run(['uv', 'venv', 'venv'])  # uv expects ./.venv/, but we can force ./venv/
+        install_cmd = ['uv','pip','install','--python=venv/bin/python']
+    else:
+        print('=> WARNING: YOU ARE USING PIP INSTEAD OF UV!')
+        print_and_run([args.python, '-m', 'venv', 'venv'])
+        install_cmd = ['./venv/bin/pip3']
+        print_and_run(install_cmd+['install', '-U', 'wheel'])
+        print_and_run(install_cmd+['install', '-U', 'pip', 'setuptools'])
 
     req_paths = [Path(p) for p in args.requirement]
     if Path('requirements.txt').exists(): req_paths.append(Path('requirements.txt'))
-    for req_path in req_paths: print_and_run(['./venv/bin/pip3', 'install', '-r', str(req_path)])
+    for req_path in req_paths: print_and_run(install_cmd+['-r', str(req_path)])
 
     epkg_paths = [Path(p) for p in args.editable]
-    for epkg_path in epkg_paths: print_and_run(['./venv/bin/pip3', 'install', '-e', str(epkg_path)])
+    for epkg_path in epkg_paths: print_and_run(install_cmd+['-e', str(epkg_path)])
 
     if Path('.git').is_dir():
         gitignore_path = Path('.gitignore')

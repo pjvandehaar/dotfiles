@@ -82,7 +82,7 @@ def main():
     print(f'common_branches = {common_branches}')
     my_branches = get_my_branches()
     print(f'my_branches = {my_branches}')
-    local_branches = [b for b in get_all_branches() if not b.startswith('origin/')]
+    local_branches = [b for b in get_all_branches() if not b.startswith(('origin/','upstream/'))]
     print(f'local_branches = {local_branches}')
     arg_branches = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
     if arg_branches: print(f'arg_branches = {arg_branches}')

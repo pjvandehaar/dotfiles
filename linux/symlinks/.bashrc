@@ -25,6 +25,7 @@ PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 PATH="/home/linuxbrew/.linuxbrew/sbin:$PATH"
 PATH="$HOME/.linuxbrew/bin:$PATH"
 PATH="$HOME/.linuxbrew/sbin:$PATH"
+PATH="$HOME/.local/share/pnpm/bin:$PATH"
 PATH="$PATH:$HOME/perl5/bin"
 PATH="$(perl -e'@p=split(":",$ENV{"PATH"}); @p=grep(-e,@p); for($i=0;$i<$#p;$i++){@p=(@p[0..$i], grep(!/^$p[$i]$/,@p[$i+1..$#p]))}; print join(":",@p)')"  # dedup & drop missing
 
