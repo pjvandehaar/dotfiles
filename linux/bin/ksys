@@ -261,6 +261,8 @@ def conf_install(args:argparse.Namespace) -> None:
             print_and_run(['sudo', 'systemctl', 'restart', 'nginx'])
             print('You might need to run `certbot`')
         print_and_run(['sudo', 'systemctl', 'daemon-reload'])
+    if args.restart:
+        restart(argparse.Namespace(unit=None,timeout=None))
 
 def conf_import(args:argparse.Namespace) -> None:
     """Copy config into `.ksys/`."""
@@ -358,6 +360,7 @@ if __name__ == '__main__':
     conf_create_parser.set_defaults(func=conf_create)
 
     conf_install_parser = commands.add_parser('conf-install')
+    conf_install_parser.add_argument('--restart','-r', action='store_true', help='Also restart the unit, like ksys r')
     conf_install_parser.set_defaults(func=conf_install)
 
     conf_import_parser = commands.add_parser('conf-import')

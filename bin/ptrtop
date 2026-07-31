@@ -465,7 +465,7 @@ if __name__ == '__main__':
         elif '--con' in sys.argv[1:]: p_sort_key = lambda p: (-p['family']['num_con'], -p['family']['num_fds'], p['pid'])
         elif '--cpu' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/2**20, 0), p['pid'])
         elif '--mem' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
-        drop_boring = '--all' not in sys.argv[1:]
+        drop_boring = not {'--all','-a'}.intersection(sys.argv)
         user_filter = set(arg for arg in sys.argv[1:] if not arg.startswith('-'))
         if 'me' in user_filter: user_filter.add(getpass.getuser())
         show_big_files = '--big' in sys.argv[1:]
