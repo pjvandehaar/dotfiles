@@ -30,7 +30,7 @@ if [[ $1 = kpa@* ]]; then
     start_dir=/var/www/html/
 fi
 
-if [[ $1 = kpa@* || $1 = tri26 || $1 = lead ]] ; then
+if [[ $1 = tri26 || $1 = lead ]] ; then
     echo "Using mosh!"
     mosh -- $@ tmux new -As0
 else

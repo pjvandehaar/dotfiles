@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
 
+# TODO: Make generalized `ptr-yt`.
+#       It checks that we're not &radio=1, or if we are it handles it correctly.
+#       It encodes to m4a (aac).
+#       It avoids writing `egg.m4a.m4a` (like `yt-dlp --output=egg.m4a` does).
+#       It asks whether to upload.  It does mkdir -p.
+#          (like `rsync -s --mkpath`, if you have modern versions on client+server)
+#       It uses mutagen for AAC (bc eyeD3 is only mp3).
+
+
 import subprocess as subp, sys, os, datetime, argparse
 from pathlib import Path
 
