@@ -58,9 +58,12 @@ def list_files(bkt:str, prefix:str, recursive:bool=False, max_keys:int|None=None
                 yield f"{bkt}/{obj['Key']}"
 
 
-def main():
+def main() -> None:
     if len(sys.argv) < 2:
-        print("Usage: bb [list-buckets | list-files <bkt> | upload <bkt> <local> <remote> | cat <bkt> <path>]")
+        print("Usage: bb ls [<bkt>/<prefix>]")
+        print("       bb list-files <bkt>/<prefix>")
+        print("       bb cat <bkt>/<key>")
+        print("       bb (upload|download) <bkt>/<key> <path>")
         print('Buckets:')
         for b in get_b2_client().list_buckets().get('Buckets', []):
             print(' -', b['Name'])
