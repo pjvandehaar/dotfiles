@@ -3,11 +3,13 @@
 import os, sys, json, boto3, functools, signal
 from botocore.config import Config
 from pathlib import Path
+from collections.abc import Iterator
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
 CREDS_PATH = Path(os.path.expanduser('~/.config/b2-secrets.json'))
 
+@functools.cache
 def get_b2_client():
     creds = json.loads(CREDS_PATH.read_text())
     return boto3.client(
@@ -18,15 +20,47 @@ def get_b2_client():
         config=Config(signature_version='s3v4')
     )
 
-def parse_bkt(s):
-    if s in ['','.']:
-        creds = json.loads(CREDS_PATH.read_text())
-        return creds['default_bucket']
-    return s
+@functools.cache
+def get_default_bkt() -> str:
+    return json.loads(Path('~/.config/b2-secrets.json').expanduser().read_text())['default_bucket']
+
+def parse_bkt_key(args:list[str]) -> tuple[str,str]:
+    bkt, key = _parse_bkt_key(args)
+    if bkt == '.' or (bkt=='' and key): bkt = get_default_bkt()
+    return (bkt, key)
+
+def _parse_bkt_key(args:list[str]) -> tuple[str,str]:
+    # Maybe: parse_bkt_key_path()?
+    if not args: return ('', '')
+    if len(args)==1:
+        if '/' in args[0]:
+            bkt, key = args[0].split('/', 1)
+            return (bkt, key)
+        return (args[0], '')
+    assert '/' not in args[0], args
+    return (args[0], args[0])
+
+def list_buckets() -> Iterator[str]:
+    for page in get_b2_client().get_paginator('list_buckets').paginate():
+        for b in page.get('Buckets',[]):
+            yield b['Name']
+
+def list_files(bkt:str, prefix:str, recursive:bool=False, max_keys:int|None=None) -> Iterator[str]:
+    if recursive:
+        for page in get_b2_client().get_paginator('list_objects_v2').paginate(Bucket=bkt, Prefix=prefix, MaxKeys=(max_keys if max_keys and max_keys<1000 else 1000), PaginationConfig={'MaxItems':max_keys}):
+            for obj in page.get('Contents',[]):
+                yield f"{bkt}/{obj['Key']}"
+    else:
+        for page in get_b2_client().get_paginator('list_objects_v2').paginate(Bucket=bkt, Prefix=prefix, Delimiter='/', MaxKeys=(max_keys if max_keys and max_keys<1000 else 1000), PaginationConfig={'MaxItems':max_keys}):
+            for obj in page.get('CommonPrefixes',[]):
+                yield f"{bkt}/{obj['Prefix']}"
+            for obj in page.get('Contents',[]):
+                yield f"{bkt}/{obj['Key']}"
+
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: b2 [list-buckets | list-files <bkt> | upload <bkt> <local> <remote> | cat <bkt> <path>]")
+        print("Usage: bb [list-buckets | list-files <bkt> | upload <bkt> <local> <remote> | cat <bkt> <path>]")
         print('Buckets:')
         for b in get_b2_client().list_buckets().get('Buckets', []):
             print(' -', b['Name'])
@@ -35,43 +69,49 @@ def main():
     cmd = sys.argv[1]
     s3 = get_b2_client()
 
-    if cmd == "list-buckets":
-        res = s3.list_buckets()
-        for b in res.get('Buckets', []):
-            print(b['Name'])
+    if cmd == "list-buckets" or (cmd=='ls' and len(sys.argv)==2):
+        for bkt in list_buckets(): print(bkt)
 
-    elif cmd in ["list-files",'ls']:
-        if len(sys.argv) < 3:
-            print("Usage: b2 list-files <bkt>")
-            sys.exit(1)
-        bkt = parse_bkt(sys.argv[2])
-        res = s3.list_objects_v2(Bucket=bkt)
-        for obj in res.get('Contents', []):
-            print(f"{obj['Key']} ({obj['Size']} bytes)")
+    elif cmd in ['ls']:
+        bkt, prefix = parse_bkt_key(sys.argv[2:])
+        num_files, num_folders = 0, 0
+        for b_k in list_files(bkt, prefix, recursive=False):
+            print(b_k)
+            if b_k.endswith('/'): num_folders += 1
+            else: num_files += 1
+        print(f'  ({num_folders} folders + {num_files} files)')
+
+    elif cmd in ['list-all-files']:
+        bkt, prefix = parse_bkt_key(sys.argv[2:])
+        for idx, b_k in enumerate(list_files(bkt, prefix, recursive=True, max_keys=1000)):
+            print(b_k)
+        print(f'  ({idx+1} files)')
 
     elif cmd == "upload":
-        if len(sys.argv) < 5:
-            print("Usage: b2 upload <bkt> <key> <path>")
+        bkt, key = parse_bkt_key(sys.argv[2:])
+        path = sys.argv[-1]
+        if not bkt or not key or not path:
+            print('Usage: bb upload <bkt>/<key> <path>')
             sys.exit(1)
-        bkt, key, path = parse_bkt(sys.argv[2]), sys.argv[3], sys.argv[4]
         print(f"Uploading {path} -> {bkt}/{key}...")
         s3.upload_file(path, bkt, key)
         print("Upload successful.")
 
     elif cmd == "download":
-        if len(sys.argv) < 5:
-            print("Usage: b2 download <bkt> <key> <path>")
+        bkt, key = parse_bkt_key(sys.argv[2:])
+        path = sys.argv[-1]
+        if not bkt or not key or not path:
+            print('Usage: bb download <bkt>/<key> <path>')
             sys.exit(1)
-        bkt, key, path = parse_bkt(sys.argv[2]), sys.argv[3], sys.argv[4]
         print(f"Downloading {bkt}/{key} -> {path}...")
         s3.download_file(bkt, key, path)
         print("Download successful.")
 
     elif cmd == "cat":
-        if len(sys.argv) < 4:
-            print("Usage: b2 cat <bucket> <key>")
+        bkt, key = parse_bkt_key(sys.argv[2:])
+        if not bkt or not key:
+            print('Usage: bb cat <bkt>/<key>')
             sys.exit(1)
-        bkt, key = parse_bkt(sys.argv[2]), sys.argv[3]
         res = s3.get_object(Bucket=bkt, Key=key)
         sys.stdout.buffer.write(res['Body'].read())
 

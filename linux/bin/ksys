@@ -18,6 +18,8 @@ It uses a directory .ksys/ (in the spirit of .git/) which stores config used in 
 
 # TODO: Add `ksys test`, which restarts, sends some example requests, and shows logs if failed
 
+# TODO: `ksys conf-install` should do `sudo certbot certonly --standalone -n -d foo.example.com` if needed (just grep for /etc/letsencrypt/live/*/fullchain.pem)
+
 
 if __name__ == '__main__':
     try: import kpa.dev_utils
@@ -169,8 +171,12 @@ After=network-online.target
 OnFailure=kpa-failure-telegram@%i.service
 
 [Service]
-User=kpa
-Group=kpa
+DynamicUser=yes
+ProtectSystem=strict
+ProtectHome=yes
+# RuntimeDirectory is auto-created in /run/ tmpfs
+RuntimeDirectory={name}
+Environment=HOME=/run/{name}
 WorkingDirectory={dir}
 ExecStart={exec}
 '''

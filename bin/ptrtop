@@ -46,11 +46,12 @@ if __name__ == '__main__':
     else: kpa.dev_utils.run(__file__, run_rarely=True, make_cache=False)
 
 
-from typing import Dict, Optional, Callable, Tuple, Any, List, Set, Union
+from typing import Any
+from collections.abc import Callable
 import psutil, signal, time, sys, itertools, shutil, functools, subprocess, re, os, getpass
 from pathlib import Path
 from psutil import AccessDenied
-ProcDict = Dict[str,Any]
+ProcDict = dict[str,Any]
 PID = int
 
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -91,16 +92,16 @@ def shorten_filedir(filedir: str) -> str:
             return f'{shortened_parent}/{prefix}*'
     return f'{shortened_parent}/{filename}'
 @functools.lru_cache(None)
-def get_filenames_in_filedir(filedir: str) -> List[str]:
+def get_filenames_in_filedir(filedir: str) -> list[str]:
     return os.listdir(filedir)
 
-def get_lsof_file_info(pid:int) -> Dict[int,Tuple[str,int,int]]:
+def get_lsof_file_info(pid:int) -> dict[int,tuple[str,int,int]]:
     '''pid -> (mode, position, size)'''
     try:
         out = subprocess.check_output(f'lsof -o -o 20 -P -F -p {pid}'.split())
     except subprocess.CalledProcessError:
         return {}
-    ret: Dict[int,Tuple[str,int,int]] = {}
+    ret: dict[int,tuple[str,int,int]] = {}
     fd, mode, size, offset = -1, '', -1, -1
     for line in out.split(b'\n'):
         # These lines should always appear in this order: f a s o
@@ -117,7 +118,7 @@ def get_lsof_file_info(pid:int) -> Dict[int,Tuple[str,int,int]]:
             ret[fd] = (mode, offset, size)
     return ret
 
-def get_file_info(pid:int, proc:psutil.Process, run_lsof:bool = False, only_size_when_offset:bool = True) -> List[Tuple[str,str,int,int,str]]:
+def get_file_info(pid:int, proc:psutil.Process, run_lsof:bool = False, only_size_when_offset:bool = True) -> list[tuple[str,str,int,int,str]]:
     '''[(path, mode, size, position, percent), ...]'''
     def clean_mode(mode:str) -> str:
         if mode == 'w': return ' w'
@@ -148,8 +149,8 @@ def get_file_info(pid:int, proc:psutil.Process, run_lsof:bool = False, only_size
 
 
 
-@functools.lru_cache()
-def username_by_uid() -> Dict[str,str]:
+@functools.lru_cache
+def username_by_uid() -> dict[str,str]:
     # This handles cases where `psutil.Process(pid).username()` returns `uid` (integer) instead of the username (str)
     lines = subprocess.check_output(['/usr/bin/getent','passwd']).decode('ascii').split('\n')
     username_by_uid = {}
@@ -170,10 +171,10 @@ def decode_username(username:str) -> str:
 
 # Note: `proc` is a psutil.Process()
 #       `p` is a dictionary representing a process
-def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = False, drop_boring:bool = True) -> ProcDict:
-    p_for_pid: Dict[PID,ProcDict] = {}  # {pid: {...}}
+def get_pid_tree(user_filter:set[str] | None = None, show_big_files:bool = False, drop_boring:bool = True) -> ProcDict:
+    p_for_pid: dict[PID,ProcDict] = {}  # {pid: {...}}
 
-    ppidmap: Dict[PID,PID] = psutil._ppid_map() # {pid -> ppid}
+    ppidmap: dict[PID,PID] = psutil._ppid_map() # {pid -> ppid}
     for pid in set(itertools.chain(ppidmap.keys(), ppidmap.values())):
         p_for_pid[pid] = {'pid':pid, 'children':[]}
     for pid,ppid in ppidmap.items():
@@ -211,7 +212,8 @@ def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = Fa
                 try:p['cmdline'] = proc.cmdline()
                 except AccessDenied:pass
                 try:
-                    p['cpu_s1'] = (lambda x:x.system + x.user)(proc.cpu_times())
+                    ct = proc.cpu_times()
+                    p['cpu_s1'] = ct.system + ct.user
                     p['cpu_s1_t'] = time.time()
                     p['mem_rss'] = proc.memory_info().rss
                 except AccessDenied: pass
@@ -256,7 +258,7 @@ def get_pid_tree(user_filter:Optional[Set[str]] = None, show_big_files:bool = Fa
 def accum_proc_info(p:ProcDict) -> None:
     for child in p['children']: accum_proc_info(child)
     p['family'] = {}
-    for k in 'cpu mem_rss num_fds num_con'.split():
+    for k in ['cpu', 'mem_rss', 'num_fds', 'num_con']:
         p['family'][k] = (p.get(k,0) + sum(child['family'].get(k,0) for child in p['children']))
         # TODO: if any of these is missing k, we should write "{x}+"
 
@@ -340,7 +342,7 @@ def inspect_pid(pid:PID) -> None:
         p = psutil.Process(pid)
     except psutil.NoSuchProcess:
         print(f'[No process with pid {pid}]')
-        exit(1)
+        sys.exit(1)
 
     try:
         for i, (k,v) in enumerate(sorted(p.environ().items())):
@@ -375,7 +377,7 @@ def inspect_pid(pid:PID) -> None:
         conns = get_net_connections(p)
         for i, c in enumerate(conns):
             if i == 0: print('[connections]')
-            try:print(' ', f'{c.status:12}  {repr_addr(c.laddr)}  {repr_addr(c.raddr)}  {repr(c.type)}  {repr(c.family)}')
+            try:print(' ', f'{c.status:12}  {repr_addr(c.laddr)}  {repr_addr(c.raddr)}  {c.type!r}  {c.family!r}')
             except Exception: print(c)
             if i+1 == len(conns): print()
     except psutil.AccessDenied:
@@ -402,9 +404,9 @@ def inspect_pid(pid:PID) -> None:
 
 
 def summarize_users() -> None:
-    users: Dict[str, Dict[str, float]] = {}
-    xs:List[ProcDict] = []
-    for proc in psutil.process_iter(attrs='username cpu_times memory_info num_fds connections'.split()):
+    users: dict[str, dict[str, float]] = {}
+    xs:list[ProcDict] = []
+    for proc in psutil.process_iter(attrs=['username', 'cpu_times', 'memory_info', 'num_fds', 'connections']):
         i = proc.info
         username = decode_username(i['username'])
         u = users.setdefault(username, {'cpu':0, 'mem_rss':0, 'num_fds':0, 'num_con':0})
@@ -460,13 +462,13 @@ if __name__ == '__main__':
 
     # Show the whole process tree, optionally filtered to some users
     else:
-        p_sort_key: Optional[Callable[[Any], Tuple[Any, Any, Any]]] = None
+        p_sort_key: Callable[[Any], tuple[Any, Any, Any]] | None = None
         if '--fd' in sys.argv[1:]:    p_sort_key = lambda p: (-p['family']['num_fds'], -p['family']['num_con'], p['pid'])
         elif '--con' in sys.argv[1:]: p_sort_key = lambda p: (-p['family']['num_con'], -p['family']['num_fds'], p['pid'])
         elif '--cpu' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['cpu']*100, 1), round(-p['family']['mem_rss']/2**20, 0), p['pid'])
         elif '--mem' in sys.argv[1:]: p_sort_key = lambda p: (round(-p['family']['mem_rss']/2**20, 0), round(-p['family']['cpu']*100, 1), p['pid'])
         drop_boring = not {'--all','-a'}.intersection(sys.argv)
-        user_filter = set(arg for arg in sys.argv[1:] if not arg.startswith('-'))
+        user_filter = {arg for arg in sys.argv[1:] if not arg.startswith('-')}
         if 'me' in user_filter: user_filter.add(getpass.getuser())
         show_big_files = '--big' in sys.argv[1:]
 
