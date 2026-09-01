@@ -3,13 +3,13 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(safe-local-variable-values '((comment-start . %)))
- '(safe-local-variable-values '((select-enable-clipboard nil)))  ;; emacs29 made killring = mac clipboard.  this separates them again.
- '(safe-local-variable-values '((x-select-enable-clipboard nil)))  ;; emacs29 made killring = mac clipboard.  this separates them again.
-)
-
-(setq select-enable-clipboard nil)
-(setq x-select-enable-clipboard nil)
+ '(select-enable-clipboard nil))  ;; emacs29 merges emacs clipboard with macOS clipboard, this separates them
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
 
 
 ;;; Emacs third-party packages
@@ -49,12 +49,11 @@
 ;;;; Emacs visuals ;;;;
 (setq split-width-threshold 200) ;; Split side-by-side if >200 cols, else above-and-below.  Default=160.
 (menu-bar-mode -1) ;; Hide menubar
-(column-number-mode) ;; show column in mode-line
-(show-paren-mode) ;; highlights matching paren
+(column-number-mode 1) ;; show column in mode-line
+(show-paren-mode 1) ;; highlights matching paren
 
-(when (require 'whitespace)  ;; see `C-h v whitespace-style`
-  (setq-default whitespace-style '(face tabs trailing indentation::space space-before-tab space-after-tab))
-  (global-whitespace-mode))
+(setq-default whitespace-style '(face tabs trailing indentation::space space-before-tab space-after-tab))
+(global-whitespace-mode 1)
 
 
 
@@ -90,7 +89,7 @@
 
 (when (fboundp 'electric-indent-mode) (electric-indent-mode -1))  ;; Disable electric-indent-mode due to pasting problems.  If you want to open a new line that's auto-indented, use C-j.
 
-(delete-selection-mode) ;; If you have a selection, typing deletes it.  As does C-d.  Doesn't copy into kill-ring.
+(delete-selection-mode 1) ;; If you have a selection, typing deletes it.  As does C-d.  Doesn't copy into kill-ring.
 
 
 
