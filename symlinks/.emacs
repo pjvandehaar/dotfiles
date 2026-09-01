@@ -27,8 +27,21 @@
 
 
 ;;;; Emacs file-system interaction ;;;;
-(setq backup-directory-alist `(("." . "~/.emacs-saves")))  ;; Put backups in ~/.emacs-saves/ instead of literring all over.
-(setq backup-by-copying t)
+
+;Backups (~/projects/foo.txt -> ~/.emacs.d/backups/!home!user!projects!foo.txt~)
+(defvar user-backup-dir (expand-file-name "backups/" user-emacs-directory))
+(unless (file-exists-p user-backup-dir) (make-directory user-backup-dir t))
+(setq backup-directory-alist `(("." . ,user-backup-dir)))
+(setq backup-by-copying t)  ;; Avoids problems with NFS, hardlinks, etc
+
+;Auto-Saves (~/projects/foo.txt -> ~/.emacs.d/autosaves/#!home!user!projects!foo.txt#)
+(defvar user-autosave-dir (expand-file-name "autosaves/" user-emacs-directory))
+(unless (file-exists-p user-autosave-dir) (make-directory user-autosave-dir t))
+(setq auto-save-file-name-transforms `((".*" ,user-autosave-dir t)))
+
+;Disable Lockfiles (Cannot be redirected to a directory)
+(setq create-lockfiles nil)
+
 (setq-default vc-follow-symlinks t)
 
 
