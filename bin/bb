@@ -59,7 +59,7 @@ def list_files(bkt:str, prefix:str, recursive:bool=False, max_keys:int|None=None
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
+    if len(sys.argv) <= 1:
         print("Usage: bb ls [<bkt>/<prefix>]")
         print("       bb list-files <bkt>/<prefix>")
         print("       bb cat <bkt>/<key>")
@@ -118,8 +118,28 @@ def main() -> None:
         res = s3.get_object(Bucket=bkt, Key=key)
         sys.stdout.buffer.write(res['Body'].read())
 
+    elif '/' in cmd:
+        bkt, prefix = parse_bkt_key(sys.argv[1:])
+        num_files, num_folders = 0, 0
+        for b_k in list_files(bkt, prefix, recursive=False):
+            print(b_k)
+            if b_k.endswith('/'): num_folders += 1
+            else: num_files += 1
+        print(f'  ({num_folders} folders + {num_files} files)')
+
     else:
-        print(f"Unknown command: {cmd}")
+        buckets = list_buckets()
+        if cmd in buckets:
+            bkt, prefix = parse_bkt_key(sys.argv[2:])
+            num_files, num_folders = 0, 0
+            for b_k in list_files(bkt, prefix, recursive=False):
+                print(b_k)
+                if b_k.endswith('/'): num_folders += 1
+                else: num_files += 1
+            print(f'  ({num_folders} folders + {num_files} files)')
+
+        else:
+            print(f"Unknown command: {cmd}")
 
 if __name__ == "__main__":
     main()
