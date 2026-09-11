@@ -24,21 +24,17 @@ def get_b2_client():
 def get_default_bkt() -> str:
     return json.loads(Path('~/.config/b2-secrets.json').expanduser().read_text())['default_bucket']
 
-def parse_bkt_key(args:list[str]) -> tuple[str,str]:
-    bkt, key = _parse_bkt_key(args)
+def parse_bkt_key(arg:str) -> tuple[str,str]:
+    bkt, key = _parse_bkt_key(arg)
     if bkt == '.' or (bkt=='' and key): bkt = get_default_bkt()
     return (bkt, key)
-
-def _parse_bkt_key(args:list[str]) -> tuple[str,str]:
+def _parse_bkt_key(arg:str) -> tuple[str,str]:
     # Maybe: parse_bkt_key_path()?
-    if not args: return ('', '')
-    if len(args)==1:
-        if '/' in args[0]:
-            bkt, key = args[0].split('/', 1)
-            return (bkt, key)
-        return (args[0], '')
-    assert '/' not in args[0], args
-    return (args[0], args[0])
+    if not arg: return ('', '')
+    if '/' in arg:
+        bkt, key = arg.split('/', 1)
+        return (bkt, key)
+    return (arg, '')
 
 def list_buckets() -> Iterator[str]:
     for page in get_b2_client().get_paginator('list_buckets').paginate():
@@ -56,6 +52,10 @@ def list_files(bkt:str, prefix:str, recursive:bool=False, max_keys:int|None=None
                 yield f"{bkt}/{obj['Prefix']}"
             for obj in page.get('Contents',[]):
                 yield f"{bkt}/{obj['Key']}"
+
+def removeprefix_strict(s:str, prefix:str) -> str:
+    assert s.startswith(prefix), (s, prefix)
+    return s.removeprefix(prefix)
 
 
 def main() -> None:
@@ -76,7 +76,7 @@ def main() -> None:
         for bkt in list_buckets(): print(bkt)
 
     elif cmd in ['ls']:
-        bkt, prefix = parse_bkt_key(sys.argv[2:])
+        bkt, prefix = parse_bkt_key(sys.argv[2])
         num_files, num_folders = 0, 0
         for b_k in list_files(bkt, prefix, recursive=False):
             print(b_k)
@@ -85,13 +85,13 @@ def main() -> None:
         print(f'  ({num_folders} folders + {num_files} files)')
 
     elif cmd in ['list-all-files']:
-        bkt, prefix = parse_bkt_key(sys.argv[2:])
+        bkt, prefix = parse_bkt_key(sys.argv[2])
         for idx, b_k in enumerate(list_files(bkt, prefix, recursive=True, max_keys=1000)):
             print(b_k)
         print(f'  ({idx+1} files)')
 
     elif cmd == "upload":
-        bkt, key = parse_bkt_key(sys.argv[2:])
+        bkt, key = parse_bkt_key(sys.argv[2])
         path = sys.argv[-1]
         if not bkt or not key or not path:
             print('Usage: bb upload <bkt>/<key> <path>')
@@ -101,17 +101,38 @@ def main() -> None:
         print("Upload successful.")
 
     elif cmd == "download":
-        bkt, key = parse_bkt_key(sys.argv[2:])
-        path = sys.argv[-1]
+        assert len(sys.argv) == 4, sys.argv
+        bkt, key = parse_bkt_key(sys.argv[2])
+        bkt_key = f'{bkt}/{key}'
+        path = Path(sys.argv[-1])
         if not bkt or not key or not path:
             print('Usage: bb download <bkt>/<key> <path>')
             sys.exit(1)
-        print(f"Downloading {bkt}/{key} -> {path}...")
-        s3.download_file(bkt, key, path)
+        if key.endswith('/'):
+            print('Downloading folder...')
+            filekeys = [removeprefix_strict(bk, f'{bkt}/') for bk in list_files(bkt, key, recursive=True)]
+            print(f'Found {len(filekeys):,} files.')
+            for filekey in filekeys[:10]:
+                print(f' - {filekey}')
+            print()
+            input('Continue? [y]')
+            for filekey in filekeys:
+                relative_key = removeprefix_strict(filekey, key)
+                filepath = path / relative_key
+                filepath.parent.mkdir(exist_ok=True, parents=True)
+                size = s3.head_object(Bucket=bkt, Key=filekey)['ContentLength']
+                if filepath.is_file() and filepath.stat().st_size == size:
+                    print(f'{size:,}  {filepath}  [already exists]')
+                else:
+                    print(f'{size:,}  {filepath}')
+                    s3.download_file(bkt, filekey, filepath)
+        else:
+            print(f"Downloading {bkt}/{key} -> {path}...")
+            s3.download_file(bkt, key, path)
         print("Download successful.")
 
     elif cmd == "cat":
-        bkt, key = parse_bkt_key(sys.argv[2:])
+        bkt, key = parse_bkt_key(sys.argv[2])
         if not bkt or not key:
             print('Usage: bb cat <bkt>/<key>')
             sys.exit(1)
@@ -130,7 +151,7 @@ def main() -> None:
     else:
         buckets = list_buckets()
         if cmd in buckets:
-            bkt, prefix = parse_bkt_key(sys.argv[2:])
+            bkt, prefix = parse_bkt_key(sys.argv[2])
             num_files, num_folders = 0, 0
             for b_k in list_files(bkt, prefix, recursive=False):
                 print(b_k)
