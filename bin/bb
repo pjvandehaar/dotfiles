@@ -25,6 +25,7 @@ def get_default_bkt() -> str:
     return json.loads(Path('~/.config/b2-secrets.json').expanduser().read_text())['default_bucket']
 
 def parse_bkt_key(arg:str) -> tuple[str,str]:
+    assert isinstance(arg, str), arg
     bkt, key = _parse_bkt_key(arg)
     if bkt == '.' or (bkt=='' and key): bkt = get_default_bkt()
     return (bkt, key)
@@ -52,6 +53,20 @@ def list_files(bkt:str, prefix:str, recursive:bool=False, max_keys:int|None=None
                 yield f"{bkt}/{obj['Prefix']}"
             for obj in page.get('Contents',[]):
                 yield f"{bkt}/{obj['Key']}"
+
+def list_files_and_sizes(bkt:str, prefix:str, recursive:bool=False, max_keys:int|None=None) -> Iterator[tuple[str,int|None]]:
+    if recursive:
+        for page in get_b2_client().get_paginator('list_objects_v2').paginate(Bucket=bkt, Prefix=prefix, MaxKeys=(max_keys if max_keys and max_keys<1000 else 1000), PaginationConfig={'MaxItems':max_keys}):
+            for obj in page.get('Contents',[]):
+                assert isinstance(obj['Size'], int), obj
+                yield (f"{bkt}/{obj['Key']}", obj['Size'])
+    else:
+        for page in get_b2_client().get_paginator('list_objects_v2').paginate(Bucket=bkt, Prefix=prefix, Delimiter='/', MaxKeys=(max_keys if max_keys and max_keys<1000 else 1000), PaginationConfig={'MaxItems':max_keys}):
+            for obj in page.get('CommonPrefixes',[]):
+                yield (f"{bkt}/{obj['Prefix']}", None)
+            for obj in page.get('Contents',[]):
+                assert isinstance(obj['Size'], int), obj
+                yield (f"{bkt}/{obj['Key']}", obj['Size'])
 
 def removeprefix_strict(s:str, prefix:str) -> str:
     assert s.startswith(prefix), (s, prefix)
@@ -139,28 +154,27 @@ def main() -> None:
         res = s3.get_object(Bucket=bkt, Key=key)
         sys.stdout.buffer.write(res['Body'].read())
 
-    elif '/' in cmd:
-        bkt, prefix = parse_bkt_key(sys.argv[1:])
+    elif '/' in cmd or cmd.startswith('kpa-'):
+        bkt, prefix = parse_bkt_key(sys.argv[1])
         num_files, num_folders = 0, 0
-        for b_k in list_files(bkt, prefix, recursive=False):
-            print(b_k)
-            if b_k.endswith('/'): num_folders += 1
-            else: num_files += 1
-        print(f'  ({num_folders} folders + {num_files} files)')
-
-    else:
-        buckets = list_buckets()
-        if cmd in buckets:
-            bkt, prefix = parse_bkt_key(sys.argv[2])
-            num_files, num_folders = 0, 0
-            for b_k in list_files(bkt, prefix, recursive=False):
-                print(b_k)
-                if b_k.endswith('/'): num_folders += 1
-                else: num_files += 1
+        bkss = list(list_files_and_sizes(bkt, prefix, recursive=False))
+        num_folders = sum(bk.endswith('/') for bk,_ in bkss)
+        num_files = len(bkss) - num_folders
+        if num_files==1 and num_folders==0 and bkss[0][0] == cmd:
+            bkt_key, size = bkss[0]
+            _, key = parse_bkt_key(bkt_key)
+            res = s3.get_object(Bucket=bkt, Key=key)
+            sys.stdout.buffer.write(res['Body'].read())
+        else:
+            for bkt_key, size in bkss:
+                if size:
+                    print(f'{size:>11,}  {bkt_key}')
+                else:
+                    print(f'{" ":9}  {bkt_key}')
             print(f'  ({num_folders} folders + {num_files} files)')
 
-        else:
-            print(f"Unknown command: {cmd}")
+    else:
+        print(f"Unknown command: {cmd}")
 
 if __name__ == "__main__":
     main()

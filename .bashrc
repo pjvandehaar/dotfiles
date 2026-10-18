@@ -250,6 +250,10 @@ ptr-htabix() {
 
 alias ptr-duration='ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1'
 
+ptr-sqlite-schema() {
+    python3 -m sqlite3 "$1" "SELECT name,sql FROM sqlite_schema WHERE type='table'";
+}
+
 
 # overrides
 # =========
