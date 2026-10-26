@@ -7,18 +7,16 @@ It uses a directory .ksys/ (in the spirit of .git/) which stores config used in 
 """
 
 # TODO: Improve `ksys -h`
+
 # TODO: Make `ksys conf` explain how to use those subcommands
+# TODO: Add `ksys conf` which prints out all `.ksys/*`, including a quick yes-no diff
+# TODO: Move `ksys conf-*` to `ksys conf *` and make `ksys conf` give an overview of options
 
 # TODO: Create `ksys skel-flask`
 # TODO: Rename `skel` (skeleton) to `qs` (quickstart) or `bp` (boilerplate)
 # TODO: Consider unifying `venv` with `skel`
 
-# TODO: Add `ksys conf` which prints out all `.ksys/*`, including a quick yes-no diff
-# TODO: Move `ksys conf-*` to `ksys conf *` and make `ksys conf` give an overview of options
-
-# TODO: Add `ksys test`, which restarts, sends some example requests, and shows logs if failed
-
-# TODO: `ksys conf-install` should do `sudo certbot certonly --standalone -n -d foo.example.com` if needed (just grep for /etc/letsencrypt/live/*/fullchain.pem)
+# TODO: Add `ksys test`, which restarts, sends some example requests, and shows logs if failed.  Uses `.ksys/test.json` or something.
 
 
 if __name__ == '__main__':
@@ -86,6 +84,7 @@ def log(args:argparse.Namespace) -> None:
 def stat(args:argparse.Namespace) -> None:
     """Show the status and recent logs for a service."""
     unit_name = (args and args.unit) or get_unit_name()
+    # TODO: Allow retcode=3 for oneshot/timer services
     cmd = ["sudo", "systemctl", "--no-pager", "status", "-n0", unit_name]
     print_and_run(cmd); print()
     cmd = ["sudo", "journalctl", "--no-pager", "-n20", "-u", unit_name, '--no-hostname']
