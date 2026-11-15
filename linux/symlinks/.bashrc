@@ -89,7 +89,7 @@ if exists dircolors; then eval "$(dircolors -b)"; fi
 ptr-update-and-restart() {
   echo "$(hostname)   $(lsb_release -d | cut -f2)   $(uname -m)" &&
   sudo apt update &&
-  sudo apt upgrade -y &&
+  sudo NEEDRESTART_SUSPEND=1 apt upgrade -y &&
   sudo apt autoremove -y &&
   echo "Rebooting in 30s!" && sleep 30 && sudo reboot
 }
