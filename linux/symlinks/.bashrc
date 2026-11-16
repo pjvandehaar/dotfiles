@@ -102,4 +102,3 @@ ptr-update-and-restart() {
 }
 __fdsjlkrew
 unset __fdsjlkrew
-. "$HOME/.cargo/env"
