@@ -36,6 +36,8 @@ def print_and_run(argv:List[str], timeout:Optional[int] = None, check:bool=True)
         subprocess.run(['sudo', '/bin/kill', '-9', str(p.pid)])
         p.wait()  # Clean up zombie
         print(f'\n--> {timeout} second timeout')
+        if check and p.returncode:
+            raise subprocess.CalledProcessError(p.returncode, argv, output=None, stderr=None)
     else:
         subprocess.run(argv, check=check)  # Executes in foreground
 
@@ -313,7 +315,6 @@ def conf_install(args:argparse.Namespace) -> None:
                 print_and_run(['sudo', 'ln', '-sf', str(dest_path), '/etc/nginx/sites-enabled'])
             print_and_run(['sudo', 'nginx', '-t'])
             print_and_run(['sudo', 'systemctl', 'restart', 'nginx'])
-            print('You might need to run `certbot`')
         print_and_run(['sudo', 'systemctl', 'daemon-reload'])
     if args.restart:
         restart(argparse.Namespace(unit=None,timeout=None))
