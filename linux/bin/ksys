@@ -6,18 +6,13 @@ ksys is a command line utility for managing systemd services and connecting them
 It uses a directory .ksys/ (in the spirit of .git/) which stores config used in /etc/.
 """
 
-# TODO: Improve `ksys -h`
-
-# TODO: Make `ksys conf` explain how to use those subcommands
-# TODO: Add `ksys conf` which prints out all `.ksys/*`, including a quick yes-no diff
-# TODO: Move `ksys conf-*` to `ksys conf *` and make `ksys conf` give an overview of options
-
-# TODO: Create `ksys skel-flask`
-# TODO: Rename `skel` (skeleton) to `qs` (quickstart) or `bp` (boilerplate)
-# TODO: Consider unifying `venv` with `skel`
-
 # TODO: Add `ksys test`, which restarts, sends some example requests, and shows logs if failed.  Uses `.ksys/test.json` or something.
+# TODO: Add `ksys gitlab-init` which replaces `ksys skel-gitlab` and is better.
+# TODO: Replace `watchgod` with kpa.watcher.yield_when_files_update(filepaths)
+# TODO: Rename `unit` to `service` everywhere where it makes sense, including `--unit`.  But also allow `-u` bc journalctl uses that.
+##      Q: Do `kys stat` and `ksys log` handle timers?  `restart`?
 
+# NOTE: in systemd, "unit" is service, timer, etc.  That's why it takes `--unit=...` but we mainly use "service".
 
 if __name__ == '__main__':
     try: import kpa.dev_utils
@@ -54,79 +49,105 @@ def get_dotksys_path() -> Optional[Path]:
         path = path.parent
     return None
 
-def get_unit_name() -> str:
+def get_template_instances(template_name: str) -> List[str]:
+    """Convert a template service (eg 'openvpn-server@') to actual service instances (eg 'openvpn-server@east')."""
+    ## Remember: Systemd has ~10 types of units, including .service, .timer, .target, etc.  We're dealing with services.
+    ## I get confused bc `systemctl status foo` is shorthand for `... foo.service` bc services are the best unit.
+    try:
+        out = subprocess.check_output(['systemctl', 'list-units', '--all', '--output=json', f'{template_name}*'])
+        units = [u['unit'].removesuffix('.service') for u in json.loads(out) if u.get('unit')]
+        return [u for u in units if u != template_name and u.startswith(template_name)]
+    except Exception:
+        return []
+
+def get_service_name() -> str:
     """Guess the `<name>.service` to use. First look for `.ksys/<name>.service` and then check if we're in `/srv/<name>/` or `/etc/<name>/`."""
     if (dotksys_path := get_dotksys_path()):
-        service_names = ['.'.join(path.name.split('%')[-1].split('.')[:-1]) for path in dotksys_path.glob('*.service')]
+        raw_service_names = [path.name.split('%')[-1].removesuffix('.service') for path in dotksys_path.glob('*.service')]
+        service_names = []
+        for name in raw_service_names:
+            if name.endswith('@'):
+                instances = get_template_instances(name)
+                if not instances:
+                    raise Exception(f"Found template unit '{name}.service' in .ksys/, but couldn't detect any running or enabled instance (e.g. {name}foo).")
+                service_names.extend(instances)
+            else:
+                service_names.append(name)
         if service_names:
             if len(service_names) > 1: raise Exception(f'Use `-u` to choose one of: {" ".join(service_names)}')
             return service_names[0]
-    if (path := Path().absolute()).parts[:2] == ('/', 'srv') and len(path.parts) >= 3:
-        return f"kpa-{path.parts[2]}"
-    if (path := Path().absolute()).parts[:2] == ('/', 'etc') and len(path.parts) >= 3:
-        return path.parts[2].split('.')[0] # handle "logrotate.d", "cron.daily", "rsyslog.conf", etc
-    raise Exception("Couldn't detect service name, because no ancestor directory contains `.ksys/` and you're not in `/srv/*/` or `/etc/*/`.")
+    cwd = Path().absolute()
+    if cwd.parts[:2] == ('/', 'srv') and len(cwd.parts) >= 3:
+        return f"kpa-{cwd.parts[2]}"
+    if cwd.parts[:2] == ('/', 'etc') and len(cwd.parts) >= 3:
+        return cwd.parts[2].split('.')[0] # handle "logrotate.d", "cron.daily", "rsyslog.conf", etc
+    if dotksys_path:
+        raise Exception("Couldn't detect service name: `.ksys/` contains no `.service` files and you're not in `/srv/*/` or `/etc/*/`.")
+    raise Exception("Couldn't detect service name: no ancestor directory contains `.ksys/` and you're not in `/srv/*/` or `/etc/*/`.")
 
 def log(args:argparse.Namespace) -> None:
     """Show logs for a service."""
-    unit_name = args.unit or get_unit_name()
+    service_name = args.unit or get_service_name()
     if args and args.all:
-        cmd = ["sudo", "journalctl", "-u", unit_name, '--no-hostname']
+        cmd = ["sudo", "journalctl", "-u", service_name, '--no-hostname']
     elif args and args.follow:
-        cmd = ["sudo", "journalctl", "-u", unit_name, '--follow', '--no-hostname']
+        cmd = ["sudo", "journalctl", "-u", service_name, '--follow', '--no-hostname']
         print('--- Ctrl-C quits ---', flush=True)
     else:
-        last_run_id = subprocess.check_output(['systemctl','show','--value','-p','InvocationID',unit_name]).decode().strip()
+        last_run_id = subprocess.check_output(['systemctl','show','--value','-p','InvocationID',service_name]).decode().strip()
         cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-hostname']
     try: print_and_run(cmd)
     except KeyboardInterrupt: print()
 
 def stat(args:argparse.Namespace) -> None:
     """Show the status and recent logs for a service."""
-    unit_name = (args and args.unit) or get_unit_name()
+    service_name = str((args and args.unit) or get_service_name())
     # TODO: Allow retcode=3 for oneshot/timer services
-    cmd = ["sudo", "systemctl", "--no-pager", "status", "-n0", unit_name]
+    cmd = ["sudo", "systemctl", "--no-pager", "status", "-n0", service_name]
     print_and_run(cmd); print()
-    cmd = ["sudo", "journalctl", "--no-pager", "-n20", "-u", unit_name, '--no-hostname']
+    cmd = ["sudo", "journalctl", "--no-pager", "-n20", "-u", service_name, '--no-hostname']
     print_and_run(cmd)
 
 def restart(args:argparse.Namespace) -> None:
     """Restart a service, and then show some logs to let you verify that it's working."""
-    unit_name = args.unit or get_unit_name()
-    try: cursor = json.loads(subprocess.check_output(['sudo', 'journalctl', '-u', unit_name, '--quiet', '--output-fields=__CURSOR', '-n1', '--output=json']))['__CURSOR']
-    except Exception: cursor = None
+    service_name = args.unit or get_service_name()
+    try:
+        out = subprocess.check_output(['sudo', 'journalctl', '-u', service_name, '--quiet', '--output-fields=__CURSOR', '-n1', '--output=json'])
+        cursor = json.loads(out).get('__CURSOR')
+    except Exception:
+        cursor = None
     # Restart
-    cmd = ["sudo", "systemctl", "restart", unit_name]
+    cmd = ["sudo", "systemctl", "restart", service_name]
     print_and_run(cmd); print()
 
     # Note: `systemctl restart` waits for a type=oneshot service to exit.
-    service_type = subprocess.check_output(['systemctl', 'show', '--value', '--property=Type', unit_name]).decode().strip()
+    service_type = subprocess.check_output(['systemctl', 'show', '--value', '--property=Type', service_name]).decode().strip()
     if service_type == 'oneshot':
         if cursor:
-            cmd = ['sudo', 'journalctl', '-u', unit_name, '--no-pager', '--no-hostname', '--after-cursor', cursor]
+            cmd = ['sudo', 'journalctl', '-u', service_name, '--no-pager', '--no-hostname', '--after-cursor', cursor]
         else:
-            last_run_id = subprocess.check_output(['systemctl','show','--value','-property=InvocationID',unit_name]).decode().strip()
+            last_run_id = subprocess.check_output(['systemctl','show','--value','--property=InvocationID',service_name]).decode().strip()
             cmd = ["sudo", "journalctl", f"_SYSTEMD_INVOCATION_ID={last_run_id}", '--no-pager', '--no-hostname']
         try: print_and_run(cmd)
         except KeyboardInterrupt: pass
     else:
         if cursor:
-            cmd = ['sudo', 'journalctl', '-u', unit_name, '--no-pager', '--no-hostname', '--follow', '--after-cursor', cursor]
+            cmd = ['sudo', 'journalctl', '-u', service_name, '--no-pager', '--no-hostname', '--follow', '--after-cursor', cursor]
         else:
             # This misses messages that are printed too quick after the restart
-            cmd = ["sudo", "journalctl", '-u', unit_name, '--no-pager', '--no-hostname', '--follow', '-n1']
+            cmd = ["sudo", "journalctl", '-u', service_name, '--no-pager', '--no-hostname', '--follow', '-n1']
         print('--- Ctrl-C quits ---', flush=True)
         try: print_and_run(cmd, timeout=args.timeout) if args.timeout else print_and_run(cmd)
         except KeyboardInterrupt: pass
     print()
 
     # Show the current state of the service
-    subprocess.run(['sudo', 'systemctl', 'is-failed', unit_name])
+    subprocess.run(['sudo', 'systemctl', 'is-failed', service_name])
 
 def stop(args:argparse.Namespace) -> None:
     """Stop a service"""
-    unit_name = args.unit or get_unit_name()
-    cmd = ["sudo", "systemctl", "stop", unit_name]
+    service_name = args.unit or get_service_name()
+    cmd = ["sudo", "systemctl", "stop", service_name]
     print_and_run(cmd); print()
 
 
@@ -135,10 +156,10 @@ def watch(args:argparse.Namespace) -> None:
     # TODO: maybe hide this output and just show `ksys log --follow`?
     import watchgod
     print('--> Watching: ', args.path)
-    unit_name = args.unit or get_unit_name()
+    service_name = args.unit or get_service_name()
     for changes in watchgod.watch(args.path):
         print('--> Restarting!')
-        subprocess.run(['sudo', 'systemctl', 'restart', unit_name])
+        subprocess.run(['sudo', 'systemctl', 'restart', service_name])
 
 def venv(args:argparse.Namespace) -> None:
     """Make ./venv/ and gitignore it."""
@@ -220,9 +241,28 @@ server {
 '''
 nginx_template = re.subn(r'(\s})', r'\1}', re.subn(r'({\s)', r'{\1', nginx_template)[0])[0]  # escape `{ ` and ` }`
 
+nginx_ssl_template = '''\
+server {
+  server_name {hostname};
+  listen 443 ssl;
+  ssl_certificate /etc/letsencrypt/live/wildcard/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/wildcard/privkey.pem;
+  location / {
+    include proxy_params;
+    proxy_pass http://localhost:{port};
+  }
+}
+server {
+  server_name {hostname};
+  listen 80;
+  return 301 https://$host$request_uri;
+}
+'''
+nginx_ssl_template = re.subn(r'(\s})', r'\1}', re.subn(r'({\s)', r'{\1', nginx_ssl_template)[0])[0]
+
 def conf_create(args:argparse.Namespace) -> None:
     """Create ./.ksys/ and put config in it."""
-    name = str(args.name) if args.name else get_unit_name()
+    name = str(args.name) if args.name else get_service_name()
     dotksys_path = Path('.ksys')
     dotksys_path.mkdir(exist_ok=True)
     directory = str(Path().absolute()) + '/'  # aesthetic
@@ -245,7 +285,8 @@ def conf_create(args:argparse.Namespace) -> None:
         ))
         hostname = args.nginx_hostname if len(args.nginx_hostname)>1 else (f'{name[4:]}.petervh.com' if name.startswith('kpa-') else f'{name}.petervh.com')
         filename = f'/etc/nginx/sites-available/{hostname}'.replace('/', '%')
-        (dotksys_path / filename).write_text(nginx_template.format(hostname=hostname, port=port))
+        tpl = nginx_ssl_template if args.https else nginx_template
+        (dotksys_path / filename).write_text(tpl.format(hostname=hostname, port=port))
     else:
         filename = f'/etc/systemd/system/{name}.service'.replace('/', '%')
         (dotksys_path / filename).write_text(systemd_daemon_template.format(
@@ -253,7 +294,7 @@ def conf_create(args:argparse.Namespace) -> None:
             dir=directory,
             exec=f'{directory}/run.py',
         ))
-    print('Now populate Exec= in .ksys/*.service and run `ksys conf-diff` and `ksys conf-install`')
+    print('Now populate Exec= in .ksys/*.service and run `ksys conf diff` and `ksys conf install`')
 
 def conf_install(args:argparse.Namespace) -> None:
     """Copy config from .ksys/ to /etc/ and restart services as appropriate."""
@@ -286,6 +327,32 @@ def conf_import(args:argparse.Namespace) -> None:
         print(f'Copying {path} -> {dest_path}')
         shutil.copy(path, dest_path)
 
+def conf(args:argparse.Namespace) -> None:
+    """Print an overview of .ksys/* configs, their sync status, and explain subcommands."""
+    if not (dotksys_path := get_dotksys_path()):
+        print("No .ksys/ directory found. Use `ksys conf-create` to initialize one.")
+        return
+
+    print("Config files in .ksys/:")
+    files = sorted([p for p in dotksys_path.iterdir() if not p.name.endswith('~') and '#' not in p.name])
+    if not files:
+        print("  (empty)")
+    for path in files:
+        dest_path = Path(path.name.replace('%', '/'))
+        if not dest_path.exists():
+            status = "missing on system"
+        elif dest_path.read_text() == path.read_text():
+            status = "identical"
+        else:
+            status = "modified"
+        print(f"  {dest_path} [{status}]")
+
+    print("\nSubcommands:")
+    print("  ksys conf diff      Show diff between .ksys/ and /etc/")
+    print("  ksys conf install   Install .ksys/ files into /etc/ and reload/restart")
+    print("  ksys conf create    Generate boilerplate config in .ksys/")
+    print("  ksys conf import    Copy files from system into .ksys/")
+
 def conf_diff(args:argparse.Namespace) -> None:
     """Diff config in `.ksys/` against `/etc/`."""
     if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
@@ -307,7 +374,7 @@ def skel_gitlab(args:argparse.Namespace) -> None:
     """Initialize a skeleton of a local git repo and a remote gitlab repo."""
     if not (dotksys_path := get_dotksys_path()): raise Exception('No directory ./.ksys')
     if dotksys_path.parent != Path().absolute(): raise Exception(f'Please `cd ..` first to project root containing {dotksys_path}')
-    name = get_unit_name()
+    name = get_service_name()
     print('=> Run `git init`')
     print('=> Run `git stage .ksys *.py *.txt`')
     print('=> Run `git commit -m "init"`')
@@ -321,21 +388,7 @@ def skel_gitlab(args:argparse.Namespace) -> None:
 
 
 if __name__ == '__main__':
-    # TODO: Don't let this `usage` override the usage of the subcommands.
-    usage = '''
-    -
-    ksys stat          See status of your service
-    ksys log           See logs
-    ksys restart       Restart your service, and then show logs
-    ksys watch $path   Watch for changes to $path and restart your service
-
-    ksys skel-*        Create boilerplate
-    ksys venv          Create virtualenv
-    ksys conf-*        Create boilerplate config in .ksys/, and install it into /etc/
-    '''
-
-    #parser = argparse.ArgumentParser(usage=usage)
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='Manage systemd services and connecting them to nginx via .ksys/')
     commands = parser.add_subparsers(dest='command')
 
     log_parser = commands.add_parser('log', aliases=['l'], help='See logs')
@@ -344,7 +397,7 @@ if __name__ == '__main__':
     log_parser.add_argument('--follow', action='store_true', help='Follow the end (Ctrl-C to stop)')
     log_parser.set_defaults(func=log)
 
-    stat_parser = commands.add_parser('stat', aliases=['s'], help='See status')
+    stat_parser = commands.add_parser('stat', aliases=['s', 'status'], help='See status')
     stat_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
     stat_parser.set_defaults(func=stat)
 
@@ -370,24 +423,33 @@ if __name__ == '__main__':
     venv_parser.add_argument('-p', '--python', type=str, default='python3', help='the python executable to use')
     venv_parser.set_defaults(func=venv)
 
-    conf_create_parser = commands.add_parser('conf-create')
-    conf_create_parser.add_argument('--name', type=str, default=None, help='What name to use (defaults to kpa-{dirname})')
-    conf_create_parser.add_argument('--timer', action='store_true', help='Create a timer rather than a daemon')
-    conf_create_parser.add_argument('--nginx-hostname', type=str, default=None, help='Create nginx config for a daemon listening on this hostname (or `.` for default)')
-    conf_create_parser.set_defaults(func=conf_create)
+    conf_parser = commands.add_parser('conf', help='Show overview of .ksys/ configs and sync status')
+    conf_parser.set_defaults(func=conf)
+    conf_sub = conf_parser.add_subparsers(dest='conf_command')
 
-    conf_install_parser = commands.add_parser('conf-install')
-    conf_install_parser.add_argument('--restart','-r', action='store_true', help='Also restart the unit, like ksys r')
-    conf_install_parser.set_defaults(func=conf_install)
+    for p in [conf_sub.add_parser('create', help='Create .ksys/ and generate boilerplate configs'),
+              commands.add_parser('conf-create', help='Create .ksys/ and generate boilerplate configs')]:
+        p.add_argument('--name', type=str, default=None, help='What name to use (defaults to kpa-{dirname})')
+        p.add_argument('--timer', action='store_true', help='Create a timer rather than a daemon')
+        p.add_argument('--nginx-hostname', type=str, default=None, help='Create nginx config for a daemon listening on this hostname (or `.` for default)')
+        p.add_argument('--https', action='store_true', help='Configure HTTPS (port 443) using wildcard cert and redirect HTTP')
+        p.set_defaults(func=conf_create)
 
-    conf_import_parser = commands.add_parser('conf-import')
-    conf_import_parser.add_argument('paths', type=str, nargs='+')
-    conf_import_parser.set_defaults(func=conf_import)
+    for p in [conf_sub.add_parser('install', help='Copy config from .ksys/ to /etc/ and reload/restart'),
+              commands.add_parser('conf-install', help='Copy config from .ksys/ to /etc/ and reload/restart')]:
+        p.add_argument('--restart', '-r', action='store_true', help='Also restart the unit, like ksys r')
+        p.set_defaults(func=conf_install)
 
-    conf_diff_parser = commands.add_parser('conf-diff')
-    conf_diff_parser.set_defaults(func=conf_diff)
+    for p in [conf_sub.add_parser('import', help='Copy existing system config into .ksys/'),
+              commands.add_parser('conf-import', help='Copy existing system config into .ksys/')]:
+        p.add_argument('paths', type=str, nargs='+')
+        p.set_defaults(func=conf_import)
 
-    skel_gitlab_parser = commands.add_parser('skel-gitlab')
+    for p in [conf_sub.add_parser('diff', help='Diff config in .ksys/ against /etc/'),
+              commands.add_parser('conf-diff', help='Diff config in .ksys/ against /etc/')]:
+        p.set_defaults(func=conf_diff)
+
+    skel_gitlab_parser = commands.add_parser('skel-gitlab', help='Print steps to initialize local and GitLab repo')
     skel_gitlab_parser.set_defaults(func=skel_gitlab)
 
     args = parser.parse_args() if sys.argv[1:] else parser.parse_args(['stat'])
