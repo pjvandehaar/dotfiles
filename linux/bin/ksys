@@ -6,10 +6,9 @@ ksys is a command line utility for managing systemd services and connecting them
 It uses a directory .ksys/ (in the spirit of .git/) which stores config used in /etc/.
 """
 
-# TODO: Rename `unit` to `service` everywhere where it makes sense, including `--unit`.  But also allow `-u` bc journalctl uses that.
-##      Q: Do `kys stat` and `ksys log` handle timers?  `restart`?
+# NOTE: In systemd, a "unit" is a service, timer, etc.  We say "service" when we can.
+#       `systemctl status kpa-monit` is shorthand for `... kpa-monit.service`, whereas `*.timer` must be written out.
 
-# NOTE: in systemd, "unit" is service, timer, etc.  That's why it takes `--unit=...` but we mainly use "service".
 
 if __name__ == '__main__':
     try: import kpa.dev_utils
@@ -56,8 +55,6 @@ def get_dotksys_path() -> Optional[Path]:
 
 def get_template_instances(template_name: str) -> List[str]:
     """Convert a template service (eg 'openvpn-server@') to actual service instances (eg 'openvpn-server@east')."""
-    ## Remember: Systemd has ~10 types of units, including .service, .timer, .target, etc.  We're dealing with services.
-    ## I get confused bc `systemctl status foo` is shorthand for `... foo.service` bc services are the best unit.
     try:
         out = subprocess.check_output(['systemctl', 'list-units', '--all', '--output=json', f'{template_name}*'])
         units = [u['unit'].removesuffix('.service') for u in json.loads(out) if u.get('unit')]
@@ -95,7 +92,7 @@ def get_service_name() -> str:
 
 def stat(args:argparse.Namespace) -> None:
     """Show the status and recent logs for a service."""
-    service_name = str((args and args.unit) or get_service_name())
+    service_name = str((args and args.service) or get_service_name())
     cmd = ["sudo", "systemctl", "--no-pager", "status", "-n0", service_name]
     proc = print_and_run(cmd, check=False); print()
     assert proc.returncode in [0,3], proc.returncode  # retcode=3 means unit is stopped/dead, which is normal for oneshot/timer
@@ -104,7 +101,7 @@ def stat(args:argparse.Namespace) -> None:
 
 def log(args:argparse.Namespace) -> None:
     """Show logs for a service."""
-    service_name = args.unit or get_service_name()
+    service_name = args.service or get_service_name()
     if args and args.all:
         cmd = ["sudo", "journalctl", "-u", service_name, '--no-hostname']
     elif args and args.follow:
@@ -118,7 +115,7 @@ def log(args:argparse.Namespace) -> None:
 
 def restart(args:argparse.Namespace) -> None:
     """Restart a service, and then show some logs to let you verify that it's working."""
-    service_name = args.unit or get_service_name()
+    service_name = args.service or get_service_name()
     try:
         out = subprocess.check_output(['sudo', 'journalctl', '-u', service_name, '--quiet', '--output-fields=__CURSOR', '-n1', '--output=json'])
         cursor = json.loads(out).get('__CURSOR')
@@ -154,7 +151,7 @@ def restart(args:argparse.Namespace) -> None:
 
 def stop(args:argparse.Namespace) -> None:
     """Stop a service"""
-    service_name = args.unit or get_service_name()
+    service_name = args.service or get_service_name()
     cmd = ["sudo", "systemctl", "stop", service_name]
     print_and_run(cmd); print()
 
@@ -163,7 +160,7 @@ def watch(args:argparse.Namespace) -> None:
     """Watch a path (file or directory) for changes, and restart when it changes"""
     from kpa.watcher import yield_when_files_update
     print('--> Watching: ', args.path)
-    service_name = args.unit or get_service_name()
+    service_name = args.service or get_service_name()
     for changes in yield_when_files_update([args.path]):
         print('--> Restarting!')
         subprocess.run(['sudo', 'systemctl', 'restart', service_name])
@@ -256,7 +253,7 @@ def gitlab_init(args:argparse.Namespace) -> None:
 def test(args:argparse.Namespace) -> None:
     """Restart a service, send test requests from .ksys/test.json, and show logs if any fail."""
     import urllib.request, urllib.error
-    service_name = args.unit or get_service_name()
+    service_name = args.service or get_service_name()
     dotksys_path = get_dotksys_path()
     test_config_path = dotksys_path / 'test.json' if dotksys_path else None
     if not test_config_path or not test_config_path.exists():
@@ -275,7 +272,7 @@ def test(args:argparse.Namespace) -> None:
     result = subprocess.run(['systemctl', 'is-active', service_name], capture_output=True, text=True)
     if result.stdout.strip() != 'active':
         print(f'=> FAIL: service is {result.stdout.strip()} after restart')
-        log(argparse.Namespace(unit=service_name, all=False, follow=False))
+        log(argparse.Namespace(service=service_name, all=False, follow=False))
         sys.exit(1)
 
     # Run test requests
@@ -305,7 +302,7 @@ def test(args:argparse.Namespace) -> None:
 
     if failures:
         print(f'\n=> {len(failures)} test(s) failed.  Showing logs:')
-        log(argparse.Namespace(unit=service_name, all=False, follow=False))
+        log(argparse.Namespace(service=service_name, all=False, follow=False))
         sys.exit(1)
     else:
         print(f'\n=> All {len(test_config)} test(s) passed.')
@@ -462,7 +459,7 @@ def conf_install(args:argparse.Namespace) -> None:
             print_and_run(['sudo', 'systemctl', 'restart', 'nginx'])
         print_and_run(['sudo', 'systemctl', 'daemon-reload'])
     if args.restart:
-        restart(argparse.Namespace(unit=None,timeout=None))
+        restart(argparse.Namespace(service=None,timeout=None))
 
 def conf_import(args:argparse.Namespace) -> None:
     """Copy config into `.ksys/`."""
@@ -496,26 +493,26 @@ if __name__ == '__main__':
     commands = parser.add_subparsers(dest='command')
 
     stat_parser = commands.add_parser('stat', aliases=['s', 'status'], help='See status')
-    stat_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
+    stat_parser.add_argument('-u', '--service', type=str, default=None, help='What systemd service (or unit)')
     stat_parser.set_defaults(func=stat)
 
     log_parser = commands.add_parser('log', aliases=['l'], help='See logs')
-    log_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
+    log_parser.add_argument('-u', '--service', type=str, default=None, help='What systemd service (or unit)')
     log_parser.add_argument('-a', '--all', action='store_true', help='Show all logs rather than only the latest run')
     log_parser.add_argument('--follow', action='store_true', help='Follow the end (Ctrl-C to stop)')
     log_parser.set_defaults(func=log)
 
     restart_parser = commands.add_parser('restart', aliases=['r'], help='Restart')
-    restart_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
+    restart_parser.add_argument('-u', '--service', type=str, default=None, help='What systemd service (or unit)')
     restart_parser.add_argument('-t', '--timeout', type=int, default=None, help='How long to watch logs.  Has no effect on oneshots.')
     restart_parser.set_defaults(func=restart)
 
     stop_parser = commands.add_parser('stop', help='Stop')
-    stop_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
+    stop_parser.add_argument('-u', '--service', type=str, default=None, help='What systemd service (or unit)')
     stop_parser.set_defaults(func=stop)
 
     watch_parser = commands.add_parser('watch', aliases=['w'], help="Reload when a file or directory changes")
-    watch_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
+    watch_parser.add_argument('-u', '--service', type=str, default=None, help='What systemd service (or unit)')
     watch_parser.add_argument('-t', '--timeout', type=int, default=2, help='How long to follow logs.  Has no effect on oneshots.')
     watch_parser.add_argument('path', type=str, help='What path (file or directory) to watch')
     watch_parser.set_defaults(func=watch)
@@ -532,7 +529,7 @@ if __name__ == '__main__':
     gitlab_init_parser.set_defaults(func=gitlab_init)
 
     test_parser = commands.add_parser('test', aliases=['t'], help='Restart, send test requests from .ksys/test.json, show logs if failed')
-    test_parser.add_argument('-u', '--unit', type=str, default=None, help='What systemd unit')
+    test_parser.add_argument('-u', '--service', type=str, default=None, help='What systemd service (or unit)')
     test_parser.add_argument('-d', '--delay', type=float, default=2, help='Seconds to wait after restart before sending requests (default: 2)')
     test_parser.set_defaults(func=test)
 
@@ -551,7 +548,7 @@ if __name__ == '__main__':
 
     for p in [conf_sub.add_parser('install', help='Copy config from .ksys/ to /etc/ and reload/restart'),
               commands.add_parser('conf-install', help='Copy config from .ksys/ to /etc/ and reload/restart')]:
-        p.add_argument('--restart', '-r', action='store_true', help='Also restart the unit, like ksys r')
+        p.add_argument('--restart', '-r', action='store_true', help='Also restart the service, like ksys r')
         p.set_defaults(func=conf_install)
 
     for p in [conf_sub.add_parser('import', help='Copy existing system config into .ksys/'),
